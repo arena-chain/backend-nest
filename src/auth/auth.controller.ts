@@ -1,5 +1,5 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -124,8 +124,10 @@ export class AuthController {
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google Auth callback' })
-  googleAuthRedirect(@Req() req) {
-    return this.authService.googleLogin(req);
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    const tokens = await this.authService.googleLogin(req);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    return res.redirect(`${frontendUrl}/login?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
   }
 
   @Post('google/mobile')

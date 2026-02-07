@@ -448,7 +448,11 @@ export class AuthService {
       // 1. Try to verify as ID Token
       const ticket = await client.verifyIdToken({
         idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        // On accepte les jetons venant du Web OU de l'Android
+        audience: [
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_ANDROID_CLIENT_ID
+        ].filter(id => !!id), // On enlève les valeurs vides
       });
       const payload = ticket.getPayload();
       if (!payload) throw new Error('No payload');
