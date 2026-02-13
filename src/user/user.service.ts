@@ -68,4 +68,51 @@ export class UsersService {
 
         return user;
     }
+
+    async findAll(): Promise<UserDocument[]> {
+        return this.userModel.find().exec();
+    }
+
+    async block(id: string): Promise<UserDocument> {
+        return this.update(id, { isActive: false });
+    }
+
+    async unblock(id: string): Promise<UserDocument> {
+        return this.update(id, { isActive: true });
+    }
+
+    async remove(id: string): Promise<void> {
+        const result = await this.userModel.findByIdAndDelete(id);
+        if (!result) {
+            throw new NotFoundException('User not found');
+        }
+    }
+
+    /**
+     * Search for users by nickname or email
+     * @param query - Search query (nickname or email)
+     * @param excludeUserId - Optional user ID to exclude from results (e.g., current user)
+     */
+    async searchUsers(query: string, excludeUserId?: string): Promise<UserDocument[]> {
+        const searchRegex = new RegExp(query, 'i'); // Case-insensitive search
+
+        const filter: any = {
+            $or: [
+                { nickname: searchRegex },
+                { email: searchRegex },
+            ],
+            isActive: true, // Only return active users
+        };
+
+        // Exclude specific user (e.g., current user)
+        if (excludeUserId) {
+            filter._id = { $ne: excludeUserId };
+        }
+
+        return this.userModel
+            .find(filter)
+            .select('_id nickname email') // Only return necessary fields
+            .limit(20) // Limit results to prevent performance issues
+            .exec();
+    }
 }

@@ -52,4 +52,8 @@ export class PlayerService {
 
         return profile;
     }
+
+    async findAll(): Promise<PlayerProfileDocument[]> {
+        return this.playerProfileModel.find().populate('userId').exec();
+    }
 }

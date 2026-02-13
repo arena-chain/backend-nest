@@ -3,6 +3,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/user.module';
 import { PlayerModule } from './player/player.module';
@@ -19,11 +21,20 @@ import { RankModule } from './rank/rank.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { ChatModule } from './chat/chat.module';
 import { NotificationModule } from './notification/notification.module';
+import { FriendshipModule } from './friendship/friendship.module';
+import { VideoModule } from './video/video.module';
+import { HighlightsModule } from './highlights/highlights.module';
+import { TicketsModule } from './tickets/tickets.module';
+import { ReservationModule } from './reservation/reservation.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/arenachain'),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     AuthModule,
     UsersModule,
     PlayerModule,
@@ -40,6 +51,11 @@ import { NotificationModule } from './notification/notification.module';
     CatalogModule,
     ChatModule,
     NotificationModule,
+    FriendshipModule,
+    VideoModule,
+    HighlightsModule,
+    TicketsModule,
+    ReservationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

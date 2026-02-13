@@ -10,6 +10,13 @@ import { Types } from 'mongoose';
 export class TeamManagerController {
     constructor(private readonly teamManagerService: TeamManagerService) { }
 
+    @Get()
+    @ApiOperation({ summary: 'Get all team managers' })
+    @ApiResponse({ status: 200, description: 'Return all team managers' })
+    findAll() {
+        return this.teamManagerService.findAll();
+    }
+
     @Post()
     @ApiOperation({ summary: 'Create a team manager profile' })
     @ApiResponse({ status: 201, description: 'Team manager profile created successfully' })

@@ -77,12 +77,14 @@ export class AuthController {
           id: '507f1f77bcf86cd799439011',
           email: 'user@example.com',
           nickname: 'PlayerOne',
-          role: 'player',
-          profile: {
-            isPro: false,
-            isVerified: false,
-            elo: 1000,
-            rank: 'Unranked'
+          roles: ['player'],
+          profiles: {
+            player: {
+              isPro: false,
+              isVerified: false,
+              elo: 1000,
+              rank: 'Unranked'
+            }
           }
         }
       }

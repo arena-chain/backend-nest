@@ -62,7 +62,7 @@ export class AuthService {
       isVerified: dto.isVerified,
     });
 
-    return this.generateTokens(user._id.toString(), user.email, UserRole.PLAYER);
+    return this.generateTokens(user._id.toString(), user.email, [UserRole.PLAYER]);
   }
 
   async registerTeamManager(dto: RegisterTeamManagerDto) {
@@ -79,7 +79,7 @@ export class AuthService {
       organizationName: dto.organizationName,
     });
 
-    return this.generateTokens(user._id.toString(), user.email, UserRole.TEAM_MANAGER);
+    return this.generateTokens(user._id.toString(), user.email, [UserRole.TEAM_MANAGER]);
   }
 
   async registerReferee(dto: RegisterRefereeDto) {
@@ -96,7 +96,7 @@ export class AuthService {
       level: dto.level,
     });
 
-    return this.generateTokens(user._id.toString(), user.email, UserRole.REFEREE);
+    return this.generateTokens(user._id.toString(), user.email, [UserRole.REFEREE]);
   }
 
   async registerAdmin(dto: RegisterAdminDto) {
@@ -114,7 +114,7 @@ export class AuthService {
       permissions: dto.permissions,
     });
 
-    return this.generateTokens(user._id.toString(), user.email, UserRole.ADMIN);
+    return this.generateTokens(user._id.toString(), user.email, [UserRole.ADMIN]);
   }
 
   async login(dto: LoginDto) {
@@ -124,33 +124,51 @@ export class AuthService {
 
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    // Determine user's role by checking which profile exists
-    let role: UserRole;
-    let profile: any;
+    // Check all profiles to determine roles
+    const roles: UserRole[] = [];
+    const profiles: any = {};
 
+    // Check Player
     try {
-      profile = await this.playerService.findByUserId(user._id);
-      role = UserRole.PLAYER;
-    } catch {
-      try {
-        profile = await this.teamManagerService.findByUserId(user._id);
-        role = UserRole.TEAM_MANAGER;
-      } catch {
-        try {
-          profile = await this.refereeService.findByUserId(user._id);
-          role = UserRole.REFEREE;
-        } catch {
-          try {
-            profile = await this.adminService.findByUserId(user._id);
-            role = UserRole.ADMIN;
-          } catch {
-            throw new UnauthorizedException('No profile found for user');
-          }
-        }
+      const playerProfile = await this.playerService.findByUserId(user._id);
+      if (playerProfile) {
+        roles.push(UserRole.PLAYER);
+        profiles.player = playerProfile;
       }
+    } catch (e) { }
+
+    // Check Team Manager
+    try {
+      const teamManagerProfile = await this.teamManagerService.findByUserId(user._id);
+      if (teamManagerProfile) {
+        roles.push(UserRole.TEAM_MANAGER);
+        profiles.teamManager = teamManagerProfile;
+      }
+    } catch (e) { }
+
+    // Check Referee
+    try {
+      const refereeProfile = await this.refereeService.findByUserId(user._id);
+      if (refereeProfile) {
+        roles.push(UserRole.REFEREE);
+        profiles.referee = refereeProfile;
+      }
+    } catch (e) { }
+
+    // Check Admin
+    try {
+      const adminProfile = await this.adminService.findByUserId(user._id);
+      if (adminProfile) {
+        roles.push(UserRole.ADMIN);
+        profiles.admin = adminProfile;
+      }
+    } catch (e) { }
+
+    if (roles.length === 0) {
+      throw new UnauthorizedException('No profile found for user');
     }
 
-    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    const tokens = await this.generateTokens(user._id.toString(), user.email, roles);
 
     return {
       ...tokens,
@@ -158,14 +176,14 @@ export class AuthService {
         id: user._id,
         email: user.email,
         nickname: user.nickname,
-        role,
-        profile,
+        roles, // Return array of roles
+        profiles, // Return object with all profiles
       },
     };
   }
 
-  private async generateTokens(userId: string, email: string, role: UserRole) {
-    const payload = { sub: userId, email, role };
+  private async generateTokens(userId: string, email: string, roles: UserRole[]) {
+    const payload = { sub: userId, email, roles };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       expiresIn: '15m',

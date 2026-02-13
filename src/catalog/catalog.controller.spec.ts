@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GameController } from './game.controller';
-import { GameService } from './game.service';
+import { CatalogController } from './catalog.controller';
+import { CatalogService } from './catalog.service';
 
-describe('GameController', () => {
-  let controller: GameController;
+describe('CatalogController', () => {
+  let controller: CatalogController;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [GameController],
-      providers: [GameService],
+      controllers: [CatalogController],
+      providers: [CatalogService],
     }).compile();
 
-    controller = module.get<GameController>(GameController);
+    controller = module.get<CatalogController>(CatalogController);
   });
 
   it('should be defined', () => {

@@ -49,4 +49,8 @@ export class AdminService {
 
         return profile;
     }
+
+    async findAll(): Promise<AdminProfileDocument[]> {
+        return this.adminProfileModel.find().populate('userId').exec();
+    }
 }
