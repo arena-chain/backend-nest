@@ -10,6 +10,13 @@ import { Types } from 'mongoose';
 export class RefereeController {
     constructor(private readonly refereeService: RefereeService) { }
 
+    @Get()
+    @ApiOperation({ summary: 'Get all referee profiles' })
+    @ApiResponse({ status: 200, description: 'Return all referee profiles' })
+    findAll() {
+        return this.refereeService.findAll();
+    }
+
     @Post()
     @ApiOperation({ summary: 'Create a referee profile' })
     @ApiResponse({ status: 201, description: 'Referee profile created successfully' })

@@ -27,10 +27,11 @@ export class PlayerService {
     }
 
     async findByUserId(userId: string | Types.ObjectId): Promise<PlayerProfileDocument> {
-        const profile = await this.playerProfileModel.findOne({ userId });
+        const id = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+        const profile = await this.playerProfileModel.findOne({ userId: id });
 
         if (!profile) {
-            throw new NotFoundException('Player profile not found');
+            throw new NotFoundException(`Player profile not found for user ${id}`);
         }
 
         return profile;
@@ -40,8 +41,9 @@ export class PlayerService {
         userId: string | Types.ObjectId,
         updateData: Partial<PlayerProfile>
     ): Promise<PlayerProfileDocument> {
+        const id = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
         const profile = await this.playerProfileModel.findOneAndUpdate(
-            { userId },
+            { userId: id },
             updateData,
             { new: true },
         );
@@ -51,5 +53,9 @@ export class PlayerService {
         }
 
         return profile;
+    }
+
+    async findAll(): Promise<PlayerProfileDocument[]> {
+        return this.playerProfileModel.find().populate('userId').exec();
     }
 }

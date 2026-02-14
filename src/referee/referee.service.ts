@@ -50,4 +50,8 @@ export class RefereeService {
 
         return profile;
     }
+
+    async findAll(): Promise<RefereeProfileDocument[]> {
+        return this.refereeProfileModel.find().populate('userId').exec();
+    }
 }

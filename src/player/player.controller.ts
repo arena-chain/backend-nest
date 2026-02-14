@@ -10,6 +10,13 @@ import { Types } from 'mongoose';
 export class PlayerController {
     constructor(private readonly playerService: PlayerService) { }
 
+    @Get()
+    @ApiOperation({ summary: 'Get all player profiles' })
+    @ApiResponse({ status: 200, description: 'Return all player profiles' })
+    findAll() {
+        return this.playerService.findAll();
+    }
+
     @Post()
     @ApiOperation({ summary: 'Create a player profile' })
     @ApiResponse({ status: 201, description: 'Player profile created successfully' })

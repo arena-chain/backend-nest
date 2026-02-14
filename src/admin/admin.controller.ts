@@ -10,6 +10,13 @@ import { Types } from 'mongoose';
 export class AdminController {
     constructor(private readonly adminService: AdminService) { }
 
+    @Get()
+    @ApiOperation({ summary: 'Get all admin profiles' })
+    @ApiResponse({ status: 200, description: 'Return all admin profiles' })
+    findAll() {
+        return this.adminService.findAll();
+    }
+
     @Post()
     @ApiOperation({ summary: 'Create an admin profile' })
     @ApiResponse({ status: 201, description: 'Admin profile created successfully' })

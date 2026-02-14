@@ -21,6 +21,9 @@ export class PlayerProfile {
     @Prop({ default: 'Unranked' })
     rank: string;
 
+    @Prop({ default: 0 })
+    points: number;
+
     @Prop({ type: Object, default: {} })
     stats: Record<string, any>;
 }

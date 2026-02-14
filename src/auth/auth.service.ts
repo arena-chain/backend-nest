@@ -97,6 +97,7 @@ export class AuthService {
         email: dto.email,
         passwordHash: hash,
         nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
         role: UserRole.PLAYER,
         roleData: { isPro: dto.isPro, isVerified: dto.isVerified },
         otp,
@@ -125,6 +126,7 @@ export class AuthService {
         email: dto.email,
         passwordHash: hash,
         nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
         role: UserRole.TEAM_MANAGER,
         roleData: { organizationName: dto.organizationName },
         otp,
@@ -153,6 +155,7 @@ export class AuthService {
         email: dto.email,
         passwordHash: hash,
         nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
         role: UserRole.REFEREE,
         roleData: { level: dto.level },
         otp,
@@ -181,6 +184,7 @@ export class AuthService {
         email: dto.email,
         passwordHash: hash,
         nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
         role: UserRole.ADMIN,
         roleData: { adminLevel: dto.adminLevel, permissions: dto.permissions },
         otp,
@@ -255,6 +259,8 @@ export class AuthService {
         email: pending.email,
         password: pending.passwordHash,
         nickname: pending.nickname,
+        region: pending.region,
+        role: pending.role,
       });
 
       // Create profile based on role
@@ -413,6 +419,7 @@ export class AuthService {
           email,
           nickname: `${firstName} ${lastName}`,
           googleId: id,
+          role: UserRole.PLAYER,
         });
 
         // Create player profile by default
@@ -423,16 +430,53 @@ export class AuthService {
       }
     }
 
-    // Determine role (simplified, assuming we check profiles)
-    let role = UserRole.PLAYER; // Default
+    // Determine role (check if user is admin, else default to player)
+    let role = UserRole.PLAYER;
     try {
-      await this.adminService.findByUserId(user._id);
-      role = UserRole.ADMIN;
+      const admin = await this.adminService.findByUserId(user._id);
+      if (admin) role = UserRole.ADMIN;
     } catch {
-      // keep default
+      // stay player
     }
 
-    return this.generateTokens(user._id.toString(), user.email, role);
+    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    return tokens;
+  }
+
+  async steamLogin(req: any) {
+    if (!req.user) {
+      throw new BadRequestException('No user from steam');
+    }
+
+    const { steamId, nickname } = req.user;
+    let user = await this.usersService.findBySteamId(steamId);
+
+    if (!user) {
+      // Create new user
+      user = await this.usersService.createWithSteam({
+        nickname,
+        steamId,
+        role: UserRole.PLAYER,
+      });
+
+      // Create player profile by default
+      await this.playerService.create(user._id as Types.ObjectId, {
+        isPro: false,
+        isVerified: false,
+      });
+    }
+
+    // Determine role
+    let role = UserRole.PLAYER;
+    try {
+      const admin = await this.adminService.findByUserId(user._id);
+      if (admin) role = UserRole.ADMIN;
+    } catch {
+      // stay player
+    }
+
+    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    return tokens;
   }
 
   async googleMobileLogin(token: string) {
@@ -499,6 +543,7 @@ export class AuthService {
           email,
           nickname: name || email.split('@')[0],
           googleId,
+          role: UserRole.PLAYER,
         });
 
         // Create player profile by default
@@ -551,15 +596,74 @@ export class AuthService {
     };
   }
 
+  async getProfile(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    let role: UserRole;
+    let profile: any;
+
+    try {
+      profile = await this.playerService.findByUserId(user._id);
+      role = UserRole.PLAYER;
+    } catch {
+      try {
+        profile = await this.teamManagerService.findByUserId(user._id);
+        role = UserRole.TEAM_MANAGER;
+      } catch {
+        try {
+          profile = await this.refereeService.findByUserId(user._id);
+          role = UserRole.REFEREE;
+        } catch {
+          try {
+            profile = await this.adminService.findByUserId(user._id);
+            role = UserRole.ADMIN;
+          } catch {
+            role = UserRole.PLAYER; // Fallback
+          }
+        }
+      }
+    }
+
+    return {
+      _id: user._id,
+      email: user.email,
+      nickname: user.nickname,
+      country: user.country,
+      avatar: user.avatar,
+      role,
+      isEmailVerified: user.isEmailVerified,
+    };
+  }
+
+  async updateProfile(email: string, updateData: { nickname?: string; country?: string; avatar?: string }) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    const updatedUser = await this.usersService.update(user._id.toString(), updateData);
+
+    return {
+      message: 'Profile updated successfully',
+      user: {
+        _id: updatedUser._id,
+        email: updatedUser.email,
+        nickname: updatedUser.nickname,
+        country: updatedUser.country,
+        avatar: updatedUser.avatar,
+        isEmailVerified: updatedUser.isEmailVerified,
+      },
+    };
+  }
+
   private async generateTokens(userId: string, email: string, role: UserRole) {
     const payload = { sub: userId, email, role };
 
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '15h',
+      expiresIn: '7d', // 7 days for development to avoid 401
     });
 
     const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '7d',
+      expiresIn: '30d',
     });
 
     await this.usersService.saveRefreshToken(userId, refreshToken);

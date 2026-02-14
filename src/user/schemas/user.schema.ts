@@ -1,6 +1,7 @@
 // src/user/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { UserRole } from '../../common/enums/role.enum';
 
 export type UserDocument = User & Document;
 
@@ -14,6 +15,9 @@ export class User {
 
     @Prop({ required: true, trim: true })
     nickname: string;
+
+    @Prop({ default: 'player' })
+    role: string;
 
     @Prop({ default: true })
     isActive: boolean;
@@ -35,6 +39,15 @@ export class User {
 
     @Prop({ unique: true, sparse: true })
     googleId?: string;
+
+    @Prop({ unique: true, sparse: true })
+    steamId?: string;
+
+    @Prop({ default: 'EUROPE' })
+    region: string;
+
+    @Prop()
+    avatar?: string;
 
     @Prop()
     refreshToken?: string;

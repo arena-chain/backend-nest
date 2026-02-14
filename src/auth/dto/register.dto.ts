@@ -37,4 +37,12 @@ export class RegisterDto {
     @IsEnum(UserRole)
     @IsOptional()
     role?: UserRole;
+
+    @ApiPropertyOptional({
+        example: 'EUROPE',
+        description: 'User region (EUROPE, AFRICA, ASIA, AMERICAS, etc.)',
+    })
+    @IsString()
+    @IsOptional()
+    region?: string;
 }

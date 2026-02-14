@@ -9,6 +9,7 @@ import { AdminModule } from '../admin/admin.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { GoogleStrategy } from './google.strategy';
+import { SteamStrategy } from './steam.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Registration, RegistrationSchema } from './schemas/registration.schema';
@@ -31,7 +32,7 @@ import { Registration, RegistrationSchema } from './schemas/registration.schema'
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, SteamStrategy],
   exports: [AuthService],
 })
 export class AuthModule { }

@@ -1,5 +1,5 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body, Get, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Req, Res, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -12,11 +12,15 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(
+    private authService: AuthService,
+    private configService: ConfigService
+  ) { }
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user (generic - requires role)' })
@@ -126,8 +130,77 @@ export class AuthController {
   @ApiOperation({ summary: 'Google Auth callback' })
   async googleAuthRedirect(@Req() req, @Res() res) {
     const tokens = await this.authService.googleLogin(req);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    return res.redirect(`${frontendUrl}/login?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+
+    return res.send(`
+      <html>
+        <head>
+          <title>Auth Success</title>
+        </head>
+        <body>
+          <script>
+            const urlParams = "?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}&source=google";
+            window.location.href = "arenachain://success" + urlParams;
+            setTimeout(() => {
+              window.location.href = "${frontendUrl}/login" + urlParams;
+            }, 500);
+          </script>
+          <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+            <h2>Connection Successful!</h2>
+            <p>Redirecting you back to the arena...</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  @Get('steam')
+  @UseGuards(AuthGuard('steam'))
+  @ApiOperation({ summary: 'Login with Steam' })
+  async steamAuth(@Req() req) { }
+
+  @Get('steam/return')
+  @UseGuards(AuthGuard('steam'))
+  @ApiOperation({ summary: 'Steam Auth callback' })
+  async steamAuthRedirect(@Req() req, @Res() res) {
+    const tokens = await this.authService.steamLogin(req);
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+
+    return res.send(`
+      <html>
+        <head>
+          <title>Auth Success</title>
+        </head>
+        <body>
+          <script>
+            const urlParams = "?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}&source=steam";
+            window.location.href = "arenachain://success" + urlParams;
+            setTimeout(() => {
+              window.location.href = "${frontendUrl}/login" + urlParams;
+            }, 500);
+          </script>
+          <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+            <h2>Connection Successful!</h2>
+            <p>Redirecting you back to the arena...</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  @Get('profile')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get current user profile' })
+  async getProfile(@Req() req) {
+    return this.authService.getProfile(req.user.email);
+  }
+
+  @Patch('profile')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  async updateProfile(@Req() req, @Body() updateData: { nickname?: string; country?: string; avatar?: string }) {
+    return this.authService.updateProfile(req.user.email, updateData);
   }
 
   @Post('google/mobile')

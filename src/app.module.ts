@@ -20,6 +20,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { ChatModule } from './chat/chat.module';
 import { NotificationModule } from './notification/notification.module';
 import { MailModule } from './mail/mail.module';
+import { LeagueModule } from './league/league.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { MailModule } from './mail/mail.module';
     StreamModule,
     ChannelModule,
     LigueModule,
+    LeagueModule,
     GamesModule,
     AbonnementModule,
     TournementsModule,

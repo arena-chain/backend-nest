@@ -49,4 +49,8 @@ export class TeamManagerService {
 
         return profile;
     }
+
+    async findAll(): Promise<TeamManagerProfileDocument[]> {
+        return this.teamManagerProfileModel.find().populate('userId').exec();
+    }
 }

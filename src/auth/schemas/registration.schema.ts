@@ -15,6 +15,9 @@ export class Registration {
     @Prop({ required: true })
     nickname: string;
 
+    @Prop({ default: 'EUROPE' })
+    region: string;
+
     @Prop({ required: true, enum: UserRole })
     role: string;
 
