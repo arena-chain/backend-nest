@@ -64,6 +64,23 @@ export class AuthController {
     return this.authService.registerAdmin(dto);
   }
 
+  @Post('refresh')
+  @ApiOperation({ summary: 'Refresh access token using a valid refresh token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Tokens refreshed successfully',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  refreshTokens(@Body() body: { refreshToken: string }) {
+    return this.authService.refreshTokens(body.refreshToken);
+  }
+
   @Post('login')
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({

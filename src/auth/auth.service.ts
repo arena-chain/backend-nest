@@ -211,6 +211,27 @@ export class AuthService {
     };
   }
 
+  async refreshTokens(refreshToken: string) {
+    try {
+      // Verify the refresh token is a valid JWT
+      const payload = await this.jwtService.verifyAsync(refreshToken);
+
+      // Check that the user exists and the stored refresh token matches
+      const user = await this.usersService.findById(payload.sub);
+      if (!user || user.refreshToken !== refreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // Determine the user's current roles (they may have changed)
+      const roles: UserRole[] = payload.roles ?? [];
+
+      // Generate fresh token pair
+      return this.generateTokens(user._id.toString(), user.email, roles);
+    } catch (e) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
   private async generateTokens(userId: string, email: string, roles: UserRole[]) {
     const payload = { sub: userId, email, roles };
 

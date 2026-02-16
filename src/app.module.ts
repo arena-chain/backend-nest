@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/user.module';
@@ -28,6 +29,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { ReservationModule } from './reservation/reservation.module';
 import { TeamModule } from './team/team.module';
 import { RiotApiModule } from './riot-api/riot-api.module';
+import { MatchmakingModule } from './matchmaking/matchmaking.module';
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { RiotApiModule } from './riot-api/riot-api.module';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
     PlayerModule,
@@ -60,6 +63,7 @@ import { RiotApiModule } from './riot-api/riot-api.module';
     ReservationModule,
     TeamModule,
     RiotApiModule,
+    MatchmakingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
