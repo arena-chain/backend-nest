@@ -11,8 +11,8 @@ export class PlayerController {
     constructor(private readonly playerService: PlayerService) { }
 
     @Get()
-    @ApiOperation({ summary: 'Get all players' })
-    @ApiResponse({ status: 200, description: 'Return all players' })
+    @ApiOperation({ summary: 'Get all player profiles' })
+    @ApiResponse({ status: 200, description: 'Return all player profiles' })
     findAll() {
         return this.playerService.findAll();
     }

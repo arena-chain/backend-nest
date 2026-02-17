@@ -34,3 +34,4 @@ export class Catalog {
 }
 
 export const CatalogSchema = SchemaFactory.createForClass(Catalog);
+
