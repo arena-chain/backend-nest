@@ -61,4 +61,23 @@ export class TicketsController {
   remove(@Param('id') id: string) {
     return this.ticketsService.remove(id);
   }
+
+  @Post('validate')
+  @ApiOperation({ summary: 'Validate and mark ticket as used (QR code scanning)' })
+  @ApiResponse({ status: 200, description: 'Ticket validation result' })
+  validateTicket(@Body('ticketNumber') ticketNumber: string) {
+    return this.ticketsService.validateTicket(ticketNumber);
+  }
+
+  @Get('tournament/:tournamentId')
+  @ApiOperation({ summary: 'Get all tickets for a tournament' })
+  findByTournament(@Param('tournamentId') tournamentId: string) {
+    return this.ticketsService.findByTournament(tournamentId);
+  }
+
+  @Get('tournament/:tournamentId/stats')
+  @ApiOperation({ summary: 'Get ticket statistics for a tournament' })
+  getTicketStats(@Param('tournamentId') tournamentId: string) {
+    return this.ticketsService.getTicketStats(tournamentId);
+  }
 }

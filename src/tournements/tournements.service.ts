@@ -2,16 +2,19 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateTournementDto, TournamentStatus, TournamentType } from './dto/create-tournement.dto';
+import { AddTicketTypesDto } from './dto/add-ticket-types.dto';
 import { UpdateTournementDto } from './dto/update-tournement.dto';
 import { Tournament, TournamentDocument } from './schemas/tournament.schema';
 import { FriendshipService } from '../friendship/friendship.service';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from '../notification/dto/create-notification.dto';
+
+import { TicketTypeDefinition, TicketTypeDefinitionDocument } from '../tickets/schemas/ticket-type.schema';
 
 @Injectable()
 export class TournementsService {
   constructor(
     @InjectModel(Tournament.name) private tournamentModel: Model<TournamentDocument>,
+    @InjectModel(TicketTypeDefinition.name) private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
     private friendshipService: FriendshipService,
     private notificationService: NotificationService,
   ) { }
@@ -222,5 +225,85 @@ export class TournementsService {
     await tournament.save();
 
     return await this.findOne(tournamentId);
+  }
+
+  async addTicketTypes(tournamentId: string, { ticketTypes }: AddTicketTypesDto): Promise<Tournament> {
+    if (!Types.ObjectId.isValid(tournamentId)) {
+      throw new BadRequestException('Invalid tournament ID');
+    }
+
+    const tournament = await this.tournamentModel.findById(tournamentId);
+
+    if (!tournament) {
+      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+    }
+
+    // 1. Create separate TicketTypeDefinition documents
+    const createdDefinitions = await Promise.all(
+      ticketTypes.map(async (ticketDto) => {
+        const definition = new this.ticketTypeDefinitionModel({
+          ...ticketDto,
+          tournament: new Types.ObjectId(tournamentId) // Link it to tournament
+        });
+        return await definition.save();
+      })
+    );
+
+    // 2. Clear existing (if any) and assign new IDs
+    // Note: We might want to keep existing ones via different endpoint,
+    // but for "set ticket types" behavior, replacing is standard.
+    // Ideally we should delete old orphaned definitions if they are exclusive to this tournament.
+    // For now, simpler approach: just overwrite the reference list.
+
+    tournament.ticketTypes = createdDefinitions.map(def => def._id as any);
+
+    await tournament.save();
+
+    return await this.findOne(tournamentId);
+  }
+
+  async getAvailableTickets(tournamentId: string) {
+    if (!Types.ObjectId.isValid(tournamentId)) {
+      throw new BadRequestException('Invalid tournament ID');
+    }
+
+    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
+
+    if (!tournament) {
+      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+    }
+
+    if (!tournament.ticketTypes || tournament.ticketTypes.length === 0) {
+      return {
+        tournament: {
+          id: tournament._id,
+          name: tournament.name,
+          startDate: tournament.startDate,
+          endDate: tournament.endDate,
+          bannerImageUrl: tournament.bannerImageUrl
+        },
+        availableTickets: []
+      };
+    }
+
+    // Map populated documents
+    const availableTickets = (tournament.ticketTypes as any[]).map(ticketType => ({
+      id: ticketType._id, // Include ID for client-side reference
+      name: ticketType.name,
+      price: ticketType.price,
+      capacity: ticketType.capacity,
+      bundles: ticketType.bundles || []
+    }));
+
+    return {
+      tournament: {
+        id: tournament._id,
+        name: tournament.name,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate,
+        bannerImageUrl: tournament.bannerImageUrl
+      },
+      availableTickets
+    };
   }
 }

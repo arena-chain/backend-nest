@@ -12,6 +12,7 @@ import { NotificationModule } from '../notification/notification.module';
     MongooseModule.forFeature([
       { name: Tournament.name, schema: TournamentSchema },
       { name: 'Team', schema: TeamSchema },
+      { name: 'TicketTypeDefinition', schema: require('../tickets/schemas/ticket-type.schema').TicketTypeDefinitionSchema },
     ]),
     FriendshipModule,
     NotificationModule,

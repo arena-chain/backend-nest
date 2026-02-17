@@ -25,7 +25,9 @@ import { FriendshipModule } from './friendship/friendship.module';
 import { VideoModule } from './video/video.module';
 import { HighlightsModule } from './highlights/highlights.module';
 import { TicketsModule } from './tickets/tickets.module';
-import { ReservationModule } from './reservation/reservation.module';
+import { MissionModule } from './mission/mission.module';
+import { AchievementsModule } from './achievements/achievements.module';
+import { PartnershipsModule } from './partnerships/partnerships.module';
 
 @Module({
   imports: [
@@ -55,7 +57,9 @@ import { ReservationModule } from './reservation/reservation.module';
     VideoModule,
     HighlightsModule,
     TicketsModule,
-    ReservationModule,
+    MissionModule,
+    AchievementsModule,
+    PartnershipsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

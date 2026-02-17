@@ -4,27 +4,51 @@ import { Model, Types } from 'mongoose';
 import * as QRCode from 'qrcode';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { Ticket, TicketDocument, TicketStatus } from './entities/ticket.entity';
+import { Ticket, TicketDocument, TicketStatus } from './schemas/ticket.schema';
 import { Tournament, TournamentDocument } from '../tournements/schemas/tournament.schema';
+
+import { TicketTypeDefinition, TicketTypeDefinitionDocument } from './schemas/ticket-type.schema';
+import { CreateTicketTypeDefinitionDto } from './dto/create-ticket-type.dto';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
     @InjectModel(Tournament.name) private tournamentModel: Model<TournamentDocument>,
+    @InjectModel(TicketTypeDefinition.name) private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
   ) { }
+
+  async createTicketTypeDefinition(createDto: CreateTicketTypeDefinitionDto): Promise<TicketTypeDefinition> {
+    const newDefinition = new this.ticketTypeDefinitionModel(createDto);
+    return await newDefinition.save();
+  }
+
+  async findAllTicketTypeDefinitions(): Promise<TicketTypeDefinition[]> {
+    return await this.ticketTypeDefinitionModel.find().exec();
+  }
+
+  async findTicketTypeDefinition(id: string): Promise<TicketTypeDefinition> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ticket type definition ID');
+    }
+    const def = await this.ticketTypeDefinitionModel.findById(id).exec();
+    if (!def) throw new NotFoundException('Ticket Type Definition not found');
+    return def;
+  }
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket[]> {
     const { tournament: tournamentId, type: ticketType, quantity } = createTicketDto;
 
-    // 1. Fetch Tournament
-    const tournament = await this.tournamentModel.findById(tournamentId).exec();
+    // 1. Fetch Tournament with ticket types populated
+    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
     if (!tournament) {
       throw new NotFoundException('Tournament not found');
     }
 
     // 2. Validate Ticket Type & Capacity
-    const typeConfig = tournament.ticketTypes?.find(t => t.name === ticketType);
+    // With populated field, ticketTypes is array of documents
+    const typeConfig = (tournament.ticketTypes as any[]).find((t: any) => t.name === ticketType);
+
     if (!typeConfig) {
       throw new BadRequestException(`Ticket type '${ticketType}' not found for this tournament`);
     }
@@ -173,5 +197,138 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
     return { message: 'Ticket deleted successfully' };
+  }
+
+  /**
+   * Validate and mark a ticket as used (for QR code scanning)
+   */
+  async validateTicket(ticketNumber: string): Promise<{
+    success: boolean;
+    message: string;
+    ticket?: Ticket
+  }> {
+    const ticket = await this.ticketModel
+      .findOne({ ticketNumber })
+      .populate('tournament', 'name startDate endDate')
+      .populate('user', 'username email')
+      .exec();
+
+    if (!ticket) {
+      return {
+        success: false,
+        message: 'Ticket not found'
+      };
+    }
+
+    // Check if already used
+    if (ticket.status === TicketStatus.USED) {
+      return {
+        success: false,
+        message: `Ticket already used on ${ticket.usedAt?.toISOString()}`,
+        ticket
+      };
+    }
+
+    // Check if cancelled
+    if (ticket.status === TicketStatus.CANCELLED) {
+      return {
+        success: false,
+        message: 'Ticket has been cancelled',
+        ticket
+      };
+    }
+
+    // Check if expired
+    if (ticket.expiresAt && ticket.expiresAt < new Date()) {
+      await this.ticketModel.findByIdAndUpdate(ticket._id, { status: TicketStatus.EXPIRED });
+      return {
+        success: false,
+        message: 'Ticket has expired',
+        ticket
+      };
+    }
+
+    // Mark as used
+    ticket.status = TicketStatus.USED;
+    ticket.usedAt = new Date();
+    await ticket.save();
+
+    return {
+      success: true,
+      message: 'Ticket validated successfully',
+      ticket
+    };
+  }
+
+  /**
+   * Get all tickets for a specific tournament
+   */
+  async findByTournament(tournamentId: string): Promise<Ticket[]> {
+    if (!Types.ObjectId.isValid(tournamentId)) {
+      throw new BadRequestException('Invalid tournament ID');
+    }
+
+    return await this.ticketModel
+      .find({ tournament: new Types.ObjectId(tournamentId) })
+      .populate('user', 'username email')
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  /**
+   * Get ticket statistics for a tournament
+   */
+  async getTicketStats(tournamentId: string): Promise<{
+    totalSold: number;
+    totalRevenue: number;
+    byType: Array<{
+      type: string;
+      sold: number;
+      revenue: number;
+      capacity: number;
+      available: number;
+    }>;
+    byStatus: Record<string, number>;
+  }> {
+    if (!Types.ObjectId.isValid(tournamentId)) {
+      throw new BadRequestException('Invalid tournament ID');
+    }
+
+    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
+    if (!tournament) {
+      throw new NotFoundException('Tournament not found');
+    }
+
+    const tickets = await this.ticketModel
+      .find({ tournament: new Types.ObjectId(tournamentId) })
+      .exec();
+
+    const totalSold = tickets.length;
+    const totalRevenue = tickets.reduce((sum, ticket) => sum + ticket.price, 0);
+
+    // Statistics by type
+    const byType = (tournament.ticketTypes as any[] || []).map((typeConfig: any) => {
+      const typeTickets = tickets.filter(t => t.type === typeConfig.name && t.status !== TicketStatus.CANCELLED);
+      return {
+        type: typeConfig.name,
+        sold: typeTickets.length,
+        revenue: typeTickets.reduce((sum, t) => sum + t.price, 0),
+        capacity: typeConfig.capacity,
+        available: typeConfig.capacity - typeTickets.length
+      };
+    });
+
+    // Statistics by status
+    const byStatus: Record<string, number> = {};
+    Object.values(TicketStatus).forEach(status => {
+      byStatus[status] = tickets.filter(t => t.status === status).length;
+    });
+
+    return {
+      totalSold,
+      totalRevenue,
+      byType,
+      byStatus
+    };
   }
 }
