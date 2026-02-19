@@ -1,0 +1,30 @@
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { SeasonTeamStatus } from '../schemas/season-team.schema';
+
+export class CreateLeagueRegistrationDto {
+    @IsString()
+    @IsNotEmpty()
+    seasonId: string;
+
+    @IsString()
+    @IsNotEmpty()
+    teamId: string;
+
+    @IsNumber()
+    @Min(1)
+    @IsOptional()
+    seed?: number;
+
+    @IsEnum(SeasonTeamStatus)
+    @IsOptional()
+    status?: SeasonTeamStatus;
+
+    @IsString()
+    @IsOptional()
+    qualifiedFromSeasonId?: string;
+
+    @IsNumber()
+    @Min(1)
+    @IsOptional()
+    qualifiedViaRank?: number;
+}

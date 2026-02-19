@@ -1,75 +1,36 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
 
-export enum LeagueTier {
-    OFFICIAL = 'OFFICIAL',
-    COMMUNITY = 'COMMUNITY',
-}
+export type LeagueDocument = League & Document;
 
-export enum LeagueMode {
-    SOLO = 'SOLO',
-    TEAM = 'TEAM',
-}
-
-export enum RegionFilter {
-    GLOBAL = 'GLOBAL',
-    CONTINENT = 'CONTINENT',
-    COUNTRY = 'COUNTRY',
-    REGION = 'REGION',
-}
-
-export enum LeagueStatus {
-    UPCOMING = 'UPCOMING',
-    ONGOING = 'ONGOING',
-    FINISHED = 'FINISHED',
+export enum LeagueLevel {
+    INTERNATIONAL = 'INTERNATIONAL',
+    CONTINENTAL = 'CONTINENTAL',
+    NATIONAL = 'NATIONAL',
+    REGIONAL = 'REGIONAL',
 }
 
 @Schema({ timestamps: true })
-export class League extends Document {
+export class League {
     @Prop({ required: true })
     name: string;
 
+    @Prop({ required: true, enum: LeagueLevel })
+    level: LeagueLevel;
+
     @Prop({ required: true })
-    gameId: string; // Reference to game catalog
+    regionId: string;
 
-    @Prop({ default: LeagueTier.OFFICIAL })
-    tier: LeagueTier;
-
-    @Prop({ default: LeagueMode.SOLO })
-    mode: LeagueMode;
-
-    @Prop({ default: RegionFilter.GLOBAL })
-    regionFilter: RegionFilter;
+    @Prop({ required: true })
+    gameId: string;
 
     @Prop()
-    regionValue: string; // e.g., "Europe", "France", "Paris"
+    description?: string;
 
-    @Prop({ required: true })
-    startDate: Date;
-
-    @Prop({ required: true })
-    endDate: Date;
-
-    @Prop({ default: 100 })
-    maxParticipants: number;
-
-    @Prop({ default: 0 })
-    minElo: number;
-
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    createdBy: Types.ObjectId;
-
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }] })
-    supervisedBy: Types.ObjectId[];
-
-    @Prop({ default: LeagueStatus.UPCOMING })
-    status: LeagueStatus;
-
-    @Prop({ type: [{ rank: Number, prize: String, points: Number }] })
-    rewards: { rank: number; prize: string; points: number }[];
-
-    @Prop({ default: false })
-    rewardsDistributed: boolean;
+    @Prop()
+    logoUrl?: string;
 }
 
 export const LeagueSchema = SchemaFactory.createForClass(League);
+LeagueSchema.index({ gameId: 1 });
+LeagueSchema.index({ regionId: 1 });

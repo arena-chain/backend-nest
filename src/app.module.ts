@@ -13,7 +13,6 @@ import { RefereeModule } from './referee/referee.module';
 import { AdminModule } from './admin/admin.module';
 import { StreamModule } from './stream/stream.module';
 import { ChannelModule } from './channel/channel.module';
-import { LigueModule } from './ligue/ligue.module';
 import { GamesModule } from './games/games.module';
 import { AbonnementModule } from './abonnement/abonnement.module';
 import { TournementsModule } from './tournements/tournements.module';
@@ -28,6 +27,14 @@ import { TicketsModule } from './tickets/tickets.module';
 import { MissionModule } from './mission/mission.module';
 import { AchievementsModule } from './achievements/achievements.module';
 import { PartnershipsModule } from './partnerships/partnerships.module';
+import { MailModule } from './mail/mail.module';
+import { LeagueModule } from './league/league.module';
+import { LeagueRegistrationModule } from './league-registration/league-registration.module';
+import { StandingsModule } from './standings/standings.module';
+import { SeasonModule } from './season/season.module';
+import { LeagueRuleModule } from './league-rule/league-rule.module';
+import { RoundModule } from './round/round.module';
+import { MatchModule } from './match/match.module';
 
 @Module({
   imports: [
@@ -45,7 +52,6 @@ import { PartnershipsModule } from './partnerships/partnerships.module';
     AdminModule,
     StreamModule,
     ChannelModule,
-    LigueModule,
     GamesModule,
     AbonnementModule,
     TournementsModule,
@@ -60,6 +66,14 @@ import { PartnershipsModule } from './partnerships/partnerships.module';
     MissionModule,
     AchievementsModule,
     PartnershipsModule,
+    MailModule,
+    LeagueModule,
+    LeagueRegistrationModule,
+    StandingsModule,
+    SeasonModule,
+    LeagueRuleModule,
+    RoundModule,
+    MatchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

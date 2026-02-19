@@ -47,6 +47,9 @@ export class User {
     region: string;
 
     @Prop()
+    country?: string;
+
+    @Prop()
     avatar?: string;
 
     @Prop()
