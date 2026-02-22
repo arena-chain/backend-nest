@@ -36,8 +36,6 @@ export class MatchmakingService {
     ) {}
 
     async joinQueue(userId: string, dto: JoinQueueDto) {
-        // Clean up any stale MATCHED tickets from previous sessions
-        // (e.g., from games that were cancelled or declined)
         await this.ticketModel.updateMany(
             {
                 userId: new Types.ObjectId(userId),
@@ -46,8 +44,6 @@ export class MatchmakingService {
             { $set: { status: 'CANCELLED' } },
         );
 
-        // Cancel any stale PENDING_ACCEPTANCE games the user never
-        // responded to (e.g., app was closed before accepting/declining)
         await this.gameModel.updateMany(
             {
                 'participants.userId': new Types.ObjectId(userId),
@@ -75,10 +71,12 @@ export class MatchmakingService {
             userId: new Types.ObjectId(userId),
             game: dto.game,
             mode: dto.mode,
+            server: dto.server,
             region: dto.region,
             elo,
             status: isScheduled ? 'SCHEDULED' : 'SEARCHING',
             ...(isScheduled && { scheduledAt: new Date(dto.scheduledAt!) }),
+            ...(dto.riotAccountInfo && { riotAccountInfo: dto.riotAccountInfo }),
         });
 
         return ticket;
@@ -118,7 +116,6 @@ export class MatchmakingService {
             updated.status = 'CANCELLED';
             await updated.save();
 
-            // Also cancel the associated matchmaking tickets
             const participantIds = updated.participants.map((p) => p.userId);
             await this.ticketModel.updateMany(
                 {
@@ -169,9 +166,6 @@ export class MatchmakingService {
     }
 
     async getActiveGame(userId: string) {
-        // PENDING_ACCEPTANCE: only within last 60 s (expiration loop handles the rest).
-        // ACCEPTED: only within last 10 min (safety net – normally acknowledged quickly).
-        // IN_PROGRESS games are excluded; they have been acknowledged by the player.
         const pendingCutoff = new Date(Date.now() - 60 * 1000);
         const acceptedCutoff = new Date(Date.now() - 10 * 60 * 1000);
 
@@ -259,6 +253,11 @@ export class MatchmakingService {
         }
     }
 
+    private areRegionsCompatible(r1: string, r2: string): boolean {
+        if (r1 === 'ALL' || r2 === 'ALL') return true;
+        return r1 === r2;
+    }
+
     private async tryMatchForMode(
         mode: string,
         requiredPlayers: number,
@@ -273,20 +272,18 @@ export class MatchmakingService {
             return;
         }
 
-        // Group tickets by region so players are only matched within
-        // the same region (e.g. EUW with EUW, NA with NA).
-        const byRegion = new Map<string, MatchmakingTicketDocument[]>();
+        const byServer = new Map<string, MatchmakingTicketDocument[]>();
         for (const ticket of allTickets) {
-            const region = (ticket.region ?? 'UNKNOWN').toUpperCase();
-            if (!byRegion.has(region)) {
-                byRegion.set(region, []);
+            const server = (ticket.server ?? ticket.region ?? 'UNKNOWN').toUpperCase();
+            if (!byServer.has(server)) {
+                byServer.set(server, []);
             }
-            byRegion.get(region)!.push(ticket);
+            byServer.get(server)!.push(ticket);
         }
 
         const matched = new Set<string>();
 
-        for (const [, tickets] of byRegion) {
+        for (const [, tickets] of byServer) {
             if (tickets.length < requiredPlayers) continue;
 
             for (let i = 0; i + requiredPlayers - 1 < tickets.length; i++) {
@@ -294,6 +291,8 @@ export class MatchmakingService {
 
                 const group: MatchmakingTicketDocument[] = [];
                 group.push(tickets[i]);
+
+                let effectiveRegion = (tickets[i].region ?? 'ALL').toUpperCase();
 
                 for (
                     let j = i + 1;
@@ -306,8 +305,19 @@ export class MatchmakingService {
                     const minElo = Math.min(...elos);
                     const maxElo = Math.max(...elos);
 
-                    if (maxElo - minElo <= eloThreshold) {
+                    if (maxElo - minElo > eloThreshold) continue;
+
+                    const candidateRegion = (tickets[j].region ?? 'ALL').toUpperCase();
+
+                    if (effectiveRegion === 'ALL') {
                         group.push(tickets[j]);
+                        if (candidateRegion !== 'ALL') {
+                            effectiveRegion = candidateRegion;
+                        }
+                    } else {
+                        if (candidateRegion === 'ALL' || candidateRegion === effectiveRegion) {
+                            group.push(tickets[j]);
+                        }
                     }
                 }
 
@@ -340,10 +350,14 @@ export class MatchmakingService {
         const requiredPlayers = group.length;
         const half = Math.ceil(requiredPlayers / 2);
 
+        const hasScheduledTicket = group.some((t) => t.scheduledAt != null);
+
         const participants = group.map((ticket, index) => ({
             userId: ticket.userId,
             team: (index < half ? 'BLUE' : 'RED') as 'BLUE' | 'RED',
             accepted: null,
+            elo: ticket.elo,
+            riotAccountInfo: ticket.riotAccountInfo ?? null,
         }));
 
         const game = await this.gameModel.create({
@@ -351,7 +365,9 @@ export class MatchmakingService {
             match_type: 'MATCHMAKING',
             status: 'PENDING_ACCEPTANCE',
             mode,
+            server: group[0].server,
             region: group[0].region,
+            isScheduled: hasScheduledTicket,
             scheduled_at: new Date(),
             number_of_participant: group.length,
             participants,
@@ -363,7 +379,7 @@ export class MatchmakingService {
         );
 
         this.logger.log(
-            `Match created: ${game._id} | mode=${mode} | players=${group.length}`,
+            `Match created: ${game._id} | mode=${mode} | server=${group[0].server} | players=${group.length}`,
         );
     }
 }

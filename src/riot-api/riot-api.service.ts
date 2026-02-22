@@ -3,6 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { FetchAccountDto, REGION_TO_ROUTING, REGION_TO_MATCH_ROUTING, RiotRegion } from './dto/fetch-account.dto';
+import { PlayerService } from '../player/player.service';
+import { RiotLinkStatus } from '../player/schemas/player-profile.schema';
+import { LinkAccountDto } from './dto/link-account.dto';
 
 interface RiotAccount {
     puuid: string;
@@ -131,6 +134,7 @@ export class RiotApiService {
     constructor(
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
+        private readonly playerService: PlayerService,
     ) {
         const apiKey = this.configService.get<string>('RIOT_API_KEY');
         console.log('RiotApiService: Loading API Key from ConfigService...');
@@ -567,5 +571,109 @@ export class RiotApiService {
             if (error instanceof HttpException) throw error;
             throw new HttpException(`Failed to fetch TFT match details`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // ── Account Linking (Icon-Change Verification) ────────────────────────
+
+    /**
+     * Step 1: Capture current profile icon and store as originalIconId.
+     * Marks the player profile as pending_verification.
+     */
+    async linkAccount(userId: string, dto: LinkAccountDto) {
+        const account = await this.getAccountByRiotId(dto.gameName, dto.tagLine, dto.region);
+        const summoner = await this.getSummonerByPuuid(account.puuid, dto.region);
+
+        await this.playerService.findOrCreateByUserId(userId);
+        await this.playerService.update(userId, {
+            riotPuuid: account.puuid,
+            riotGameName: dto.gameName,
+            riotTagLine: dto.tagLine,
+            riotRegion: dto.region,
+            riotAccountId: summoner.accountId,
+            originalIconId: summoner.profileIconId,
+            riotLinkStatus: RiotLinkStatus.PENDING_VERIFICATION,
+        });
+
+        return {
+            message: 'Account link initiated. Please change your summoner icon in the League client, then click "Verify Game Account".',
+            originalIconId: summoner.profileIconId,
+            summonerName: `${account.gameName}#${account.tagLine}`,
+            status: RiotLinkStatus.PENDING_VERIFICATION,
+        };
+    }
+
+    /**
+     * Step 2: Re-fetch the profile icon and compare with the stored original.
+     * If changed → verified. If same → retry needed.
+     */
+    async verifyAccount(userId: string) {
+        const profile = await this.playerService.findByUserId(userId);
+
+        if (!profile.riotPuuid || profile.riotLinkStatus !== RiotLinkStatus.PENDING_VERIFICATION) {
+            throw new HttpException(
+                'No pending account link found. Please click "Link Game Account" first.',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        const summoner = await this.getSummonerByPuuid(
+            profile.riotPuuid,
+            profile.riotRegion as RiotRegion,
+        );
+
+        const currentIconId = summoner.profileIconId;
+        const originalIconId = profile.originalIconId;
+
+        if (currentIconId !== originalIconId) {
+            await this.playerService.update(userId, {
+                riotLinkStatus: RiotLinkStatus.VERIFIED,
+            });
+
+            return {
+                verified: true,
+                message: 'Account verified successfully! Your Riot account is now linked.',
+                summonerName: `${profile.riotGameName}#${profile.riotTagLine}`,
+            };
+        }
+
+        return {
+            verified: false,
+            message: 'Icon has not changed yet. Please change your summoner icon in the League client and try again.',
+            originalIconId,
+            currentIconId,
+        };
+    }
+
+    /**
+     * Get the current link status for a user.
+     */
+    async getLinkStatus(userId: string) {
+        const profile = await this.playerService.findByUserId(userId);
+
+        return {
+            status: profile.riotLinkStatus || RiotLinkStatus.UNLINKED,
+            riotGameName: profile.riotGameName || null,
+            riotTagLine: profile.riotTagLine || null,
+            riotRegion: profile.riotRegion || null,
+            riotPuuid: profile.riotPuuid || null,
+            originalIconId: profile.originalIconId || null,
+        };
+    }
+
+    /**
+     * Disconnect / unlink the Riot account from the player profile.
+     */
+    async disconnectAccount(userId: string) {
+        await this.playerService.update(userId, {
+            riotPuuid: null,
+            riotGameName: null,
+            riotTagLine: null,
+            riotRegion: null,
+            riotAccountId: null,
+            originalIconId: null,
+            riotLinkStatus: RiotLinkStatus.UNLINKED,
+        } as any);
+
+        return { message: 'Game account disconnected successfully.' };
     }
 }

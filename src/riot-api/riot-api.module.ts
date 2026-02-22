@@ -3,6 +3,7 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { RiotApiController } from './riot-api.controller';
 import { RiotApiService } from './riot-api.service';
+import { PlayerModule } from '../player/player.module';
 
 @Module({
     imports: [
@@ -11,6 +12,7 @@ import { RiotApiService } from './riot-api.service';
             maxRedirects: 5,
         }),
         ConfigModule,
+        PlayerModule,
     ],
     controllers: [RiotApiController],
     providers: [RiotApiService],

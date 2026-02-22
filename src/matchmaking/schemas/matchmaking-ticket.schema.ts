@@ -15,10 +15,23 @@ export class MatchmakingTicket {
     mode: string;
 
     @Prop({ required: true })
+    server: string;
+
+    @Prop({ required: true, default: 'ALL' })
     region: string;
 
     @Prop({ required: true })
     elo: number;
+
+    @Prop({ type: Object, default: null })
+    riotAccountInfo?: {
+        originalIconId: number;
+        riotGameName: string;
+        riotLinkStatus: string;
+        riotPuuid: string;
+        riotRegion: string;
+        riotTagLine: string;
+    } | null;
 
     @Prop({
         enum: ['SEARCHING', 'SCHEDULED', 'MATCHED', 'CANCELLED'],

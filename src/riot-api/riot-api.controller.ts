@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { RiotApiService } from './riot-api.service';
 import { FetchAccountDto, RiotRegion } from './dto/fetch-account.dto';
+import { LinkAccountDto } from './dto/link-account.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Riot API')
@@ -46,5 +47,40 @@ export class RiotApiController {
         @Query('puuid') puuid: string,
     ) {
         return this.riotApiService.getDetailedTftMatchInfo(matchId, region, puuid);
+    }
+
+    // ── Account Linking ───────────────────────────────────────────────────
+
+    @Post('link-account')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Initiate Riot account linking (captures current icon)' })
+    @ApiResponse({ status: 200, description: 'Link initiated — change your icon then verify' })
+    @ApiResponse({ status: 404, description: 'Riot account not found' })
+    linkAccount(@Req() req: any, @Body() dto: LinkAccountDto) {
+        return this.riotApiService.linkAccount(req.user.userId, dto);
+    }
+
+    @Post('verify-account')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Verify Riot account ownership by icon change' })
+    @ApiResponse({ status: 200, description: 'Verification result' })
+    @ApiResponse({ status: 400, description: 'No pending link found' })
+    verifyAccount(@Req() req: any) {
+        return this.riotApiService.verifyAccount(req.user.userId);
+    }
+
+    @Get('link-status')
+    @ApiOperation({ summary: 'Get current Riot account link status' })
+    @ApiResponse({ status: 200, description: 'Current link status' })
+    getLinkStatus(@Req() req: any) {
+        return this.riotApiService.getLinkStatus(req.user.userId);
+    }
+
+    @Post('disconnect-account')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'Disconnect linked Riot account' })
+    @ApiResponse({ status: 200, description: 'Account disconnected successfully' })
+    disconnectAccount(@Req() req: any) {
+        return this.riotApiService.disconnectAccount(req.user.userId);
     }
 }
