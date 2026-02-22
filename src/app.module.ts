@@ -35,6 +35,12 @@ import { SeasonModule } from './season/season.module';
 import { LeagueRuleModule } from './league-rule/league-rule.module';
 import { RoundModule } from './round/round.module';
 import { MatchModule } from './match/match.module';
+import { PrizePoolModule } from './prize-pool/prize-pool.module';
+import { CheckInModule } from './check-in/check-in.module';
+import { SeasonRosterModule } from './season-roster/season-roster.module';
+import { MatchDisputeModule } from './match-dispute/match-dispute.module';
+import { BracketModule } from './bracket/bracket.module';
+import { StageModule } from './stage/stage.module';
 
 @Module({
   imports: [
@@ -74,6 +80,12 @@ import { MatchModule } from './match/match.module';
     LeagueRuleModule,
     RoundModule,
     MatchModule,
+    PrizePoolModule,
+    CheckInModule,
+    SeasonRosterModule,
+    MatchDisputeModule,
+    BracketModule,
+    StageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

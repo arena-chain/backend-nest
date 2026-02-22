@@ -20,7 +20,7 @@ export class RoundService {
      * Each round starts on Monday and ends on Sunday of that week.
      */
     async generateRounds(dto: GenerateRoundsDto): Promise<Round[]> {
-        const { seasonId, startDate, weekCount } = dto;
+        const { seasonId, stageId, startDate, weekCount } = dto;
         const rounds: Round[] = [];
 
         for (let i = 0; i < weekCount; i++) {
@@ -32,6 +32,7 @@ export class RoundService {
 
             const round = await new this.roundModel({
                 seasonId,
+                ...(stageId && { stageId }),
                 roundNumber: i + 1,
                 startDate: roundStart,
                 endDate: roundEnd,
@@ -48,8 +49,14 @@ export class RoundService {
         return this.roundModel.find({ seasonId: leagueId }).sort({ roundNumber: 1 }).exec();
     }
 
-    async findBySeason(seasonId: string): Promise<Round[]> {
-        return this.roundModel.find({ seasonId }).sort({ roundNumber: 1 }).exec();
+    async findBySeason(seasonId: string, stageId?: string): Promise<Round[]> {
+        const filter: any = { seasonId };
+        if (stageId) filter.stageId = stageId;
+        return this.roundModel.find(filter).sort({ roundNumber: 1 }).exec();
+    }
+
+    async findByStage(stageId: string): Promise<Round[]> {
+        return this.roundModel.find({ stageId }).sort({ roundNumber: 1 }).exec();
     }
 
     async findOne(id: string): Promise<Round> {

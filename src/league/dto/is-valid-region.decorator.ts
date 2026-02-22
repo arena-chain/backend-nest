@@ -1,6 +1,6 @@
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 import { LeagueLevel } from '../schemas/league.schema';
-import { CONTINENTS, COUNTRIES } from '../constants/regions.constant';
+import { CONTINENTAL_REGIONS, COUNTRIES } from '../constants/regions.constant';
 
 @ValidatorConstraint({ name: 'IsValidRegion', async: false })
 export class IsValidRegionConstraint implements ValidatorConstraintInterface {
@@ -14,7 +14,7 @@ export class IsValidRegionConstraint implements ValidatorConstraintInterface {
             case LeagueLevel.INTERNATIONAL:
                 return !regionId || regionId === 'Global';
             case LeagueLevel.CONTINENTAL:
-                return CONTINENTS.includes(regionId);
+                return CONTINENTAL_REGIONS.includes(regionId);
             case LeagueLevel.NATIONAL:
                 return COUNTRIES.includes(regionId);
             case LeagueLevel.REGIONAL:
@@ -32,7 +32,7 @@ export class IsValidRegionConstraint implements ValidatorConstraintInterface {
             case LeagueLevel.INTERNATIONAL:
                 return `For INTERNATIONAL leagues, regionId must be 'Global' or empty.`;
             case LeagueLevel.CONTINENTAL:
-                return `For CONTINENTAL leagues, regionId must be a valid continent.`;
+                return `For CONTINENTAL leagues, regionId must be a valid continent or esports region (e.g. EMEA, Americas, Pacific, CN).`;
             case LeagueLevel.NATIONAL:
                 return `For NATIONAL leagues, regionId must be a valid country.`;
             case LeagueLevel.REGIONAL:

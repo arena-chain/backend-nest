@@ -18,8 +18,12 @@ export class RoundController {
     }
 
     @Get()
-    findAll(@Query('seasonId') seasonId?: string) {
-        if (seasonId) return this.roundService.findBySeason(seasonId);
+    findAll(
+        @Query('seasonId') seasonId?: string,
+        @Query('stageId') stageId?: string,
+    ) {
+        if (seasonId) return this.roundService.findBySeason(seasonId, stageId);
+        if (stageId) return this.roundService.findByStage(stageId);
         return [];
     }
 

@@ -8,6 +8,17 @@ export const CONTINENTS = [
     'South America',
 ];
 
+/** Esports continental regions (e.g. Valorant VCT, Riot). Use for CONTINENTAL leagues. */
+export const ESPORTS_CONTINENTAL_REGIONS = [
+    'EMEA',      // Europe, Middle East, Africa
+    'Americas',  // North + South America
+    'Pacific',   // Asia-Pacific (excl. CN)
+    'CN',        // China
+];
+
+/** All valid regionIds for CONTINENTAL level = CONTINENTS + ESPORTS_CONTINENTAL_REGIONS */
+export const CONTINENTAL_REGIONS = [...CONTINENTS, ...ESPORTS_CONTINENTAL_REGIONS];
+
 export const COUNTRIES = [
     'Afghanistan',
     'Albania',

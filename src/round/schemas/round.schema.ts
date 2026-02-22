@@ -14,6 +14,9 @@ export class Round {
     @Prop({ required: true })
     seasonId: string;
 
+    @Prop()
+    stageId?: string;
+
     @Prop({ required: true, min: 1 })
     roundNumber: number;
 

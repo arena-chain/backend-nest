@@ -5,6 +5,10 @@ export class CreateRoundDto {
     @IsNotEmpty()
     seasonId: string;
 
+    @IsOptional()
+    @IsString()
+    stageId?: string;
+
     @IsNumber()
     @Min(1)
     @IsNotEmpty()
@@ -23,6 +27,10 @@ export class GenerateRoundsDto {
     @IsString()
     @IsNotEmpty()
     seasonId: string;
+
+    @IsOptional()
+    @IsString()
+    stageId?: string;
 
     @IsDateString()
     @IsNotEmpty()

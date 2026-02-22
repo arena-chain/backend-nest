@@ -14,13 +14,22 @@ export enum MatchStatus {
 
 export class GameResult {
     @Prop({ required: true })
-    gameNumber: number; // 1, 2, 3...
+    gameNumber: number;
 
     @Prop({ required: true })
-    winnerId: string; // teamId of the winner of this individual game
+    winnerId: string;
 
     @Prop()
-    durationMinutes?: number; // Optional: how long this game lasted
+    mapName?: string;
+
+    @Prop()
+    team1Score?: number;
+
+    @Prop()
+    team2Score?: number;
+
+    @Prop()
+    durationMinutes?: number;
 }
 
 @Schema({ timestamps: true })
@@ -54,7 +63,17 @@ export class Match {
     status: MatchStatus;
 
     // Individual game results within the series
-    @Prop({ type: [{ gameNumber: Number, winnerId: String, durationMinutes: Number }], default: [] })
+    @Prop({
+        type: [{
+            gameNumber: Number,
+            winnerId: String,
+            mapName: String,
+            team1Score: Number,
+            team2Score: Number,
+            durationMinutes: Number,
+        }],
+        default: [],
+    })
     games: GameResult[];
 
     @Prop({ default: 0 })
