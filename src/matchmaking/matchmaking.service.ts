@@ -36,29 +36,49 @@ export class MatchmakingService {
     ) {}
 
     async joinQueue(userId: string, dto: JoinQueueDto) {
-        await this.ticketModel.updateMany(
-            {
+        const isScheduled = !!dto.scheduledAt;
+
+        if (!isScheduled) {
+            await this.ticketModel.updateMany(
+                {
+                    userId: new Types.ObjectId(userId),
+                    status: 'MATCHED',
+                },
+                { $set: { status: 'CANCELLED' } },
+            );
+
+            await this.gameModel.updateMany(
+                {
+                    'participants.userId': new Types.ObjectId(userId),
+                    status: 'PENDING_ACCEPTANCE',
+                    match_type: 'MATCHMAKING',
+                },
+                { $set: { status: 'CANCELLED' } },
+            );
+
+            const existingSearch = await this.ticketModel.findOne({
                 userId: new Types.ObjectId(userId),
-                status: 'MATCHED',
-            },
-            { $set: { status: 'CANCELLED' } },
-        );
-
-        await this.gameModel.updateMany(
-            {
-                'participants.userId': new Types.ObjectId(userId),
-                status: 'PENDING_ACCEPTANCE',
-                match_type: 'MATCHMAKING',
-            },
-            { $set: { status: 'CANCELLED' } },
-        );
-
-        const existing = await this.ticketModel.findOne({
-            userId: new Types.ObjectId(userId),
-            status: { $in: ['SEARCHING', 'SCHEDULED'] },
-        });
-        if (existing) {
-            return existing;
+                status: 'SEARCHING',
+            });
+            if (existingSearch) {
+                return existingSearch;
+            }
+        } else {
+            const scheduledTime = new Date(dto.scheduledAt!);
+            const windowMs = 5 * 60 * 1000;
+            const existingScheduled = await this.ticketModel.findOne({
+                userId: new Types.ObjectId(userId),
+                status: 'SCHEDULED',
+                mode: dto.mode,
+                server: dto.server,
+                scheduledAt: {
+                    $gte: new Date(scheduledTime.getTime() - windowMs),
+                    $lte: new Date(scheduledTime.getTime() + windowMs),
+                },
+            });
+            if (existingScheduled) {
+                return existingScheduled;
+            }
         }
 
         const profile = await this.playerProfileModel.findOne({
@@ -66,7 +86,6 @@ export class MatchmakingService {
         });
         const elo = profile?.elo ?? 1000;
 
-        const isScheduled = !!dto.scheduledAt;
         const ticket = await this.ticketModel.create({
             userId: new Types.ObjectId(userId),
             game: dto.game,
@@ -145,8 +164,17 @@ export class MatchmakingService {
     async getActiveTicket(userId: string) {
         return this.ticketModel.findOne({
             userId: new Types.ObjectId(userId),
-            status: { $in: ['SEARCHING', 'SCHEDULED', 'MATCHED'] },
+            status: { $in: ['SEARCHING', 'MATCHED'] },
         }).sort({ createdAt: -1 });
+    }
+
+    async getScheduledTickets(userId: string) {
+        return this.ticketModel
+            .find({
+                userId: new Types.ObjectId(userId),
+                status: 'SCHEDULED',
+            })
+            .sort({ scheduledAt: 1 });
     }
 
     async acknowledgeGame(gameId: string, userId: string) {

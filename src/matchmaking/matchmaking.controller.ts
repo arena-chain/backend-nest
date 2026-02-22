@@ -101,4 +101,22 @@ export class MatchmakingController {
         }
         return { game };
     }
+
+    @Get('my-scheduled-tickets')
+    async getScheduledTickets(@Req() req) {
+        const userId = req.user.userId;
+        const tickets = await this.matchmakingService.getScheduledTickets(userId);
+        return {
+            tickets: tickets.map((t) => ({
+                id: t._id,
+                game: t.game,
+                mode: t.mode,
+                server: t.server,
+                region: t.region,
+                elo: t.elo,
+                status: t.status,
+                scheduledAt: t.scheduledAt ?? null,
+            })),
+        };
+    }
 }
