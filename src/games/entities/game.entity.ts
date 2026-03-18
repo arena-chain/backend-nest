@@ -12,7 +12,18 @@ export class Game {
     @Prop({ required: true })
     match_type: string;
 
-    @Prop({ default: 'SCHEDULED' })
+    @Prop({
+        enum: [
+            'SCHEDULED',
+            'PENDING_ACCEPTANCE',
+            'ACCEPTED',
+            'CANCELLED',
+            'IN_PROGRESS',
+            'WAITING_FOR_RESULT',
+            'COMPLETED',
+        ],
+        default: 'SCHEDULED',
+    })
     status: string;
 
     @Prop({ required: true })
@@ -26,6 +37,61 @@ export class Game {
 
     @Prop()
     finished_at: Date;
+
+    @Prop()
+    mode?: string;
+
+    @Prop()
+    server?: string;
+
+    @Prop()
+    region?: string;
+
+    @Prop({ type: Object })
+    roomInfo?: {
+        roomId: string;
+        map?: string;
+    };
+
+    @Prop({ default: false })
+    isScheduled: boolean;
+
+    @Prop({
+        type: [
+            {
+                userId: { type: Types.ObjectId, ref: 'User', required: true },
+                team: { type: String, enum: ['BLUE', 'RED'], required: true },
+                accepted: { type: Boolean, default: null },
+                elo: { type: Number, default: 1000 },
+                riotAccountInfo: {
+                    type: {
+                        originalIconId: Number,
+                        riotGameName: String,
+                        riotLinkStatus: String,
+                        riotPuuid: String,
+                        riotRegion: String,
+                        riotTagLine: String,
+                    },
+                    default: null,
+                },
+            },
+        ],
+        default: [],
+    })
+    participants: {
+        userId: Types.ObjectId;
+        team: 'BLUE' | 'RED';
+        accepted: boolean | null;
+        elo: number;
+        riotAccountInfo?: {
+            originalIconId: number;
+            riotGameName: string;
+            riotLinkStatus: string;
+            riotPuuid: string;
+            riotRegion: string;
+            riotTagLine: string;
+        } | null;
+    }[];
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);

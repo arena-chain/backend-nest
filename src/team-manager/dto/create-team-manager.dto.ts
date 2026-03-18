@@ -6,4 +6,8 @@ export class CreateTeamManagerDto {
     @IsOptional()
     @IsString()
     organizationName?: string;
+
+    @ApiProperty({ description: 'The ID of the team to manage' })
+    @IsString()
+    teamId: string;
 }

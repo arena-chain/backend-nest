@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { TeamManagerService } from './team-manager.service';
 import { CreateTeamManagerDto } from './dto/create-team-manager.dto';
 import { UpdateTeamManagerDto } from './dto/update-team-manager.dto';
 import { Types } from 'mongoose';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../common/enums/role.enum';
 
 @ApiTags('team-manager')
 @Controller('team-manager')
@@ -25,12 +29,39 @@ export class TeamManagerController {
         return this.teamManagerService.create(new Types.ObjectId(userId), createTeamManagerDto);
     }
 
+    @Get('pending')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get pending team managers' })
+    findPending() {
+        return this.teamManagerService.findPending();
+    }
+
     @Get(':userId')
     @ApiOperation({ summary: 'Get team manager profile by user ID' })
     @ApiResponse({ status: 200, description: 'Team manager profile found' })
     @ApiResponse({ status: 404, description: 'Team manager profile not found' })
     findByUserId(@Param('userId') userId: string) {
         return this.teamManagerService.findByUserId(userId);
+    }
+
+    @Patch(':userId/approve')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Approve team manager' })
+    approve(@Param('userId') userId: string) {
+        return this.teamManagerService.approve(userId);
+    }
+
+    @Patch(':userId/reject')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Reject team manager' })
+    reject(@Param('userId') userId: string) {
+        return this.teamManagerService.reject(userId);
     }
 
     @Patch(':userId')

@@ -29,3 +29,7 @@ export class Notification {
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);
 
+// Create indexes
+NotificationSchema.index({ userId: 1 });
+NotificationSchema.index({ isRead: 1 });
+NotificationSchema.index({ createdAt: -1 });

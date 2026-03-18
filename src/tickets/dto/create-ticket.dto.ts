@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsMongoId, IsNumber, Min, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TicketStatus } from '../schemas/ticket.schema';
+import { TicketStatus } from '../entities/ticket.entity';
 
 export class CreateTicketDto {
     @ApiProperty({ description: 'Tournament ID' })
