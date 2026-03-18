@@ -5,6 +5,7 @@ import { UsersModule } from '../user/user.module';
 import { PlayerModule } from '../player/player.module';
 import { TeamManagerModule } from '../team-manager/team-manager.module';
 import { RefereeModule } from '../referee/referee.module';
+import { ScouterModule } from '../scouter/scouter.module';
 import { AdminModule } from '../admin/admin.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
@@ -21,6 +22,7 @@ import { Registration, RegistrationSchema } from './schemas/registration.schema'
     PlayerModule,
     TeamManagerModule,
     RefereeModule,
+    ScouterModule,
     AdminModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

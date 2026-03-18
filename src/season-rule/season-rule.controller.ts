@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { LeagueRuleService } from './league-rule.service';
+import { LeagueRuleService } from './season-rule.service';
 import { CreateLeagueRuleDto } from './dto/create-league-rule.dto';
 import { UpdateLeagueRuleDto } from './dto/update-league-rule.dto';
 
@@ -13,7 +13,11 @@ export class LeagueRuleController {
     }
 
     @Get()
-    findAll(@Query('gameId') gameId?: string) {
+    findAll(
+        @Query('seasonId') seasonId?: string,
+        @Query('gameId') gameId?: string,
+    ) {
+        if (seasonId) return this.leagueRuleService.findBySeason(seasonId);
         if (gameId) return this.leagueRuleService.findByGame(gameId);
         return this.leagueRuleService.findAll();
     }

@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type LeagueRuleDocument = LeagueRule & Document;
+export type LeagueRuleDocument = SeasonRule & Document;
 
 export enum MatchFormat {
     BO1 = 'BO1',
@@ -101,7 +101,10 @@ export class OvertimeConfig {
 }
 
 @Schema({ timestamps: true })
-export class LeagueRule {
+export class SeasonRule {
+    @Prop({ required: true })
+    seasonId: string;
+
     @Prop({ required: true })
     name: string;
 
@@ -208,5 +211,7 @@ export class LeagueRule {
     extraRules?: Record<string, any>;
 }
 
-export const LeagueRuleSchema = SchemaFactory.createForClass(LeagueRule);
-LeagueRuleSchema.index({ gameId: 1 });
+export const SeasonRuleSchema = SchemaFactory.createForClass(SeasonRule);
+SeasonRuleSchema.index({ seasonId: 1 });
+SeasonRuleSchema.index({ gameId: 1 });
+SeasonRuleSchema.index({ seasonId: 1, gameId: 1 });

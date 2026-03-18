@@ -39,6 +39,5 @@ export class CheckIn {
 }
 
 export const CheckInSchema = SchemaFactory.createForClass(CheckIn);
-CheckInSchema.index({ matchId: 1 }, { unique: true });
 CheckInSchema.index({ seasonId: 1 });
 CheckInSchema.index({ deadline: 1 });

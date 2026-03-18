@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SeasonTeam, SeasonTeamDocument, SeasonTeamStatus } from './schemas/season-team.schema';
-import { LeagueRule, LeagueRuleDocument } from '../league-rule/schemas/league-rule.schema';
+import { SeasonRule, LeagueRuleDocument } from '../season-rule/schemas/season-rule.schema';
 import { SeasonService } from '../season/season.service';
 import { StandingsService } from '../standings/standings.service';
 import { SeasonStatus } from '../season/schemas/season.schema';
@@ -19,7 +19,7 @@ export class LeagueRegistrationService {
     constructor(
         @InjectModel(SeasonTeam.name)
         private readonly seasonTeamModel: Model<SeasonTeamDocument>,
-        @InjectModel(LeagueRule.name)
+        @InjectModel(SeasonRule.name)
         private readonly leagueRuleModel: Model<LeagueRuleDocument>,
         private readonly seasonService: SeasonService,
         private readonly standingsService: StandingsService,

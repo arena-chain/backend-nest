@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Match, MatchDocument, MatchStatus } from './schemas/match.schema';
-import { LeagueRule, LeagueRuleDocument } from '../league-rule/schemas/league-rule.schema';
+import { SeasonRule, LeagueRuleDocument } from '../season-rule/schemas/season-rule.schema';
 import { SeasonService } from '../season/season.service';
 import { StandingsService } from '../standings/standings.service';
 import { LeagueRegistrationService } from '../league-registration/league-registration.service';
@@ -18,7 +18,7 @@ import {
 export class MatchService {
     constructor(
         @InjectModel(Match.name) private readonly matchModel: Model<MatchDocument>,
-        @InjectModel(LeagueRule.name) private readonly leagueRuleModel: Model<LeagueRuleDocument>,
+        @InjectModel(SeasonRule.name) private readonly leagueRuleModel: Model<LeagueRuleDocument>,
         private readonly seasonService: SeasonService,
         private readonly standingsService: StandingsService,
         private readonly registrationService: LeagueRegistrationService,
@@ -179,7 +179,52 @@ export class MatchService {
     }
 
     async findByRound(roundId: string): Promise<Match[]> {
-        return this.matchModel.find({ roundId }).sort({ scheduledStart: 1 }).exec();
+        return this.matchModel.find({ roundId }).sort({ matchOrder: 1, scheduledStart: 1 }).exec();
+    }
+
+    /**
+     * Bulk-create scheduled matches from pairings (e.g. round-robin).
+     * Used when generating rounds + matches automatically.
+     */
+    async createScheduledFromPairings(
+        roundId: string,
+        seasonId: string,
+        pairings: Array<{ team1Id: string; team2Id: string }>,
+        roundStartDate: Date,
+    ): Promise<Match[]> {
+        const season = await this.seasonService.findOne(seasonId);
+        const rule = await this.leagueRuleModel.findById(season.rulesId).exec();
+        if (!rule) {
+            throw new BadRequestException(
+                `No rule set for season (rulesId: ${season.rulesId}). Attach a rule first.`,
+            );
+        }
+
+        const format = rule.matchType;
+        const matches: Match[] = [];
+        const MS_PER_MATCH_SLOT = 2 * 60 * 60 * 1000; // 2h between matches
+
+        for (let i = 0; i < pairings.length; i++) {
+            const { team1Id, team2Id } = pairings[i];
+            const scheduledStart = new Date(roundStartDate.getTime() + i * MS_PER_MATCH_SLOT);
+
+            const match = await new this.matchModel({
+                roundId,
+                seasonId,
+                team1Id,
+                team2Id,
+                format,
+                scheduledStart,
+                status: MatchStatus.SCHEDULED,
+                games: [],
+                team1GamesWon: 0,
+                team2GamesWon: 0,
+                matchOrder: i + 1,
+            }).save();
+            matches.push(match);
+        }
+
+        return matches;
     }
 
     async findBySeason(seasonId: string): Promise<Match[]> {

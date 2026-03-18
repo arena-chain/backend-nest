@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import { MatchFormat } from '../../league-rule/schemas/league-rule.schema';
+import { MatchFormat } from '../../season-rule/schemas/season-rule.schema';
 
 export type MatchDocument = Match & Document;
 
@@ -55,6 +55,10 @@ export class Match {
 
     @Prop()
     scheduledEnd?: Date;
+
+    /** Order within the round (1, 2, 3…) for display “Match 1”, “Match 2” per week. */
+    @Prop()
+    matchOrder?: number;
 
     @Prop()
     refereeId?: string;

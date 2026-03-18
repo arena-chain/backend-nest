@@ -32,7 +32,7 @@ export class RegisterDto {
     @ApiPropertyOptional({
         enum: UserRole,
         example: UserRole.PLAYER,
-        description: 'User role (PLAYER, TEAM_MANAGER, REFEREE, or ADMIN)',
+        description: 'User role (PLAYER, TEAM_MANAGER, REFEREE, SCOUTER, or ADMIN)',
     })
     @IsEnum(UserRole)
     @IsOptional()

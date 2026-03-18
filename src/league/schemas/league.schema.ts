@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type LeagueDocument = League & Document;
 
@@ -29,8 +29,13 @@ export class League {
 
     @Prop()
     logoUrl?: string;
+
+    @Prop({ default: true })
+    isActive: boolean;
+
+    @Prop({ type: Types.ObjectId, ref: 'User' })
+    organiserId?: Types.ObjectId;
 }
 
 export const LeagueSchema = SchemaFactory.createForClass(League);
-LeagueSchema.index({ gameId: 1 });
-LeagueSchema.index({ regionId: 1 });
+

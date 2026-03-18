@@ -10,7 +10,7 @@ import {
     SideSelection,
     TiebreakerRule,
     VetoFirstPick,
-} from '../schemas/league-rule.schema';
+} from '../schemas/season-rule.schema';
 
 export class OvertimeConfigDto {
     @IsEnum(OvertimeFormat)
@@ -42,6 +42,10 @@ export class OvertimeConfigDto {
 }
 
 export class CreateLeagueRuleDto {
+    @IsString()
+    @IsNotEmpty()
+    seasonId: string;
+
     @IsString()
     @IsNotEmpty()
     name: string;

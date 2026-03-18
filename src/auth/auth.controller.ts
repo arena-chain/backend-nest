@@ -6,6 +6,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RegisterPlayerDto } from './dto/register-player.dto';
 import { RegisterTeamManagerDto } from './dto/register-team-manager.dto';
 import { RegisterRefereeDto } from './dto/register-referee.dto';
+import { RegisterScouterDto } from './dto/register-scouter.dto';
 import { RegisterAdminDto } from './dto/register-admin.dto';
 import { LoginDto } from './dto/login.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
@@ -62,6 +63,14 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'User already exists' })
   registerReferee(@Body() dto: RegisterRefereeDto) {
     return this.authService.registerReferee(dto);
+  }
+
+  @Post('register/scouter')
+  @ApiOperation({ summary: 'Register a new scouter' })
+  @ApiResponse({ status: 201, description: 'Scouter successfully registered' })
+  @ApiResponse({ status: 409, description: 'User already exists' })
+  registerScouter(@Body() dto: RegisterScouterDto) {
+    return this.authService.registerScouter(dto);
   }
 
   @Post('register/admin')

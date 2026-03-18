@@ -14,8 +14,9 @@ export class Season {
     @Prop({ required: true })
     leagueId: string;
 
-    @Prop({ required: true })
-    rulesId: string;
+    /** Primary ruleset for this season. Set after creating SeasonRules with this season's id. */
+    @Prop()
+    rulesId?: string;
 
     @Prop({ required: true })
     name: string;
@@ -37,5 +38,4 @@ export class Season {
 }
 
 export const SeasonSchema = SchemaFactory.createForClass(Season);
-SeasonSchema.index({ leagueId: 1 });
-SeasonSchema.index({ rulesId: 1 });
+

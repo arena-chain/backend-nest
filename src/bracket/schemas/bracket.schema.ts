@@ -18,7 +18,7 @@ export enum BracketSlotStatus {
     PENDING = 'PENDING',       // Waiting for teams (from previous round)
     READY = 'READY',           // Both teams assigned, match can be scheduled
     COMPLETED = 'COMPLETED',   // Winner has advanced
-    BYE = 'BYE',               // One team advances automatically (odd seeding)
+    BYE = 'BYE',               // One team advances automatically
 }
 
 @Schema({ _id: false })
@@ -56,8 +56,12 @@ export class BracketSlot {
 
 @Schema({ timestamps: true })
 export class Bracket {
-    @Prop({ required: true, unique: true })
+    @Prop({ required: true })
     seasonId: string;
+
+    /** Optional: stage this bracket belongs to */
+    @Prop()
+    stageId?: string;
 
     @Prop({ required: true, enum: BracketFormat, default: BracketFormat.SINGLE_ELIMINATION })
     format: BracketFormat;
@@ -65,22 +69,8 @@ export class Bracket {
     @Prop({ required: true })
     totalRounds: number;
 
-    @Prop({
-        type: [{
-            slotId: String,
-            roundNumber: Number,
-            position: Number,
-            team1Id: String,
-            team2Id: String,
-            winnerId: String,
-            matchId: String,
-            nextSlotId: String,
-            loserNextSlotId: String,
-            status: { type: String, enum: BracketSlotStatus, default: BracketSlotStatus.PENDING },
-        }],
-        default: [],
-        _id: false,
-    })
+    /** All matches in the bracket */
+    @Prop({ type: [BracketSlot], default: [] })
     slots: BracketSlot[];
 
     @Prop({ required: true, enum: BracketStatus, default: BracketStatus.PENDING })
@@ -91,4 +81,5 @@ export class Bracket {
 }
 
 export const BracketSchema = SchemaFactory.createForClass(Bracket);
-BracketSchema.index({ seasonId: 1 }, { unique: true });
+BracketSchema.index({ seasonId: 1 });
+BracketSchema.index({ stageId: 1 });

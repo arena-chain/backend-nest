@@ -6,9 +6,9 @@ export class CreateSeasonDto {
     @IsNotEmpty()
     leagueId: string;
 
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    rulesId: string;
+    rulesId?: string;
 
     @IsString()
     @IsNotEmpty()

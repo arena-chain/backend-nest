@@ -4,7 +4,7 @@ import { LeagueRegistrationService } from './league-registration.service';
 import { LeagueRegistrationController } from './league-registration.controller';
 import { SeasonTeam, SeasonTeamSchema } from './schemas/season-team.schema';
 import { SeasonModule } from '../season/season.module';
-import { LeagueRuleModule } from '../league-rule/league-rule.module';
+import { LeagueRuleModule } from '../season-rule/season-rule.module';
 import { StandingsModule } from '../standings/standings.module';
 
 @Module({

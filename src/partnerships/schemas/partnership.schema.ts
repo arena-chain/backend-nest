@@ -11,8 +11,9 @@ export class Partnership {
     @Prop()
     logo: string;
 
-    @Prop({ enum: ['Event Sponsor', 'Platform Sponsor'], required: true })
+    @Prop({ enum: ['Title Sponsor', 'Event Sponsor', 'Platform Sponsor', 'Media Partner'], required: true })
     type: string;
+
 
     @Prop()
     description: string;

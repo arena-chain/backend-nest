@@ -12,16 +12,16 @@ export class LeagueService {
   ) { }
 
   async create(createLeagueDto: CreateLeagueDto): Promise<League> {
-    const createdLeague = new this.leagueModel(createLeagueDto);
-    return createdLeague.save();
+    const createdLeague = await new this.leagueModel(createLeagueDto).save();
+    return this.findOne(createdLeague._id.toString());
   }
 
   async findAll(): Promise<League[]> {
-    return this.leagueModel.find().exec();
+    return this.leagueModel.find().populate('organiserId').exec();
   }
 
   async findOne(id: string): Promise<League> {
-    const league = await this.leagueModel.findById(id).exec();
+    const league = await this.leagueModel.findById(id).populate('organiserId').exec();
     if (!league) {
       throw new NotFoundException(`League with ID ${id} not found`);
     }
@@ -31,6 +31,7 @@ export class LeagueService {
   async update(id: string, updateLeagueDto: UpdateLeagueDto): Promise<League> {
     const updatedLeague = await this.leagueModel
       .findByIdAndUpdate(id, updateLeagueDto, { new: true })
+      .populate('organiserId')
       .exec();
     if (!updatedLeague) {
       throw new NotFoundException(`League with ID ${id} not found`);

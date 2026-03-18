@@ -5,7 +5,7 @@ import { MatchService } from './match.service';
 import { MatchController } from './match.controller';
 import { EloService } from './elo.service';
 import { StandingsModule } from '../standings/standings.module';
-import { LeagueRuleModule } from '../league-rule/league-rule.module';
+import { LeagueRuleModule } from '../season-rule/season-rule.module';
 import { SeasonModule } from '../season/season.module';
 import { LeagueRegistrationModule } from '../league-registration/league-registration.module';
 

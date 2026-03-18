@@ -36,11 +36,11 @@ export class PrizeDistribution {
 
 @Schema({ timestamps: true })
 export class PrizePool {
-    @Prop({ required: true })
-    seasonId: string;
-
-    @Prop({ required: true })
-    leagueId: string;
+    @Prop({ type: Types.ObjectId, ref: 'Season', required: true })
+    seasonId: Types.ObjectId;
+    
+    @Prop({ type: Types.ObjectId, ref: 'League', required: true })
+    leagueId: Types.ObjectId;
 
     @Prop({ required: true })
     totalAmount: number;

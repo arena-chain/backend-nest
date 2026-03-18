@@ -10,10 +10,12 @@ import { PlayerService } from '../player/player.service';
 import { TeamManagerService } from '../team-manager/team-manager.service';
 import { RefereeService } from '../referee/referee.service';
 import { AdminService } from '../admin/admin.service';
+import { ScouterService } from '../scouter/scouter.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterPlayerDto } from './dto/register-player.dto';
 import { RegisterTeamManagerDto } from './dto/register-team-manager.dto';
 import { RegisterRefereeDto } from './dto/register-referee.dto';
+import { RegisterScouterDto } from './dto/register-scouter.dto';
 import { RegisterAdminDto } from './dto/register-admin.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from '../common/enums/role.enum';
@@ -29,6 +31,7 @@ export class AuthService {
     private playerService: PlayerService,
     private teamManagerService: TeamManagerService,
     private refereeService: RefereeService,
+    private scouterService: ScouterService,
     private adminService: AdminService,
     private jwtService: JwtService,
     private mailService: MailService,
@@ -68,6 +71,9 @@ export class AuthService {
         break;
       case UserRole.REFEREE:
         result = await this.registerReferee(dto as RegisterRefereeDto);
+        break;
+      case UserRole.SCOUTER:
+        result = await this.registerScouter(dto as RegisterScouterDto);
         break;
       case UserRole.ADMIN:
         result = await this.registerAdmin(dto as RegisterAdminDto);
@@ -169,6 +175,35 @@ export class AuthService {
     return { message: 'Verification code sent to your email' };
   }
 
+  async registerScouter(dto: RegisterScouterDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('User already exists');
+
+    const hash = await bcrypt.hash(dto.password, 10);
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    await this.registrationModel.findOneAndUpdate(
+      { email: dto.email },
+      {
+        email: dto.email,
+        passwordHash: hash,
+        nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
+        role: UserRole.SCOUTER,
+        roleData: { level: dto.level, notes: dto.notes },
+        otp,
+        otpExpires,
+      },
+      { upsert: true, new: true },
+    );
+
+    await this.mailService.sendVerificationEmail(dto.email, otp);
+
+    return { message: 'Verification code sent to your email' };
+  }
+
   async registerAdmin(dto: RegisterAdminDto) {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) throw new BadRequestException('User already exists');
@@ -222,10 +257,15 @@ export class AuthService {
           role = UserRole.REFEREE;
         } catch {
           try {
-            profile = await this.adminService.findByUserId(user._id);
-            role = UserRole.ADMIN;
+            profile = await this.scouterService.findByUserId(user._id);
+            role = UserRole.SCOUTER;
           } catch {
-            throw new UnauthorizedException('No profile found for user');
+            try {
+              profile = await this.adminService.findByUserId(user._id);
+              role = UserRole.ADMIN;
+            } catch {
+              throw new UnauthorizedException('No profile found for user');
+            }
           }
         }
       }
@@ -274,6 +314,9 @@ export class AuthService {
           break;
         case UserRole.REFEREE:
           profile = await this.refereeService.create(user._id as Types.ObjectId, pending.roleData);
+          break;
+        case UserRole.SCOUTER:
+          profile = await this.scouterService.create(user._id as Types.ObjectId, pending.roleData);
           break;
         case UserRole.ADMIN:
           profile = await this.adminService.create(user._id as Types.ObjectId, pending.roleData);
@@ -571,11 +614,16 @@ export class AuthService {
           role = UserRole.REFEREE;
         } catch {
           try {
-            profile = await this.adminService.findByUserId(user._id);
-            role = UserRole.ADMIN;
+            profile = await this.scouterService.findByUserId(user._id);
+            role = UserRole.SCOUTER;
           } catch {
-            // Default to player if no profile found
-            role = UserRole.PLAYER;
+            try {
+              profile = await this.adminService.findByUserId(user._id);
+              role = UserRole.ADMIN;
+            } catch {
+              // Default to player if no profile found
+              role = UserRole.PLAYER;
+            }
           }
         }
       }
@@ -616,10 +664,15 @@ export class AuthService {
           role = UserRole.REFEREE;
         } catch {
           try {
-            profile = await this.adminService.findByUserId(user._id);
-            role = UserRole.ADMIN;
+            profile = await this.scouterService.findByUserId(user._id);
+            role = UserRole.SCOUTER;
           } catch {
-            role = UserRole.PLAYER; // Fallback
+            try {
+              profile = await this.adminService.findByUserId(user._id);
+              role = UserRole.ADMIN;
+            } catch {
+              role = UserRole.PLAYER; // Fallback
+            }
           }
         }
       }

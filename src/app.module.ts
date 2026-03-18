@@ -10,6 +10,7 @@ import { UsersModule } from './user/user.module';
 import { PlayerModule } from './player/player.module';
 import { TeamManagerModule } from './team-manager/team-manager.module';
 import { RefereeModule } from './referee/referee.module';
+import { ScouterModule } from './scouter/scouter.module';
 import { AdminModule } from './admin/admin.module';
 import { StreamModule } from './stream/stream.module';
 import { ChannelModule } from './channel/channel.module';
@@ -32,7 +33,7 @@ import { LeagueModule } from './league/league.module';
 import { LeagueRegistrationModule } from './league-registration/league-registration.module';
 import { StandingsModule } from './standings/standings.module';
 import { SeasonModule } from './season/season.module';
-import { LeagueRuleModule } from './league-rule/league-rule.module';
+import { LeagueRuleModule } from './season-rule/season-rule.module';
 import { RoundModule } from './round/round.module';
 import { MatchModule } from './match/match.module';
 import { PrizePoolModule } from './prize-pool/prize-pool.module';
@@ -41,6 +42,8 @@ import { SeasonRosterModule } from './season-roster/season-roster.module';
 import { MatchDisputeModule } from './match-dispute/match-dispute.module';
 import { BracketModule } from './bracket/bracket.module';
 import { StageModule } from './stage/stage.module';
+import { InvitationModule } from './invitation/invitation.module';
+import { ScoutingModule } from './scouting/scouting.module';
 
 @Module({
   imports: [
@@ -55,6 +58,7 @@ import { StageModule } from './stage/stage.module';
     PlayerModule,
     TeamManagerModule,
     RefereeModule,
+    ScouterModule,
     AdminModule,
     StreamModule,
     ChannelModule,
@@ -86,6 +90,8 @@ import { StageModule } from './stage/stage.module';
     MatchDisputeModule,
     BracketModule,
     StageModule,
+    InvitationModule,
+    ScoutingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
