@@ -6,7 +6,7 @@ import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { Reservation, ReservationDocument, ReservationStatus } from './schemas/reservation.schema';
 import { Ticket, TicketDocument, TicketStatus } from '../tickets/entities/ticket.entity';
-import { Tournament, TournamentDocument } from '../tournements/schemas/tournament.schema';
+import { Tournament, TournamentDocument, TicketType } from '../tournements/schemas/tournament.schema';
 
 @Injectable()
 export class ReservationService {
