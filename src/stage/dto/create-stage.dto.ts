@@ -1,7 +1,23 @@
 import {
-    IsString, IsEnum, IsNumber, IsOptional, IsDateString, Min,
+    IsString, IsEnum, IsNumber, IsOptional, IsDateString, Min, ValidateNested, IsObject,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
 import { StageType, StageStatus } from '../schemas/stage.schema';
+
+export class SwissConfigDto {
+    @IsNumber()
+    @Min(1)
+    roundsToWin: number;
+
+    @IsNumber()
+    @Min(1)
+    roundsToEliminate: number;
+
+    @IsNumber()
+    @Min(1)
+    maxRounds: number;
+}
 
 export class CreateStageDto {
     @IsOptional()
@@ -42,6 +58,22 @@ export class CreateStageDto {
     @IsOptional()
     @IsString()
     standingsId?: string;
+
+    @IsNumber()
+    @Min(0)
+    @IsOptional()
+    advancementCount?: number;
+
+    @IsNumber()
+    @Min(0)
+    @IsOptional()
+    eliminationCount?: number;
+
+    @IsOptional()
+    @IsObject()
+    @ValidateNested()
+    @Type(() => SwissConfigDto)
+    swissConfig?: SwissConfigDto;
 
     @IsOptional()
     @IsString()

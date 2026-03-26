@@ -26,8 +26,16 @@ export class SeasonTeam {
     @Prop()
     qualifiedFromSeasonId?: string;
 
+    /** Human-readable qualification source label, e.g. 'DACH: Evolution Qualifier' */
+    @Prop()
+    qualifiedFromName?: string;
+
     @Prop()
     qualifiedViaRank?: number;
+
+    /** Final placement rank after the season ends, e.g. 1 = champion */
+    @Prop()
+    finalRank?: number;
 }
 
 export const SeasonTeamSchema = SchemaFactory.createForClass(SeasonTeam);

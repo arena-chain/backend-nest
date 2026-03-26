@@ -6,8 +6,12 @@ export class StandingsController {
     constructor(private readonly standingsService: StandingsService) {}
 
     @Get()
-    findBySeason(@Query('seasonId') seasonId: string) {
-        return this.standingsService.findBySeason(seasonId);
+    findBySeason(
+        @Query('seasonId') seasonId: string,
+        @Query('stageId') stageId?: string,
+        @Query('groupId') groupId?: string,
+    ) {
+        return this.standingsService.findBySeason(seasonId, stageId, groupId);
     }
 
     @Get(':id')

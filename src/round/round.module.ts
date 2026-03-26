@@ -6,6 +6,7 @@ import { RoundService } from './round.service';
 import { RoundController } from './round.controller';
 import { MatchModule } from '../match/match.module';
 import { LeagueRegistrationModule } from '../league-registration/league-registration.module';
+import { StandingsModule } from '../standings/standings.module';
 
 @Module({
     imports: [
@@ -15,6 +16,7 @@ import { LeagueRegistrationModule } from '../league-registration/league-registra
         ]),
         MatchModule,
         LeagueRegistrationModule,
+        StandingsModule,
     ],
     controllers: [RoundController],
     providers: [RoundService],

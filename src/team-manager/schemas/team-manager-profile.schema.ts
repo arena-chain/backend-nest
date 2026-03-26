@@ -9,8 +9,8 @@ export class TeamManagerProfile {
     @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
     userId: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, ref: 'Team', required: true })
-    team: Types.ObjectId;
+    @Prop({ type: Types.ObjectId, ref: 'Team' })
+    team?: Types.ObjectId;
 
     @Prop()
     organizationName?: string;
@@ -35,6 +35,9 @@ export class TeamManagerProfile {
 
     @Prop()
     phoneNumber?: string;
+
+    @Prop()
+    photo?: string;
 
     @Prop({ enum: ['pending', 'approved', 'rejected'], default: 'pending' })
     status: string;

@@ -5,7 +5,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { SeasonTeam, SeasonTeamDocument, SeasonTeamStatus } from './schemas/season-team.schema';
 import { SeasonRule, LeagueRuleDocument } from '../season-rule/schemas/season-rule.schema';
 import { SeasonService } from '../season/season.service';
@@ -13,6 +13,8 @@ import { StandingsService } from '../standings/standings.service';
 import { SeasonStatus } from '../season/schemas/season.schema';
 import { CreateLeagueRegistrationDto } from './dto/create-league-registration.dto';
 import { UpdateLeagueRegistrationDto } from './dto/update-league-registration.dto';
+import { Team, TeamDocument } from '../team/schemas/team.schema';
+import { SeasonRosterService } from '../season-roster/season-roster.service';
 
 @Injectable()
 export class LeagueRegistrationService {
@@ -21,8 +23,11 @@ export class LeagueRegistrationService {
         private readonly seasonTeamModel: Model<SeasonTeamDocument>,
         @InjectModel(SeasonRule.name)
         private readonly leagueRuleModel: Model<LeagueRuleDocument>,
+        @InjectModel(Team.name)
+        private readonly teamModel: Model<TeamDocument>,
         private readonly seasonService: SeasonService,
         private readonly standingsService: StandingsService,
+        private readonly rosterService: SeasonRosterService,
     ) {}
 
     async register(dto: CreateLeagueRegistrationDto): Promise<SeasonTeam> {
@@ -63,8 +68,15 @@ export class LeagueRegistrationService {
             status: dto.status ?? SeasonTeamStatus.ACTIVE,
         }).save();
 
-        // Auto-init standings row for this team in the season
         await this.standingsService.initTeamStandings(dto.seasonId, dto.teamId);
+
+        // Auto-create an empty roster for this team in the season
+        await this.rosterService.create({
+            seasonId: dto.seasonId,
+            teamId: dto.teamId,
+            minRosterSize: 5,
+            maxRosterSize: 7,
+        }).catch(() => {/* roster may already exist */});
 
         return entry;
     }
@@ -115,5 +127,35 @@ export class LeagueRegistrationService {
 
     async countActive(seasonId: string): Promise<number> {
         return this.seasonTeamModel.countDocuments({ seasonId, status: SeasonTeamStatus.ACTIVE });
+    }
+
+    async getSeasonTeamsWithPlayers(seasonId: string): Promise<any[]> {
+        const registrations = await this.seasonTeamModel
+            .find({ seasonId, status: SeasonTeamStatus.ACTIVE })
+            .sort({ seed: 1 })
+            .exec();
+
+        if (registrations.length === 0) return [];
+
+        const teamIds = registrations
+            .map((r) => r.teamId)
+            .filter((id) => Types.ObjectId.isValid(id))
+            .map((id) => new Types.ObjectId(id));
+
+        const teams = await this.teamModel
+            .find({ _id: { $in: teamIds } })
+            .populate({ path: 'members', model: 'User', select: 'nickname avatar email country' })
+            .exec();
+
+        return registrations.map((reg) => ({
+            registration: {
+                _id: reg._id,
+                seed: reg.seed,
+                status: reg.status,
+                qualifiedFromSeasonId: reg.qualifiedFromSeasonId,
+                qualifiedViaRank: reg.qualifiedViaRank,
+            },
+            team: teams.find((t) => t._id.toString() === reg.teamId) ?? null,
+        }));
     }
 }

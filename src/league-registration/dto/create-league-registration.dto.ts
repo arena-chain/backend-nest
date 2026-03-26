@@ -23,6 +23,11 @@ export class CreateLeagueRegistrationDto {
     @IsOptional()
     qualifiedFromSeasonId?: string;
 
+    /** Human-readable qualification source, e.g. "DACH: Evolution Qualifier" */
+    @IsString()
+    @IsOptional()
+    qualifiedFromName?: string;
+
     @IsNumber()
     @Min(1)
     @IsOptional()

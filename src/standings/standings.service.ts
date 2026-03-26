@@ -10,13 +10,24 @@ export class StandingsService {
         private readonly standingsModel: Model<StandingsDocument>,
     ) {}
 
-    async initTeamStandings(seasonId: string, teamId: string): Promise<Standings> {
-        const existing = await this.standingsModel.findOne({ seasonId, teamId }).exec();
+    async initTeamStandings(
+        seasonId: string,
+        teamId: string,
+        stageId?: string,
+        groupId?: string,
+    ): Promise<Standings> {
+        const filter: any = { seasonId, teamId };
+        if (stageId) filter.stageId = stageId;
+        if (groupId) filter.groupId = groupId;
+
+        const existing = await this.standingsModel.findOne(filter).exec();
         if (existing) return existing;
 
         return new this.standingsModel({
             seasonId,
             teamId,
+            ...(stageId && { stageId }),
+            ...(groupId && { groupId }),
             played: 0,
             wins: 0,
             draws: 0,
@@ -40,9 +51,16 @@ export class StandingsService {
         loserGamesWon: number,
         pointsWin: number,
         pointsLoss: number,
+        stageId?: string,
+        groupId?: string,
     ): Promise<void> {
+        const winnerFilter: any = { seasonId, teamId: winnerId };
+        const loserFilter: any = { seasonId, teamId: loserId };
+        if (stageId) { winnerFilter.stageId = stageId; loserFilter.stageId = stageId; }
+        if (groupId) { winnerFilter.groupId = groupId; loserFilter.groupId = groupId; }
+
         await this.standingsModel.findOneAndUpdate(
-            { seasonId, teamId: winnerId },
+            winnerFilter,
             {
                 $inc: {
                     played: 1,
@@ -57,7 +75,7 @@ export class StandingsService {
         ).exec();
 
         await this.standingsModel.findOneAndUpdate(
-            { seasonId, teamId: loserId },
+            loserFilter,
             {
                 $inc: {
                     played: 1,
@@ -71,7 +89,7 @@ export class StandingsService {
             { upsert: true, new: true },
         ).exec();
 
-        await this.recalculateRanks(seasonId);
+        await this.recalculateRanks(seasonId, stageId, groupId);
     }
 
     async updateAfterForfeit(
@@ -80,15 +98,22 @@ export class StandingsService {
         forfeitingTeamId: string,
         pointsWin: number,
         forfeitCountsAsLoss: boolean,
+        stageId?: string,
+        groupId?: string,
     ): Promise<number> {
+        const winnerFilter: any = { seasonId, teamId: winnerId };
+        const loserFilter: any = { seasonId, teamId: forfeitingTeamId };
+        if (stageId) { winnerFilter.stageId = stageId; loserFilter.stageId = stageId; }
+        if (groupId) { winnerFilter.groupId = groupId; loserFilter.groupId = groupId; }
+
         await this.standingsModel.findOneAndUpdate(
-            { seasonId, teamId: winnerId },
+            winnerFilter,
             { $inc: { played: 1, wins: 1, points: pointsWin } },
             { upsert: true, new: true },
         ).exec();
 
         const forfeitingTeam = await this.standingsModel.findOneAndUpdate(
-            { seasonId, teamId: forfeitingTeamId },
+            loserFilter,
             {
                 $inc: {
                     played: 1,
@@ -99,14 +124,18 @@ export class StandingsService {
             { upsert: true, new: true },
         ).exec();
 
-        await this.recalculateRanks(seasonId);
+        await this.recalculateRanks(seasonId, stageId, groupId);
 
         return forfeitingTeam?.forfeits ?? 1;
     }
 
-    async recalculateRanks(seasonId: string): Promise<void> {
+    async recalculateRanks(seasonId: string, stageId?: string, groupId?: string): Promise<void> {
+        const filter: any = { seasonId };
+        if (stageId) filter.stageId = stageId;
+        if (groupId) filter.groupId = groupId;
+
         const all = await this.standingsModel
-            .find({ seasonId })
+            .find(filter)
             .sort({ points: -1, gameDiff: -1, gamesWon: -1 })
             .exec();
 
@@ -122,8 +151,11 @@ export class StandingsService {
         }
     }
 
-    async findBySeason(seasonId: string): Promise<Standings[]> {
-        return this.standingsModel.find({ seasonId }).sort({ rank: 1 }).exec();
+    async findBySeason(seasonId: string, stageId?: string, groupId?: string): Promise<Standings[]> {
+        const filter: any = { seasonId };
+        if (stageId) filter.stageId = stageId;
+        if (groupId) filter.groupId = groupId;
+        return this.standingsModel.find(filter).sort({ rank: 1 }).exec();
     }
 
     async findOne(id: string): Promise<Standings> {

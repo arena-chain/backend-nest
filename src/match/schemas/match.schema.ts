@@ -50,6 +50,18 @@ export class Match {
     @Prop({ required: true, enum: MatchFormat })
     format: MatchFormat;
 
+    /** Override the season-wide format for this specific match (e.g. BO5 for Grand Final) */
+    @Prop({ enum: MatchFormat })
+    formatOverride?: MatchFormat;
+
+    /** Group this match belongs to (for GROUPS stage type) */
+    @Prop()
+    groupId?: string;
+
+    /** Live stream URL for this match */
+    @Prop()
+    streamUrl?: string;
+
     @Prop({ required: true })
     scheduledStart: Date;
 
@@ -109,3 +121,5 @@ MatchSchema.index({ roundId: 1 });
 MatchSchema.index({ seasonId: 1 });
 MatchSchema.index({ team1Id: 1 });
 MatchSchema.index({ team2Id: 1 });
+MatchSchema.index({ groupId: 1 });
+MatchSchema.index({ scheduledStart: 1 });

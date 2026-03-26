@@ -1,4 +1,5 @@
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { StageType } from '../../stage/schemas/stage.schema';
 
 export class CreateRoundDto {
     @IsString()
@@ -47,4 +48,22 @@ export class GenerateRoundsDto {
     @IsOptional()
     @IsBoolean()
     generateMatches?: boolean;
+
+    /**
+     * Stage format type: controls pairing algorithm.
+     * LEAGUE / GROUPS → round-robin (default).
+     * SWISS → pair teams by current W/L record (Dutch/Monrad system).
+     */
+    @IsOptional()
+    @IsEnum(StageType)
+    stageType?: StageType;
+
+    /**
+     * For Swiss: which round number is being generated (1, 2, 3…).
+     * Required when stageType is SWISS and generateMatches is true.
+     */
+    @IsOptional()
+    @IsNumber()
+    @Min(1)
+    swissRoundNumber?: number;
 }

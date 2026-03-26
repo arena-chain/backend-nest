@@ -8,6 +8,8 @@ import { CreateRoundDto, GenerateRoundsDto } from './dto/create-round.dto';
 import { UpdateRoundDto } from './dto/update-round.dto';
 import { MatchService } from '../match/match.service';
 import { LeagueRegistrationService } from '../league-registration/league-registration.service';
+import { StandingsService } from '../standings/standings.service';
+import { StageType } from '../stage/schemas/stage.schema';
 
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
@@ -18,6 +20,7 @@ export class RoundService {
         @InjectModel(Season.name) private seasonModel: Model<SeasonDocument>,
         private readonly matchService: MatchService,
         private readonly registrationService: LeagueRegistrationService,
+        private readonly standingsService: StandingsService,
     ) { }
 
     async create(dto: CreateRoundDto): Promise<Round> {
@@ -45,6 +48,7 @@ export class RoundService {
             Math.max(1, Math.ceil(seasonDurationMs / MS_PER_WEEK));
 
         const rounds: Round[] = [];
+        const isSwiss = dto.stageType === StageType.SWISS;
         let roundRobinRounds: Array<Array<{ team1Id: string; team2Id: string }>> = [];
 
         if (generateMatches) {
@@ -63,7 +67,9 @@ export class RoundService {
                 );
             }
 
-            roundRobinRounds = this.computeRoundRobinPairings(teamIds);
+            if (!isSwiss) {
+                roundRobinRounds = this.computeRoundRobinPairings(teamIds);
+            }
         }
 
         for (let i = 0; i < weekCount; i++) {
@@ -84,18 +90,80 @@ export class RoundService {
 
             rounds.push(round);
 
-            if (generateMatches && i < roundRobinRounds.length) {
-                const pairings = roundRobinRounds[i];
-                await this.matchService.createScheduledFromPairings(
-                    round._id.toString(),
-                    seasonId,
-                    pairings,
-                    roundStart,
-                );
+            if (generateMatches) {
+                let pairings: Array<{ team1Id: string; team2Id: string }>;
+
+                if (isSwiss) {
+                    const swissRound = (dto.swissRoundNumber ?? 1) + i;
+                    pairings = await this.computeSwissPairings(seasonId, stageId, swissRound);
+                } else {
+                    pairings = i < roundRobinRounds.length ? roundRobinRounds[i] : [];
+                }
+
+                if (pairings.length > 0) {
+                    await this.matchService.createScheduledFromPairings(
+                        round._id.toString(),
+                        seasonId,
+                        pairings,
+                        roundStart,
+                    );
+                }
             }
         }
 
         return rounds;
+    }
+
+    /**
+     * Swiss pairing (Monrad/Dutch system).
+     * Groups teams by their current W-L record (from standings), then pairs
+     * adjacent teams within each group. Avoids rematches by checking existing matches.
+     * Teams with no prior standings start at 0-0 and are paired by registration seed.
+     */
+    private async computeSwissPairings(
+        seasonId: string,
+        stageId?: string,
+        roundNumber?: number,
+    ): Promise<Array<{ team1Id: string; team2Id: string }>> {
+        const standings = await this.standingsService.findBySeason(seasonId, stageId);
+
+        // Sort by points desc, then wins desc (standard Swiss ordering)
+        const sorted = [...standings].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            return b.wins - a.wins;
+        });
+
+        // Gather already-played team pairs to avoid rematches
+        const playedPairs = new Set<string>();
+        const existingMatches = await this.matchService.findBySeason(seasonId);
+        for (const m of existingMatches as any[]) {
+            const key = [m.team1Id, m.team2Id].sort().join('|');
+            playedPairs.add(key);
+        }
+
+        const pairings: Array<{ team1Id: string; team2Id: string }> = [];
+        const paired = new Set<string>();
+
+        for (let i = 0; i < sorted.length; i++) {
+            const a = String(sorted[i].teamId);
+            if (paired.has(a)) continue;
+
+            // Find closest unpaired opponent that hasn't been faced yet
+            for (let j = i + 1; j < sorted.length; j++) {
+                const b = String(sorted[j].teamId);
+                if (paired.has(b)) continue;
+
+                const pairKey = [a, b].sort().join('|');
+                if (!playedPairs.has(pairKey)) {
+                    pairings.push({ team1Id: a, team2Id: b });
+                    paired.add(a);
+                    paired.add(b);
+                    break;
+                }
+            }
+        }
+
+        return pairings;
     }
 
     /**

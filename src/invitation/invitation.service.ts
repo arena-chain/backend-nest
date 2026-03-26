@@ -73,10 +73,10 @@ export class InvitationService {
    */
   async findByTeamManager(teamManagerUserId: string, status?: InvitationStatus): Promise<Invitation[]> {
     const profile = await this.teamManagerService.findByUserId(teamManagerUserId);
-    const teamIds = (profile as any).managedTeams?.map((t) => t.toString()) ?? [(profile as any).team?.toString()].filter(Boolean);
-    if (teamIds.length === 0) return [];
+    const teamId = (profile as any).team?.toString();
+    if (!teamId) return [];
 
-    const filter: any = { teamId: { $in: teamIds.map((id) => new Types.ObjectId(id)) } };
+    const filter: any = { teamId: new Types.ObjectId(teamId) };
     if (status) filter.status = status;
 
     return this.invitationModel
@@ -102,8 +102,7 @@ export class InvitationService {
     }
 
     const profile = await this.teamManagerService.findByUserId(teamManagerUserId);
-    const managedTeams = (profile as any).managedTeams ?? [(profile as any).team];
-    const managesTeam = managedTeams?.some((t) => t?.toString() === inv.teamId.toString());
+    const managesTeam = (profile as any).team?.toString() === inv.teamId.toString();
     if (!managesTeam) {
       throw new ForbiddenException('You do not manage this team');
     }
@@ -135,8 +134,7 @@ export class InvitationService {
     }
 
     const profile = await this.teamManagerService.findByUserId(teamManagerUserId);
-    const managedTeams2 = (profile as any).managedTeams ?? [(profile as any).team];
-    const managesTeam = managedTeams2?.some((t) => t?.toString() === inv.teamId.toString());
+    const managesTeam = (profile as any).team?.toString() === inv.teamId.toString();
     if (!managesTeam) {
       throw new ForbiddenException('You do not manage this team');
     }

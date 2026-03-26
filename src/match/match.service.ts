@@ -6,6 +6,7 @@ import { SeasonRule, LeagueRuleDocument } from '../season-rule/schemas/season-ru
 import { SeasonService } from '../season/season.service';
 import { StandingsService } from '../standings/standings.service';
 import { LeagueRegistrationService } from '../league-registration/league-registration.service';
+import { BracketService } from '../bracket/bracket.service';
 import { EloService } from './elo.service';
 import {
     AddGameResultDto,
@@ -22,6 +23,7 @@ export class MatchService {
         private readonly seasonService: SeasonService,
         private readonly standingsService: StandingsService,
         private readonly registrationService: LeagueRegistrationService,
+        private readonly bracketService: BracketService,
         private readonly eloService: EloService,
     ) {}
 
@@ -36,7 +38,7 @@ export class MatchService {
 
         const match = new this.matchModel({
             ...dto,
-            format: rule.matchType,
+            format: dto.formatOverride ?? rule.matchType,
             status: MatchStatus.SCHEDULED,
             games: [],
             team1GamesWon: 0,
@@ -110,6 +112,9 @@ export class MatchService {
         match.team1GamesWon = dto.team1GamesWon;
         match.team2GamesWon = dto.team2GamesWon;
         match.status = MatchStatus.COMPLETED;
+        if (dto.games && dto.games.length > 0) {
+            match.games = dto.games as any;
+        }
 
         const winnerId = dto.team1GamesWon >= winsNeeded ? match.team1Id : match.team2Id;
         const loserId = winnerId === match.team1Id ? match.team2Id : match.team1Id;
@@ -119,7 +124,8 @@ export class MatchService {
         match.winnerId = winnerId;
         match.loserId = loserId;
         await match.save();
-        await this.applyPointsUpdate(match.seasonId, winnerId, loserId, winnerGamesWon, loserGamesWon);
+        await this.applyPointsUpdate(match.seasonId, winnerId, loserId, winnerGamesWon, loserGamesWon, match.groupId);
+        await this.tryAutoAdvanceBracket(match);
 
         return match;
     }
@@ -144,6 +150,7 @@ export class MatchService {
         match.loserId = dto.forfeitingTeamId;
 
         await match.save();
+        await this.tryAutoAdvanceBracket(match);
 
         const season = await this.seasonService.findOne(match.seasonId);
         const rule = await this.leagueRuleModel.findById(season.rulesId).exec();
@@ -227,8 +234,12 @@ export class MatchService {
         return matches;
     }
 
-    async findBySeason(seasonId: string): Promise<Match[]> {
-        return this.matchModel.find({ seasonId }).sort({ scheduledStart: 1 }).exec();
+    async findBySeason(seasonId: string, groupId?: string, status?: string, from?: string): Promise<Match[]> {
+        const filter: any = { seasonId };
+        if (groupId) filter.groupId = groupId;
+        if (status) filter.status = status;
+        if (from) filter.scheduledStart = { $gte: new Date(from) };
+        return this.matchModel.find(filter).sort({ scheduledStart: 1 }).exec();
     }
 
     async findOne(id: string): Promise<Match> {
@@ -245,12 +256,34 @@ export class MatchService {
 
     // ─── Private helpers ────────────────────────────────────────────────────────
 
+    private async tryAutoAdvanceBracket(match: MatchDocument): Promise<void> {
+        if (!match.winnerId || !match.loserId) return;
+        try {
+            const bracket = await this.bracketService.findBySeason(match.seasonId);
+            if (!bracket) return;
+            const slot = bracket.slots.find(
+                s => s.team1Id === match.team1Id && s.team2Id === match.team2Id
+                    && s.status !== 'COMPLETED' && s.status !== 'BYE',
+            );
+            if (!slot) return;
+            await this.bracketService.advanceWinner(match.seasonId, {
+                slotId: slot.slotId,
+                winnerId: match.winnerId,
+                loserId: match.loserId,
+                matchId: match._id.toString(),
+            });
+        } catch {
+            // bracket auto-advance is best-effort; never block match result
+        }
+    }
+
     private async applyPointsUpdate(
         seasonId: string,
         winnerId: string,
         loserId: string,
         winnerGamesWon: number,
         loserGamesWon: number,
+        groupId?: string,
     ): Promise<void> {
         const season = await this.seasonService.findOne(seasonId);
         const rule = await this.leagueRuleModel.findById(season.rulesId).exec();
@@ -263,6 +296,8 @@ export class MatchService {
             loserGamesWon,
             rule?.pointsWin ?? 3,
             rule?.pointsLoss ?? 0,
+            undefined,
+            groupId,
         );
     }
 }

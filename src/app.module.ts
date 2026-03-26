@@ -42,8 +42,10 @@ import { SeasonRosterModule } from './season-roster/season-roster.module';
 import { MatchDisputeModule } from './match-dispute/match-dispute.module';
 import { BracketModule } from './bracket/bracket.module';
 import { StageModule } from './stage/stage.module';
+import { GroupModule } from './group/group.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { ScoutingModule } from './scouting/scouting.module';
+import { NftModule } from './nft/nft.module';
 
 @Module({
   imports: [
@@ -90,8 +92,10 @@ import { ScoutingModule } from './scouting/scouting.module';
     MatchDisputeModule,
     BracketModule,
     StageModule,
+    GroupModule,
     InvitationModule,
     ScoutingModule,
+    NftModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -8,6 +8,7 @@ import { StandingsModule } from '../standings/standings.module';
 import { LeagueRuleModule } from '../season-rule/season-rule.module';
 import { SeasonModule } from '../season/season.module';
 import { LeagueRegistrationModule } from '../league-registration/league-registration.module';
+import { BracketModule } from '../bracket/bracket.module';
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { LeagueRegistrationModule } from '../league-registration/league-registra
         LeagueRuleModule,
         SeasonModule,
         LeagueRegistrationModule,
+        BracketModule,
     ],
     controllers: [MatchController],
     providers: [MatchService, EloService],

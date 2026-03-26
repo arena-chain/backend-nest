@@ -17,9 +17,15 @@ export class MatchController {
     }
 
     @Get()
-    findAll(@Query('roundId') roundId?: string, @Query('seasonId') seasonId?: string) {
+    findAll(
+        @Query('roundId') roundId?: string,
+        @Query('seasonId') seasonId?: string,
+        @Query('groupId') groupId?: string,
+        @Query('status') status?: string,
+        @Query('from') from?: string,
+    ) {
         if (roundId) return this.matchService.findByRound(roundId);
-        if (seasonId) return this.matchService.findBySeason(seasonId);
+        if (seasonId) return this.matchService.findBySeason(seasonId, groupId, status, from);
         return [];
     }
 

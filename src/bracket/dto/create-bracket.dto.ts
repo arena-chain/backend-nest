@@ -8,6 +8,11 @@ export class CreateBracketDto {
     @IsEnum(BracketFormat)
     format: BracketFormat;
 
+    /** Bind this bracket to a specific stage */
+    @IsOptional()
+    @IsString()
+    stageId?: string;
+
     /** If omitted, backend seeds from current season standings (by rank). */
     @IsOptional()
     @IsArray()
@@ -21,6 +26,11 @@ export class AdvanceSlotDto {
 
     @IsString()
     winnerId: string;
+
+    /** Required for double elimination: the losing team goes to the lower bracket */
+    @IsOptional()
+    @IsString()
+    loserId?: string;
 
     @IsOptional()
     @IsString()

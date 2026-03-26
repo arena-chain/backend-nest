@@ -1,4 +1,6 @@
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, Min, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { MatchFormat } from '../../season-rule/schemas/season-rule.schema';
 
 export class CreateMatchDto {
     @IsString()
@@ -34,6 +36,18 @@ export class CreateMatchDto {
     @IsString()
     @IsOptional()
     notes?: string;
+
+    @IsEnum(MatchFormat)
+    @IsOptional()
+    formatOverride?: MatchFormat;
+
+    @IsString()
+    @IsOptional()
+    groupId?: string;
+
+    @IsString()
+    @IsOptional()
+    streamUrl?: string;
 }
 
 export class AddGameResultDto {
@@ -45,6 +59,18 @@ export class AddGameResultDto {
     @IsString()
     @IsNotEmpty()
     winnerId: string;
+
+    @IsString()
+    @IsOptional()
+    mapName?: string;
+
+    @IsNumber()
+    @IsOptional()
+    team1Score?: number;
+
+    @IsNumber()
+    @IsOptional()
+    team2Score?: number;
 
     @IsNumber()
     @IsOptional()
@@ -61,6 +87,12 @@ export class SubmitFullResultDto {
     @Min(0)
     @IsNotEmpty()
     team2GamesWon: number;
+
+    @IsArray()
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => AddGameResultDto)
+    games?: AddGameResultDto[];
 }
 
 export class DeclareForfeitDto {

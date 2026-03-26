@@ -134,5 +134,14 @@ export class TournementsController {
   getAvailableTickets(@Param('id') id: string) {
     return this.tournementsService.getAvailableTickets(id);
   }
+
+  @Get(':id/teams')
+  @ApiOperation({ summary: 'Get all teams in a tournament with their full player roster' })
+  @ApiParam({ name: 'id', description: 'Tournament ID' })
+  @ApiResponse({ status: 200, description: 'Teams with populated members' })
+  @ApiResponse({ status: 404, description: 'Tournament not found' })
+  getTeamsWithPlayers(@Param('id') id: string) {
+    return this.tournementsService.getTeamsWithPlayers(id);
+  }
 }
 

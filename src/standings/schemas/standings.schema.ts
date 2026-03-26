@@ -12,6 +12,10 @@ export class Standings {
     @Prop()
     stageId?: string;
 
+    /** Optional group for group-stage standings (Group A, B, C, D…) */
+    @Prop()
+    groupId?: string;
+
     @Prop({ required: true })
     teamId: string;
 
@@ -61,4 +65,4 @@ export const StandingsSchema = SchemaFactory.createForClass(Standings);
 
 // Indexes
 StandingsSchema.index({ seasonId: 1, points: -1 });
-StandingsSchema.index({ seasonId: 1, teamId: 1 }, { unique: true });
+StandingsSchema.index({ seasonId: 1, stageId: 1, groupId: 1, teamId: 1 }, { unique: true });
