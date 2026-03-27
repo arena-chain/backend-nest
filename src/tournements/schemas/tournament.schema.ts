@@ -142,9 +142,8 @@ export class Tournament {
     @Prop()
     streamUrl?: string;
 
-    @Prop({ type: [TicketTypeSchema], default: [] })
-    ticketTypes: TicketType[];
+    @Prop({ type: [{ type: Types.ObjectId, ref: 'TicketTypeDefinition' }], default: [] })
+    ticketTypes: Types.ObjectId[];
 }
 
 export const TournamentSchema = SchemaFactory.createForClass(Tournament);
-

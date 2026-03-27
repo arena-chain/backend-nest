@@ -26,7 +26,7 @@ export class TeamManagerService {
             gender?: string;
             description?: string;
             phoneNumber?: string;
-        }
+        },
     ): Promise<TeamManagerProfileDocument> {
         const profile = new this.teamManagerProfileModel({
             userId,
@@ -41,6 +41,7 @@ export class TeamManagerService {
             team: new Types.ObjectId(profileData.teamId),
             status: 'pending',
             isVerified: false,
+            managedTeams: [],
         });
 
         return profile.save();

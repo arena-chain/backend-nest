@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { RankService } from './rank.service';
 import { CreatePlayerRankDto } from './dto/create-rank.dto';
 import { UpdateEloDto } from './dto/update-elo.dto';
@@ -18,8 +19,69 @@ export class RankController {
   }
 
   /**
+   * Get leaderboard for a game
+   * GET /rank/leaderboard/:gameId
+   */
+  @Get('leaderboard/:gameId')
+  async getLeaderboard(
+    @Param('gameId') gameId: string,
+    @Query('season') season?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const seasonNum = season ? parseInt(season, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : 100;
+    return this.rankService.getLeaderboard(gameId, seasonNum, limitNum);
+  }
+
+  /**
+   * Get all ranks for the current authenticated user across all games
+   * GET /rank/me/all
+   */
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me/all')
+  async getMyRanks(@Req() req: any) {
+    const userId = req.user?.userId;
+    return this.rankService.getUserRanks(userId);
+  }
+
+  /**
+   * Get all ranks for a specific user across all games
+   * GET /rank/user/:userId/all
+   */
+  @Get('user/:userId/all')
+  async getUserRanks(@Param('userId') userId: string) {
+    return this.rankService.getUserRanks(userId);
+  }
+
+  /**
+   * Get rank history for a player
+   * GET /rank/history/:userId/:gameId
+   */
+  @Get('history/:userId/:gameId')
+  async getRankHistory(
+    @Param('userId') userId: string,
+    @Param('gameId') gameId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return this.rankService.getRankHistory(userId, gameId, limitNum);
+  }
+
+  /**
+   * Get user penalties
+   * GET /rank/penalties/:userId
+   */
+  @Get('penalties/:userId')
+  async getUserPenalties(
+    @Param('userId') userId: string,
+    @Query('gameId') gameId?: string,
+  ) {
+    return this.rankService.getUserPenalties(userId, gameId);
+  }
+
+  /**
    * Get a player's rank for a specific game
-   * GET /rank/:userId/:gameId
+   * GET /rank/:userId/:gameId (DYNAMIC ROUTE - SHOULD BE AT BOTTOM)
    */
   @Get(':userId/:gameId')
   async getPlayerRank(
@@ -54,61 +116,10 @@ export class RankController {
   }
 
   /**
-   * Get rank history for a player
-   * GET /rank/history/:userId/:gameId
-   */
-  @Get('history/:userId/:gameId')
-  async getRankHistory(
-    @Param('userId') userId: string,
-    @Param('gameId') gameId: string,
-    @Query('limit') limit?: string,
-  ) {
-    const limitNum = limit ? parseInt(limit, 10) : 50;
-    return this.rankService.getRankHistory(userId, gameId, limitNum);
-  }
-
-  /**
-   * Get leaderboard for a game
-   * GET /rank/leaderboard/:gameId
-   */
-  @Get('leaderboard/:gameId')
-  async getLeaderboard(
-    @Param('gameId') gameId: string,
-    @Query('season') season?: string,
-    @Query('limit') limit?: string,
-  ) {
-    const seasonNum = season ? parseInt(season, 10) : undefined;
-    const limitNum = limit ? parseInt(limit, 10) : 100;
-    return this.rankService.getLeaderboard(gameId, seasonNum, limitNum);
-  }
-
-  /**
-   * Get all ranks for a user across all games
-   * GET /rank/user/:userId/all
-   */
-  @Get('user/:userId/all')
-  async getUserRanks(@Param('userId') userId: string) {
-    return this.rankService.getUserRanks(userId);
-  }
-
-  /**
-   * Get user penalties
-   * GET /rank/penalties/:userId
-   */
-  @Get('penalties/:userId')
-  async getUserPenalties(
-    @Param('userId') userId: string,
-    @Query('gameId') gameId?: string,
-  ) {
-    return this.rankService.getUserPenalties(userId, gameId);
-  }
-
-  /**
    * Reset season ranks (Admin only)
    * POST /rank/reset-season/:gameId
    */
   @Post('reset-season/:gameId')
-  // @UseGuards(AdminGuard) // TODO: Add admin authentication guard
   async resetSeasonRanks(
     @Param('gameId') gameId: string,
     @Body('newSeason') newSeason: number,

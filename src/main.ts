@@ -5,16 +5,20 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Set global prefix for API
+  app.setGlobalPrefix('api');
+
+  // Enable CORS for mobile apps
   app.enableCors({
-    origin: true, // Allow all origins
+    origin: true, // Allow all origins (mobile apps)
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true, // Enable transformation for @Transform decorators
-  }));
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -39,8 +43,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
-  console.log(`Application is running on: http://localhost:${process.env.PORT ?? 3000}`);
-  console.log(`Swagger documentation available at: http://localhost:${process.env.PORT ?? 3000}/api`);
+  const port = process.env.PORT ?? 3000;
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`\n🚀 Application is running!`);
+  console.log(`📍 Local: http://localhost:${port}`);
+  console.log(`📍 Network: http://0.0.0.0:${port}`);
+  console.log(`📚 Swagger API: http://localhost:${port}/api`);
+  console.log(`\n💡 For physical devices, use your computer's IP address instead of localhost`);
+  console.log(`   Example: http://192.168.1.X:${port}\n`);
 }
 bootstrap();

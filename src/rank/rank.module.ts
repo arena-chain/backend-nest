@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { RankService } from './rank.service';
 import { RankController } from './rank.controller';
 import { PlayerRank, PlayerRankSchema } from './schemas/rank.schema';
@@ -9,6 +10,7 @@ import { RankTierConfig, RankTierConfigSchema } from './schemas/rank-tier-config
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
     MongooseModule.forFeature([
       { name: PlayerRank.name, schema: PlayerRankSchema },
       { name: RankHistory.name, schema: RankHistorySchema },

@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ReservationService } from './reservation.service';
 import { ReservationController } from './reservation.controller';
 import { Reservation, ReservationSchema } from './schemas/reservation.schema';
-import { Ticket, TicketSchema } from '../tickets/entities/ticket.entity';
+import { Ticket, TicketSchema } from '../tickets/schemas/ticket.schema';
 import { Tournament, TournamentSchema } from '../tournements/schemas/tournament.schema';
 
 @Module({

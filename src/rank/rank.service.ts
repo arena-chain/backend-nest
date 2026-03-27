@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreatePlayerRankDto } from './dto/create-rank.dto';
@@ -34,6 +35,7 @@ export class RankService {
     @InjectModel(RankHistory.name) private rankHistoryModel: Model<RankHistoryDocument>,
     @InjectModel(Penalty.name) private penaltyModel: Model<PenaltyDocument>,
     @InjectModel(RankTierConfig.name) private rankTierConfigModel: Model<RankTierConfigDocument>,
+    private eventEmitter: EventEmitter2,
   ) { }
 
   /**
@@ -177,8 +179,15 @@ export class RankService {
       newTier: tier,
       previousLevel,
       newLevel: level,
-      isTierPromotion,
       isTierDemotion,
+    });
+
+    // Emit event for LEVEL/XP system
+    this.eventEmitter.emit('match.completed', {
+      matchId: matchId || `rank_update_${Date.now()}`,
+      userId,
+      mode: 'RANKED',
+      won: result === MatchResult.WIN,
     });
 
     return playerRank;
@@ -293,6 +302,10 @@ export class RankService {
    * Get leaderboard for a game
    */
   async getLeaderboard(gameId: string, season?: number, limit: number = 100) {
+    if (!Types.ObjectId.isValid(gameId)) {
+      return [];
+    }
+
     const query: any = {
       game: new Types.ObjectId(gameId),
     };
@@ -301,15 +314,13 @@ export class RankService {
       query.season = season;
     }
 
-    const leaderboard = await this.playerRankModel
+    return this.playerRankModel
       .find(query)
       .sort({ elo: -1 })
       .limit(limit)
-      .populate('user', 'nickname email')
+      .populate('user', 'nickname email region country avatar')
       .populate('game', 'title')
       .exec();
-
-    return leaderboard;
   }
 
   /**

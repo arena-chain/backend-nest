@@ -1,8 +1,10 @@
 // src/auth/auth.service.ts
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { Types } from 'mongoose';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import { Registration, RegistrationDocument } from './schemas/registration.schema';
 import { UsersService } from '../user/user.service';
 import { PlayerService } from '../player/player.service';
 import { TeamManagerService } from '../team-manager/team-manager.service';
@@ -15,189 +17,225 @@ import { RegisterRefereeDto } from './dto/register-referee.dto';
 import { RegisterAdminDto } from './dto/register-admin.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserRole } from '../common/enums/role.enum';
+import { MailService } from '../mail/mail.service';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectModel(Registration.name) private registrationModel: Model<RegistrationDocument>,
     private usersService: UsersService,
     private playerService: PlayerService,
     private teamManagerService: TeamManagerService,
     private refereeService: RefereeService,
     private adminService: AdminService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) { }
 
+  private async sendRegistrationOtp(email: string) {
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    const user = await this.usersService.findByEmail(email);
+    if (user) {
+      await this.usersService.update(user._id.toString(), {
+        emailVerificationOtp: otp,
+        emailVerificationOtpExpires: otpExpires,
+      });
+      await this.mailService.sendVerificationEmail(email, otp);
+    }
+  }
+
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
   async register(dto: RegisterDto) {
-    // Generic register - routes based on role
     if (!dto.role) {
       throw new BadRequestException('Role is required for registration');
     }
 
+    let result;
     switch (dto.role) {
       case UserRole.PLAYER:
-        return this.registerPlayer(dto as RegisterPlayerDto);
+        result = await this.registerPlayer(dto as RegisterPlayerDto);
+        break;
       case UserRole.TEAM_MANAGER:
-        return this.registerTeamManager(dto as RegisterTeamManagerDto);
+        result = await this.registerTeamManager(dto as RegisterTeamManagerDto);
+        break;
       case UserRole.REFEREE:
-        return this.registerReferee(dto as RegisterRefereeDto);
+        result = await this.registerReferee(dto as RegisterRefereeDto);
+        break;
       case UserRole.ADMIN:
-        return this.registerAdmin(dto as RegisterAdminDto);
+        result = await this.registerAdmin(dto as RegisterAdminDto);
+        break;
       default:
         throw new BadRequestException('Invalid role');
     }
+
+    // Send verification email
+    await this.sendRegistrationOtp(dto.email);
+
+    return result;
   }
 
   async registerPlayer(dto: RegisterPlayerDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('User already exists');
+
     const hash = await bcrypt.hash(dto.password, 10);
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
 
-    const user = await this.usersService.create({
-      email: dto.email,
-      password: hash,
-      nickname: dto.nickname,
-    });
+    await this.registrationModel.findOneAndUpdate(
+      { email: dto.email },
+      {
+        email: dto.email,
+        passwordHash: hash,
+        nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
+        country: dto.country || 'TUNISIA',
+        role: UserRole.PLAYER,
+        roleData: { isPro: dto.isPro, isVerified: dto.isVerified },
+        otp,
+        otpExpires,
+      },
+      { upsert: true, new: true }
+    );
 
-    // Create player profile
-    await this.playerService.create(user._id as Types.ObjectId, {
-      isPro: dto.isPro,
-      isVerified: dto.isVerified,
-    });
+    await this.mailService.sendVerificationEmail(dto.email, otp);
 
-    return this.generateTokens(user._id.toString(), user.email, [UserRole.PLAYER]);
+    return { message: 'Verification code sent to your email' };
   }
 
   async registerTeamManager(dto: RegisterTeamManagerDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('User already exists');
+
     const hash = await bcrypt.hash(dto.password, 10);
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
 
-    const user = await this.usersService.create({
-      email: dto.email,
-      password: hash,
-      nickname: dto.nickname,
-    });
+    await this.registrationModel.findOneAndUpdate(
+      { email: dto.email },
+      {
+        email: dto.email,
+        passwordHash: hash,
+        nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
+        country: dto.country || 'TUNISIA',
+        role: UserRole.TEAM_MANAGER,
+        roleData: { organizationName: dto.organizationName },
+        otp,
+        otpExpires,
+      },
+      { upsert: true, new: true }
+    );
 
-    // Create team manager profile with all fields
-    await this.teamManagerService.create(user._id as Types.ObjectId, {
-      organizationName: dto.organizationName,
-      teamId: dto.teamId,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      cin: dto.cin,
-      age: dto.age,
-      gender: dto.gender,
-      description: dto.description,
-      phoneNumber: dto.phoneNumber,
-    });
+    await this.mailService.sendVerificationEmail(dto.email, otp);
 
-    return this.generateTokens(user._id.toString(), user.email, [UserRole.TEAM_MANAGER]);
+    return { message: 'Verification code sent to your email' };
   }
 
   async registerReferee(dto: RegisterRefereeDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('User already exists');
+
     const hash = await bcrypt.hash(dto.password, 10);
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
 
-    const user = await this.usersService.create({
-      email: dto.email,
-      password: hash,
-      nickname: dto.nickname,
-    });
+    await this.registrationModel.findOneAndUpdate(
+      { email: dto.email },
+      {
+        email: dto.email,
+        passwordHash: hash,
+        nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
+        country: dto.country || 'TUNISIA',
+        role: UserRole.REFEREE,
+        roleData: { level: dto.level },
+        otp,
+        otpExpires,
+      },
+      { upsert: true, new: true }
+    );
 
-    // Create referee profile
-    await this.refereeService.create(user._id as Types.ObjectId, {
-      level: dto.level,
-    });
+    await this.mailService.sendVerificationEmail(dto.email, otp);
 
-    return this.generateTokens(user._id.toString(), user.email, [UserRole.REFEREE]);
+    return { message: 'Verification code sent to your email' };
   }
 
   async registerAdmin(dto: RegisterAdminDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('User already exists');
+
     const hash = await bcrypt.hash(dto.password, 10);
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
 
-    const user = await this.usersService.create({
-      email: dto.email,
-      password: hash,
-      nickname: dto.nickname,
-    });
+    await this.registrationModel.findOneAndUpdate(
+      { email: dto.email },
+      {
+        email: dto.email,
+        passwordHash: hash,
+        nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
+        country: dto.country || 'TUNISIA',
+        role: UserRole.ADMIN,
+        roleData: { adminLevel: dto.adminLevel, permissions: dto.permissions },
+        otp,
+        otpExpires,
+      },
+      { upsert: true, new: true }
+    );
 
-    // Create admin profile
-    await this.adminService.create(user._id as Types.ObjectId, {
-      adminLevel: dto.adminLevel,
-      permissions: dto.permissions,
-    });
+    await this.mailService.sendVerificationEmail(dto.email, otp);
 
-    return this.generateTokens(user._id.toString(), user.email, [UserRole.ADMIN]);
+    return { message: 'Verification code sent to your email' };
   }
 
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
-
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    // Check all profiles to determine roles
-    const roles: UserRole[] = [];
-    const profiles: any = {};
+    // Determine user's role
+    let role: UserRole;
+    let profile: any;
 
-    // Check Player
     try {
-      const playerProfile = await this.playerService.findByUserId(user._id);
-      if (playerProfile) {
-        roles.push(UserRole.PLAYER);
-        profiles.player = playerProfile;
-      }
-    } catch (e) { }
-
-    // Check Team Manager
-    try {
-      const teamManagerProfile = await this.teamManagerService.findByUserId(user._id);
-      if (teamManagerProfile) {
-        // Block login if team manager is still pending approval
-        if (teamManagerProfile.status === 'pending') {
-          throw new UnauthorizedException(
-            'Your account is pending verification. Please wait for admin approval before logging in.'
-          );
-        }
-        // Block login if team manager was rejected
-        if (teamManagerProfile.status === 'rejected') {
-          throw new UnauthorizedException(
-            'Your account registration was rejected. Please contact support for more information.'
-          );
-        }
-        // Only allow approved team managers
-        if (teamManagerProfile.status === 'approved') {
-          roles.push(UserRole.TEAM_MANAGER);
-          profiles.teamManager = teamManagerProfile;
+      profile = await this.playerService.findByUserId(user._id);
+      role = UserRole.PLAYER;
+    } catch {
+      try {
+        profile = await this.teamManagerService.findByUserId(user._id);
+        role = UserRole.TEAM_MANAGER;
+      } catch {
+        try {
+          profile = await this.refereeService.findByUserId(user._id);
+          role = UserRole.REFEREE;
+        } catch {
+          try {
+            profile = await this.adminService.findByUserId(user._id);
+            role = UserRole.ADMIN;
+          } catch {
+            throw new UnauthorizedException('No profile found for user');
+          }
         }
       }
-    } catch (e) {
-      // Re-throw UnauthorizedException (our custom errors)
-      if (e instanceof UnauthorizedException) {
-        throw e;
-      }
-      // Ignore NotFoundException (profile doesn't exist)
     }
 
-    // Check Referee
-    try {
-      const refereeProfile = await this.refereeService.findByUserId(user._id);
-      if (refereeProfile) {
-        roles.push(UserRole.REFEREE);
-        profiles.referee = refereeProfile;
-      }
-    } catch (e) { }
-
-    // Check Admin
-    try {
-      const adminProfile = await this.adminService.findByUserId(user._id);
-      if (adminProfile) {
-        roles.push(UserRole.ADMIN);
-        profiles.admin = adminProfile;
-      }
-    } catch (e) { }
-
-    if (roles.length === 0) {
-      throw new UnauthorizedException('No profile found for user');
-    }
-
-    const tokens = await this.generateTokens(user._id.toString(), user.email, roles);
+    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
 
     return {
       ...tokens,
@@ -205,42 +243,436 @@ export class AuthService {
         id: user._id,
         email: user.email,
         nickname: user.nickname,
-        roles, // Return array of roles
-        profiles, // Return object with all profiles
+        role,
+        profile,
+        isEmailVerified: user.isEmailVerified,
+        avatar: user.avatar || null,
+        country: user.country || 'TUNISIA',
       },
     };
   }
 
-  async refreshTokens(refreshToken: string) {
-    try {
-      // Verify the refresh token is a valid JWT
-      const payload = await this.jwtService.verifyAsync(refreshToken);
+  async verifyEmail(dto: VerifyOtpDto) {
+    // 1. Check pending registrations
+    const pending = await this.registrationModel.findOne({ email: dto.email });
 
-      // Check that the user exists and the stored refresh token matches
-      const user = await this.usersService.findById(payload.sub);
-      if (!user || user.refreshToken !== refreshToken) {
-        throw new UnauthorizedException('Invalid refresh token');
+    if (pending) {
+      if (pending.otp !== dto.otp) throw new BadRequestException('Invalid OTP');
+      if (pending.otpExpires < new Date()) throw new BadRequestException('OTP expired');
+
+      // Create user
+      const user = await this.usersService.create({
+        email: pending.email,
+        password: pending.passwordHash,
+        nickname: pending.nickname,
+        region: pending.region,
+        country: pending.country || 'TUNISIA',
+        role: pending.role,
+      });
+
+      // Create profile based on role
+      let profile;
+      switch (pending.role) {
+        case UserRole.PLAYER:
+          profile = await this.playerService.create(user._id as Types.ObjectId, pending.roleData);
+          break;
+        case UserRole.TEAM_MANAGER:
+          profile = await this.teamManagerService.create(user._id as Types.ObjectId, pending.roleData);
+          break;
+        case UserRole.REFEREE:
+          profile = await this.refereeService.create(user._id as Types.ObjectId, pending.roleData);
+          break;
+        case UserRole.ADMIN:
+          profile = await this.adminService.create(user._id as Types.ObjectId, pending.roleData);
+          break;
       }
 
-      // Determine the user's current roles (they may have changed)
-      const roles: UserRole[] = payload.roles ?? [];
+      // Mark verified
+      await this.usersService.update(user._id.toString(), { isEmailVerified: true });
 
-      // Generate fresh token pair
-      return this.generateTokens(user._id.toString(), user.email, roles);
-    } catch (e) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      // Clean up
+      await this.registrationModel.deleteOne({ _id: pending._id });
+
+      const tokens = await this.generateTokens(user._id.toString(), user.email, pending.role as UserRole);
+
+      return {
+        message: 'Registration complete',
+        ...tokens,
+        user: {
+          id: user._id,
+          email: user.email,
+          nickname: user.nickname,
+          role: pending.role,
+          profile,
+          isEmailVerified: true,
+          avatar: user.avatar || null,
+          country: user.country || 'TUNISIA',
+        }
+      };
     }
+
+    // 2. Check existing unverified users (fallback)
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException('Registration or user not found');
+
+    if (user.emailVerificationOtp !== dto.otp) throw new BadRequestException('Invalid OTP');
+    if (!user.emailVerificationOtpExpires || user.emailVerificationOtpExpires < new Date()) throw new BadRequestException('OTP expired');
+
+    await this.usersService.update(user._id.toString(), {
+      isEmailVerified: true,
+      emailVerificationOtp: undefined,
+      emailVerificationOtpExpires: undefined,
+    });
+
+    return { message: 'Email verified successfully' };
   }
 
-  private async generateTokens(userId: string, email: string, roles: UserRole[]) {
-    const payload = { sub: userId, email, roles };
+  async resendOtp(email: string) {
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    // Check pending first
+    const pending = await this.registrationModel.findOne({ email });
+    if (pending) {
+      await this.registrationModel.updateOne({ _id: pending._id }, { otp, otpExpires });
+      await this.mailService.sendVerificationEmail(email, otp);
+      return { message: 'OTP resent' };
+    }
+
+    // Check existing
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    await this.usersService.update(user._id.toString(), {
+      emailVerificationOtp: otp,
+      emailVerificationOtpExpires: otpExpires,
+    });
+    await this.mailService.sendVerificationEmail(email, otp);
+    return { message: 'OTP resent' };
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    await this.usersService.update(user._id.toString(), {
+      resetPasswordOtp: otp,
+      resetPasswordOtpExpires: otpExpires,
+    });
+
+    await this.mailService.sendPasswordResetEmail(email, otp);
+
+    return { message: 'Reset password OTP sent successfully' };
+  }
+
+  async verifyResetOtp(dto: { email: string; otp: string }) {
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.resetPasswordOtp !== dto.otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    if (!user.resetPasswordOtpExpires || user.resetPasswordOtpExpires < new Date()) {
+      throw new BadRequestException('OTP expired');
+    }
+
+    return { message: 'OTP verified successfully' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.resetPasswordOtp !== dto.otp) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    if (!user.resetPasswordOtpExpires || user.resetPasswordOtpExpires < new Date()) {
+      throw new BadRequestException('OTP expired');
+    }
+
+    const hash = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.usersService.update(user._id.toString(), {
+      passwordHash: hash,
+      resetPasswordOtp: undefined,
+      resetPasswordOtpExpires: undefined,
+    });
+
+    return { message: 'Password reset successfully' };
+  }
+
+  async googleLogin(req: any) {
+    if (!req.user) {
+      throw new BadRequestException('No user from google');
+    }
+
+    const { email, firstName, lastName, picture, id } = req.user;
+    let user = await this.usersService.findByGoogleId(id);
+
+    if (!user) {
+      // Check if user exists with same email but no googleId
+      user = await this.usersService.findByEmail(email);
+      if (user) {
+        // Link google account
+        user = await this.usersService.update(user._id.toString(), { googleId: id });
+      } else {
+        // Create new user (default to PLAYER role for google login?)
+        user = await this.usersService.createWithGoogle({
+          email,
+          nickname: `${firstName} ${lastName}`,
+          googleId: id,
+          role: UserRole.PLAYER,
+        });
+
+        // Create player profile by default
+        await this.playerService.create(user._id as Types.ObjectId, {
+          isPro: false,
+          isVerified: false,
+        });
+      }
+    }
+
+    // Determine role (check if user is admin, else default to player)
+    let role = UserRole.PLAYER;
+    try {
+      const admin = await this.adminService.findByUserId(user._id);
+      if (admin) role = UserRole.ADMIN;
+    } catch {
+      // stay player
+    }
+
+    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    return tokens;
+  }
+
+  async steamLogin(req: any) {
+    if (!req.user) {
+      throw new BadRequestException('No user from steam');
+    }
+
+    const { steamId, nickname } = req.user;
+    let user = await this.usersService.findBySteamId(steamId);
+
+    if (!user) {
+      // Create new user
+      user = await this.usersService.createWithSteam({
+        nickname,
+        steamId,
+        role: UserRole.PLAYER,
+      });
+
+      // Create player profile by default
+      await this.playerService.create(user._id as Types.ObjectId, {
+        isPro: false,
+        isVerified: false,
+      });
+    }
+
+    // Determine role
+    let role = UserRole.PLAYER;
+    try {
+      const admin = await this.adminService.findByUserId(user._id);
+      if (admin) role = UserRole.ADMIN;
+    } catch {
+      // stay player
+    }
+
+    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    return tokens;
+  }
+
+  async googleMobileLogin(token: string) {
+    const { OAuth2Client } = require('google-auth-library');
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    let email: string;
+    let name: string;
+    let googleId: string;
+    let picture: string;
+
+    try {
+      // 1. Try to verify as ID Token
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        // On accepte les jetons venant du Web OU de l'Android
+        audience: [
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_ANDROID_CLIENT_ID
+        ].filter(id => !!id), // On enlève les valeurs vides
+      });
+      const payload = ticket.getPayload();
+      if (!payload) throw new Error('No payload');
+
+      email = payload.email;
+      name = payload.name;
+      googleId = payload.sub;
+      picture = payload.picture;
+    } catch (error) {
+      // 2. Fallback: Try to verify as Access Token by calling Google UserInfo API
+      try {
+        client.setCredentials({ access_token: token });
+        const response: any = await client.request({
+          url: 'https://www.googleapis.com/oauth2/v3/userinfo',
+        });
+        const data = response.data;
+
+        email = data.email;
+        name = data.name || data.email.split('@')[0];
+        googleId = data.sub;
+        picture = data.picture;
+      } catch (innerError) {
+        console.error('Google token verification failed:', error.message, innerError.message);
+        throw new UnauthorizedException('Invalid Google token');
+      }
+    }
+
+    // Find or create user
+    let user = await this.usersService.findByGoogleId(googleId);
+
+    if (!user) {
+      // Check if user exists with same email
+      user = await this.usersService.findByEmail(email);
+
+      if (user) {
+        // Link Google account to existing user
+        user = await this.usersService.update(user._id.toString(), {
+          googleId,
+          isEmailVerified: true, // Google emails are verified
+        });
+      } else {
+        // Create new user
+        user = await this.usersService.createWithGoogle({
+          email,
+          nickname: name || email.split('@')[0],
+          googleId,
+          role: UserRole.PLAYER,
+        });
+
+        // Create player profile by default
+        await this.playerService.create(user._id as Types.ObjectId, {
+          isPro: false,
+          isVerified: false,
+        });
+      }
+    }
+
+    // Determine role
+    let role = UserRole.PLAYER;
+    let profile: any;
+
+    try {
+      profile = await this.playerService.findByUserId(user._id);
+      role = UserRole.PLAYER;
+    } catch {
+      try {
+        profile = await this.teamManagerService.findByUserId(user._id);
+        role = UserRole.TEAM_MANAGER;
+      } catch {
+        try {
+          profile = await this.refereeService.findByUserId(user._id);
+          role = UserRole.REFEREE;
+        } catch {
+          try {
+            profile = await this.adminService.findByUserId(user._id);
+            role = UserRole.ADMIN;
+          } catch {
+            // Default to player if no profile found
+            role = UserRole.PLAYER;
+          }
+        }
+      }
+    }
+
+    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+
+    return {
+      ...tokens,
+      user: {
+        id: user._id,
+        email: user.email,
+        nickname: user.nickname,
+        role,
+        profile,
+        isEmailVerified: user.isEmailVerified,
+      },
+    };
+  }
+
+  async getProfile(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    let role: UserRole;
+    let profile: any;
+
+    try {
+      profile = await this.playerService.findByUserId(user._id);
+      role = UserRole.PLAYER;
+    } catch {
+      try {
+        profile = await this.teamManagerService.findByUserId(user._id);
+        role = UserRole.TEAM_MANAGER;
+      } catch {
+        try {
+          profile = await this.refereeService.findByUserId(user._id);
+          role = UserRole.REFEREE;
+        } catch {
+          try {
+            profile = await this.adminService.findByUserId(user._id);
+            role = UserRole.ADMIN;
+          } catch {
+            role = UserRole.PLAYER; // Fallback
+          }
+        }
+      }
+    }
+
+    return {
+      _id: user._id,
+      email: user.email,
+      nickname: user.nickname,
+      country: user.country,
+      avatar: user.avatar,
+      role,
+      isEmailVerified: user.isEmailVerified,
+    };
+  }
+
+  async updateProfile(email: string, updateData: { nickname?: string; country?: string; avatar?: string }) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) throw new NotFoundException('User not found');
+
+    const updatedUser = await this.usersService.update(user._id.toString(), updateData);
+
+    return {
+      message: 'Profile updated successfully',
+      user: {
+        _id: updatedUser._id,
+        email: updatedUser.email,
+        nickname: updatedUser.nickname,
+        country: updatedUser.country,
+        avatar: updatedUser.avatar,
+        isEmailVerified: updatedUser.isEmailVerified,
+      },
+    };
+  }
+
+  private async generateTokens(userId: string, email: string, role: UserRole) {
+    const payload = { sub: userId, email, role };
 
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '15m',
+      expiresIn: '7d', // 7 days for development to avoid 401
     });
 
     const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: '7d',
+      expiresIn: '30d',
     });
 
     await this.usersService.saveRefreshToken(userId, refreshToken);

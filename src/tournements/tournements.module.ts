@@ -4,6 +4,7 @@ import { TournementsService } from './tournements.service';
 import { TournementsController } from './tournements.controller';
 import { Tournament, TournamentSchema } from './schemas/tournament.schema';
 import { Team, TeamSchema } from '../team/schemas/team.schema';
+import { TicketTypeDefinition, TicketTypeDefinitionSchema } from '../tickets/schemas/ticket-type.schema';
 import { FriendshipModule } from '../friendship/friendship.module';
 import { NotificationModule } from '../notification/notification.module';
 
@@ -12,6 +13,7 @@ import { NotificationModule } from '../notification/notification.module';
     MongooseModule.forFeature([
       { name: Tournament.name, schema: TournamentSchema },
       { name: 'Team', schema: TeamSchema },
+      { name: TicketTypeDefinition.name, schema: TicketTypeDefinitionSchema },
     ]),
     FriendshipModule,
     NotificationModule,

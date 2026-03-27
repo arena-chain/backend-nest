@@ -5,7 +5,7 @@ import * as QRCode from 'qrcode';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { Reservation, ReservationDocument, ReservationStatus } from './schemas/reservation.schema';
-import { Ticket, TicketDocument, TicketStatus } from '../tickets/entities/ticket.entity';
+import { Ticket, TicketDocument, TicketStatus } from '../tickets/schemas/ticket.schema';
 import { Tournament, TournamentDocument } from '../tournements/schemas/tournament.schema';
 
 @Injectable()
@@ -19,8 +19,8 @@ export class ReservationService {
   async create(createReservationDto: CreateReservationDto): Promise<Reservation> {
     const { tournament: tournamentId, user: userId, ticketType, quantity } = createReservationDto;
 
-    // 1. Fetch Tournament
-    const tournament = await this.tournamentModel.findById(tournamentId).exec();
+    // 1. Fetch Tournament with ticket types populated
+    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
     if (!tournament) {
       throw new NotFoundException('Tournament not found');
     }
@@ -31,7 +31,7 @@ export class ReservationService {
     }
 
     // 3. Validate Ticket Type & Capacity
-    const typeConfig = tournament.ticketTypes?.find(t => t.name === ticketType);
+    const typeConfig = (tournament.ticketTypes as any[]).find((t: any) => t.name === ticketType);
     if (!typeConfig) {
       throw new BadRequestException(`Ticket type '${ticketType}' not found`);
     }

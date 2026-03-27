@@ -1,9 +1,11 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import 'multer';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiConsumes } from '@nestjs/swagger';
 import { TournementsService } from './tournements.service';
 import { CreateTournementDto } from './dto/create-tournement.dto';
 import { UpdateTournementDto } from './dto/update-tournement.dto';
+import { AddTicketTypesDto } from './dto/add-ticket-types.dto';
 import { imageUploadOptions } from 'src/common/utils/file-upload.utils';
 
 @ApiTags('Tournaments')
@@ -18,6 +20,9 @@ export class TournementsController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @UseInterceptors(FileInterceptor('file', imageUploadOptions))
   create(@Body() createTournementDto: CreateTournementDto, @UploadedFile() file: Express.Multer.File) {
+    // TicketTypes are now parsed via DTO @Transform decorator
+
+
     if (file) {
       createTournementDto.bannerImageUrl = `/uploads/${file.filename}`;
     }
@@ -31,11 +36,19 @@ export class TournementsController {
     return this.tournementsService.findAll();
   }
 
+  @Get(':id/available-tickets')
+  @ApiOperation({ summary: 'Get available ticket types for a tournament' })
+  @ApiParam({ name: 'id', description: 'Tournament ID' })
+  @ApiResponse({ status: 200, description: 'Available tickets retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Tournament not found' })
+  getAvailableTickets(@Param('id') id: string) {
+    return this.tournementsService.getAvailableTickets(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get tournament by ID' })
   @ApiParam({ name: 'id', description: 'Tournament ID' })
   @ApiResponse({ status: 200, description: 'Returns tournament details' })
-  @ApiResponse({ status: 404, description: 'Tournament not found' })
   findOne(@Param('id') id: string) {
     return this.tournementsService.findOne(id);
   }
@@ -108,5 +121,17 @@ export class TournementsController {
   ) {
     return this.tournementsService.addPhase(id, phaseData);
   }
-}
 
+
+  @Post(':id/tickets')
+  @ApiOperation({ summary: 'Add/Assign ticket types to the tournament' })
+  @ApiParam({ name: 'id', description: 'Tournament ID' })
+  @ApiResponse({ status: 200, description: 'Ticket types added successfully' })
+  @ApiResponse({ status: 404, description: 'Tournament not found' })
+  addTicketTypes(
+    @Param('id') id: string,
+    @Body() addTicketTypesDto: AddTicketTypesDto,
+  ) {
+    return this.tournementsService.addTicketTypes(id, addTicketTypesDto);
+  }
+}

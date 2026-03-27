@@ -41,6 +41,8 @@ export class TeamManagerProfile {
 
     @Prop({ default: false })
     isVerified: boolean;
+    @Prop({ type: [{ type: Types.ObjectId, ref: 'Team' }], default: [] })
+    managedTeams: Types.ObjectId[];
 }
 
 export const TeamManagerProfileSchema = SchemaFactory.createForClass(TeamManagerProfile);

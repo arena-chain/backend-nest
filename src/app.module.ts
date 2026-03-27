@@ -30,6 +30,7 @@ import { ReservationModule } from './reservation/reservation.module';
 import { TeamModule } from './team/team.module';
 import { RiotApiModule } from './riot-api/riot-api.module';
 import { MatchmakingModule } from './matchmaking/matchmaking.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MatchmakingModule } from './matchmaking/matchmaking.module';
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
+    MailModule,
     AuthModule,
     UsersModule,
     PlayerModule,

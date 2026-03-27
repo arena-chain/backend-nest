@@ -16,16 +16,17 @@ export class TicketsController {
     return this.ticketsService.create(createTicketDto);
   }
 
+  @Post('validate')
+  @ApiOperation({ summary: 'Validate and mark ticket as used (QR code scanning)' })
+  @ApiResponse({ status: 200, description: 'Ticket validation result' })
+  validateTicket(@Body('ticketNumber') ticketNumber: string) {
+    return this.ticketsService.validateTicket(ticketNumber);
+  }
+
   @Get('my-tickets')
   @ApiOperation({ summary: 'Get all tickets for current user' })
   getMyTickets(@Query('userId') userId: string) {
-    // In a real app with AuthGuard, we would extract user from Request
-    // For now, we'll accept userId as query param or header, or just fail safely
     if (!userId) {
-      // Check if we can get it from a common decorator or request if available
-      // For this specific codebase, based on previous interactions, it seems we might need to rely on the client sending the ID
-      // But typically `req.user` is used. 
-      // Let's assume the client sends `userId` query param for now as a fallback if no Guard is shown
       throw new Error('User ID is required');
     }
     return this.ticketsService.findAllByUser(userId);
@@ -42,6 +43,18 @@ export class TicketsController {
   @ApiQuery({ name: 'number', required: true, description: 'Ticket number' })
   search(@Query('number') ticketNumber: string) {
     return this.ticketsService.findByNumber(ticketNumber);
+  }
+
+  @Get('tournament/:tournamentId/stats')
+  @ApiOperation({ summary: 'Get ticket statistics for a tournament' })
+  getTicketStats(@Param('tournamentId') tournamentId: string) {
+    return this.ticketsService.getTicketStats(tournamentId);
+  }
+
+  @Get('tournament/:tournamentId')
+  @ApiOperation({ summary: 'Get all tickets for a tournament' })
+  findByTournament(@Param('tournamentId') tournamentId: string) {
+    return this.ticketsService.findByTournament(tournamentId);
   }
 
   @Get(':id')

@@ -8,10 +8,15 @@ import { RefereeModule } from '../referee/referee.module';
 import { AdminModule } from '../admin/admin.module';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
+import { GoogleStrategy } from './google.strategy';
+import { SteamStrategy } from './steam.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Registration, RegistrationSchema } from './schemas/registration.schema';
 
 @Module({
   imports: [
+    MongooseModule.forFeature([{ name: Registration.name, schema: RegistrationSchema }]),
     UsersModule,
     PlayerModule,
     TeamManagerModule,
@@ -27,7 +32,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, SteamStrategy],
   exports: [AuthService],
 })
 export class AuthModule { }

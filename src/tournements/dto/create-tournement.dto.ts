@@ -32,10 +32,18 @@ export enum TournamentType {
 export class BundleDto {
     @IsNumber()
     @Min(1)
+    @Transform(({ value }) => {
+        const num = typeof value === 'string' ? parseInt(value, 10) : value;
+        return isNaN(num) ? value : num;
+    })
     quantity: number;
 
     @IsNumber()
     @Min(0)
+    @Transform(({ value }) => {
+        const num = typeof value === 'string' ? parseFloat(value) : value;
+        return isNaN(num) ? value : num;
+    })
     price: number;
 }
 
@@ -46,10 +54,18 @@ export class TicketTypeDto {
 
     @IsNumber()
     @Min(0)
+    @Transform(({ value }) => {
+        const num = typeof value === 'string' ? parseFloat(value) : value;
+        return isNaN(num) ? value : num;
+    })
     price: number;
 
     @IsNumber()
     @Min(1)
+    @Transform(({ value }) => {
+        const num = typeof value === 'string' ? parseInt(value, 10) : value;
+        return isNaN(num) ? value : num;
+    })
     capacity: number;
 
     @IsArray()
@@ -156,6 +172,12 @@ export class CreateTournementDto {
     format: TournamentFormat;
 
     @ApiPropertyOptional({ description: 'Tournament rules', example: { bestOf: 3, mapPool: ['Dust2', 'Inferno'] } })
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try { return JSON.parse(value); } catch { return value; }
+        }
+        return value;
+    })
     @IsObject()
     @IsOptional()
     rules?: Record<string, any>;
@@ -175,6 +197,4 @@ export class CreateTournementDto {
     @IsBoolean()
     @IsOptional()
     registrationOpen?: boolean;
-
-
 }
