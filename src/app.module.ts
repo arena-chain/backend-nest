@@ -34,12 +34,12 @@ import { MatchmakingModule } from './matchmaking/matchmaking.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/arenachain'),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
-    ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
     PlayerModule,
