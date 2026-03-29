@@ -1,15 +1,49 @@
-import { IsString, IsOptional, IsArray } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { Types } from 'mongoose';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateTeamManagerDto {
-    @ApiProperty({ required: false, description: 'Organization name' })
+    @ApiPropertyOptional({ description: 'Organization name' })
     @IsOptional()
     @IsString()
     organizationName?: string;
 
-    @ApiProperty({ required: false, description: 'Managed team IDs', type: [String] })
+    @ApiPropertyOptional({ description: 'First name' })
     @IsOptional()
-    @IsArray()
-    managedTeams?: Types.ObjectId[];
+    @IsString()
+    firstName?: string;
+
+    @ApiPropertyOptional({ description: 'Last name' })
+    @IsOptional()
+    @IsString()
+    lastName?: string;
+
+    @ApiPropertyOptional({ description: 'CIN (National ID number)' })
+    @IsOptional()
+    @IsString()
+    cin?: string;
+
+    @ApiPropertyOptional({ description: 'Age' })
+    @IsOptional()
+    @IsNumber()
+    age?: number;
+
+    @ApiPropertyOptional({ description: 'Gender' })
+    @IsOptional()
+    @IsString()
+    gender?: string;
+
+    @ApiPropertyOptional({ description: 'Bio / description' })
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @ApiPropertyOptional({ description: 'Phone number' })
+    @IsOptional()
+    @IsString()
+    phoneNumber?: string;
+
+    @ApiPropertyOptional({ description: 'Profile photo — URL or base64 string (data:image/...)' })
+    @IsOptional()
+    @IsString()
+    photo?: string;
 }

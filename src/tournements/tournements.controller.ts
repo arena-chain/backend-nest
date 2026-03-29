@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import 'multer';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiConsumes } from '@nestjs/swagger';
 import { TournementsService } from './tournements.service';
 import { CreateTournementDto } from './dto/create-tournement.dto';
@@ -36,19 +35,11 @@ export class TournementsController {
     return this.tournementsService.findAll();
   }
 
-  @Get(':id/available-tickets')
-  @ApiOperation({ summary: 'Get available ticket types for a tournament' })
-  @ApiParam({ name: 'id', description: 'Tournament ID' })
-  @ApiResponse({ status: 200, description: 'Available tickets retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Tournament not found' })
-  getAvailableTickets(@Param('id') id: string) {
-    return this.tournementsService.getAvailableTickets(id);
-  }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get tournament by ID' })
   @ApiParam({ name: 'id', description: 'Tournament ID' })
   @ApiResponse({ status: 200, description: 'Returns tournament details' })
+  @ApiResponse({ status: 404, description: 'Tournament not found' })
   findOne(@Param('id') id: string) {
     return this.tournementsService.findOne(id);
   }
@@ -134,4 +125,23 @@ export class TournementsController {
   ) {
     return this.tournementsService.addTicketTypes(id, addTicketTypesDto);
   }
+
+  @Get(':id/available-tickets')
+  @ApiOperation({ summary: 'Get available ticket types for a tournament' })
+  @ApiParam({ name: 'id', description: 'Tournament ID' })
+  @ApiResponse({ status: 200, description: 'Available tickets retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Tournament not found' })
+  getAvailableTickets(@Param('id') id: string) {
+    return this.tournementsService.getAvailableTickets(id);
+  }
+
+  @Get(':id/teams')
+  @ApiOperation({ summary: 'Get all teams in a tournament with their full player roster' })
+  @ApiParam({ name: 'id', description: 'Tournament ID' })
+  @ApiResponse({ status: 200, description: 'Teams with populated members' })
+  @ApiResponse({ status: 404, description: 'Tournament not found' })
+  getTeamsWithPlayers(@Param('id') id: string) {
+    return this.tournementsService.getTeamsWithPlayers(id);
+  }
 }
+

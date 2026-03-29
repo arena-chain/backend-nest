@@ -1,4 +1,4 @@
-import { IsString, IsUrl, IsOptional, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsUrl, IsOptional, IsArray, IsBoolean, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateStreamDto {
@@ -11,13 +11,24 @@ export class CreateStreamDto {
     @IsString()
     description?: string;
 
-    @ApiProperty({ description: 'Streamer user ID' })
+    @ApiProperty({ required: false, description: 'Streamer user ID' })
+    @IsOptional()
     @IsString()
-    streamerId: string;
+    streamerId?: string;
 
-    @ApiProperty({ description: 'Stream URL' })
+    @ApiProperty({ description: 'Channel ID that owns the stream' })
+    @IsString()
+    channelId: string;
+
+    @ApiProperty({ required: false, description: 'Source or playback URL for the live video' })
+    @IsOptional()
     @IsUrl()
-    streamUrl: string;
+    streamUrl?: string;
+
+    @ApiProperty({ required: false, description: 'Playback URL used by viewers' })
+    @IsOptional()
+    @IsUrl()
+    playbackUrl?: string;
 
     @ApiProperty({ required: false, default: false, description: 'Is the stream currently live' })
     @IsOptional()
@@ -33,4 +44,14 @@ export class CreateStreamDto {
     @IsOptional()
     @IsUrl()
     thumbnailUrl?: string;
+
+    @ApiProperty({ required: false, description: 'Scheduled start time' })
+    @IsOptional()
+    @IsDateString()
+    scheduledStartTime?: string;
+
+    @ApiProperty({ required: false, description: 'Scheduled end time' })
+    @IsOptional()
+    @IsDateString()
+    scheduledEndTime?: string;
 }

@@ -17,3 +17,6 @@ export class AdminProfile {
 }
 
 export const AdminProfileSchema = SchemaFactory.createForClass(AdminProfile);
+
+// Create indexes
+AdminProfileSchema.index({ userId: 1 });

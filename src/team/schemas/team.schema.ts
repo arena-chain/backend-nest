@@ -9,6 +9,9 @@ export class Team {
     name: string;
 
     @Prop()
+    organizationName?: string;
+
+    @Prop()
     logo?: string;
 
     @Prop()

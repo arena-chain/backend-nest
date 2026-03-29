@@ -1,26 +1,55 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateChatDto } from './dto/create-chat.dto';
-import { UpdateChatDto } from './dto/update-chat.dto';
+import { Chat, ChatDocument } from './entities/chat.entity';
+import { UsersService } from '../user/user.service';
 
 @Injectable()
 export class ChatService {
-  create(createChatDto: CreateChatDto) {
-    return 'This action adds a new chat';
+  constructor(
+    @InjectModel(Chat.name) private readonly chatModel: Model<ChatDocument>,
+    private readonly usersService: UsersService,
+  ) {}
+
+  async createForUser(userId: string, createChatDto: CreateChatDto) {
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const created = await this.chatModel.create({
+      senderId: new Types.ObjectId(userId),
+      senderNickname: user.nickname,
+      senderRole: user.role,
+      channelId: new Types.ObjectId(createChatDto.channelId),
+      message: createChatDto.message.trim(),
+    });
+
+    return created.toObject();
   }
 
-  findAll() {
-    return `This action returns all chat`;
+  async createAnonymous(createChatDto: CreateChatDto, guestNickname: string) {
+    const created = await this.chatModel.create({
+      senderId: null,
+      senderNickname: guestNickname.trim(),
+      senderRole: 'guest',
+      channelId: new Types.ObjectId(createChatDto.channelId),
+      message: createChatDto.message.trim(),
+    });
+
+    return created.toObject();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} chat`;
-  }
+  async findByChannel(channelId: string, limit = 50) {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const messages = await this.chatModel
+      .find({ channelId: new Types.ObjectId(channelId) })
+      .sort({ createdAt: -1 })
+      .limit(safeLimit)
+      .lean()
+      .exec();
 
-  update(id: number, updateChatDto: UpdateChatDto) {
-    return `This action updates a #${id} chat`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} chat`;
+    return messages.reverse();
   }
 }

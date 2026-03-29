@@ -12,8 +12,9 @@ export class CreateChannelDto {
     description?: string;
 
     @ApiProperty({ description: 'Owner user ID' })
+    @IsOptional()
     @IsString()
-    ownerId: string;
+    ownerId?: string;
 
     @ApiProperty({ required: false, description: 'Banner URL' })
     @IsOptional()

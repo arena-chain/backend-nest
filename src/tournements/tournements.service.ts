@@ -5,6 +5,7 @@ import { CreateTournementDto, TournamentStatus, TournamentType } from './dto/cre
 import { AddTicketTypesDto } from './dto/add-ticket-types.dto';
 import { UpdateTournementDto } from './dto/update-tournement.dto';
 import { Tournament, TournamentDocument } from './schemas/tournament.schema';
+import { Team, TeamDocument } from '../team/schemas/team.schema';
 import { FriendshipService } from '../friendship/friendship.service';
 import { NotificationService } from '../notification/notification.service';
 
@@ -14,6 +15,7 @@ import { TicketTypeDefinition, TicketTypeDefinitionDocument } from '../tickets/s
 export class TournementsService {
   constructor(
     @InjectModel(Tournament.name) private tournamentModel: Model<TournamentDocument>,
+    @InjectModel(Team.name) private teamModel: Model<TeamDocument>,
     @InjectModel(TicketTypeDefinition.name) private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
     private friendshipService: FriendshipService,
     private notificationService: NotificationService,
@@ -260,6 +262,24 @@ export class TournementsService {
     await tournament.save();
 
     return await this.findOne(tournamentId);
+  }
+
+  async getTeamsWithPlayers(tournamentId: string): Promise<any[]> {
+    if (!Types.ObjectId.isValid(tournamentId)) {
+      throw new BadRequestException('Invalid tournament ID');
+    }
+
+    const tournament = await this.tournamentModel.findById(tournamentId).exec();
+    if (!tournament) {
+      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+    }
+
+    const teams = await this.teamModel
+      .find({ _id: { $in: tournament.teams } })
+      .populate({ path: 'members', model: 'User', select: 'nickname avatar email country' })
+      .exec();
+
+    return teams;
   }
 
   async getAvailableTickets(tournamentId: string) {

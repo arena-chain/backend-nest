@@ -7,10 +7,9 @@ export class CreatePartnershipDto {
 
     @IsString()
     @IsOptional()
-    @IsUrl()
     logo?: string;
 
-    @IsEnum(['Event Sponsor', 'Platform Sponsor'])
+    @IsEnum(['Title Sponsor', 'Event Sponsor', 'Platform Sponsor', 'Media Partner'])
     @IsNotEmpty()
     type: string;
 

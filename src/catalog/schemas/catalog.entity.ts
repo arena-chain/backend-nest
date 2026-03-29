@@ -29,8 +29,18 @@ export class Catalog {
     @Prop()
     coverImageUrl?: string;
 
+    @Prop({ default: 5 })
+    teamSize: number;
+
+    @Prop({ default: true })
+    supportsTeams: boolean;
+
+    @Prop({ default: false })
+    supportsSolo: boolean;
+
     @Prop({ type: Object, default: {} })
     metadata: Record<string, any>;
 }
 
 export const CatalogSchema = SchemaFactory.createForClass(Catalog);
+

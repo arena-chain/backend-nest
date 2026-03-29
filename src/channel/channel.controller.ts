@@ -1,19 +1,30 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('channel')
 @Controller('channel')
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) { }
 
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user channel' })
+  findMine(@Req() req) {
+    return this.channelService.findMine(req.user.userId);
+  }
+
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new channel' })
   @ApiResponse({ status: 201, description: 'Channel created successfully' })
-  create(@Body() createChannelDto: CreateChannelDto) {
-    return this.channelService.create(createChannelDto);
+  create(@Req() req, @Body() createChannelDto: CreateChannelDto) {
+    return this.channelService.create(req.user.userId, createChannelDto);
   }
 
   @Get()
@@ -39,18 +50,22 @@ export class ChannelController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update channel' })
   @ApiResponse({ status: 200, description: 'Channel updated successfully' })
   @ApiResponse({ status: 404, description: 'Channel not found' })
-  update(@Param('id') id: string, @Body() updateChannelDto: UpdateChannelDto) {
-    return this.channelService.update(id, updateChannelDto);
+  update(@Req() req, @Param('id') id: string, @Body() updateChannelDto: UpdateChannelDto) {
+    return this.channelService.update(id, req.user.userId, updateChannelDto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete channel' })
   @ApiResponse({ status: 200, description: 'Channel deleted successfully' })
   @ApiResponse({ status: 404, description: 'Channel not found' })
-  remove(@Param('id') id: string) {
-    return this.channelService.remove(id);
+  remove(@Req() req, @Param('id') id: string) {
+    return this.channelService.remove(id, req.user.userId);
   }
 }

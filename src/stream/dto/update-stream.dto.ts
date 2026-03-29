@@ -1,4 +1,4 @@
-import { IsString, IsUrl, IsOptional, IsArray, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsUrl, IsOptional, IsArray, IsBoolean, IsNumber, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateStreamDto {
@@ -12,10 +12,20 @@ export class UpdateStreamDto {
     @IsString()
     description?: string;
 
+    @ApiProperty({ required: false, description: 'Channel ID' })
+    @IsOptional()
+    @IsString()
+    channelId?: string;
+
     @ApiProperty({ required: false, description: 'Stream URL' })
     @IsOptional()
     @IsUrl()
     streamUrl?: string;
+
+    @ApiProperty({ required: false, description: 'Playback URL used by viewers' })
+    @IsOptional()
+    @IsUrl()
+    playbackUrl?: string;
 
     @ApiProperty({ required: false, description: 'Is the stream currently live' })
     @IsOptional()
@@ -36,4 +46,14 @@ export class UpdateStreamDto {
     @IsOptional()
     @IsUrl()
     thumbnailUrl?: string;
+
+    @ApiProperty({ required: false, description: 'Scheduled start time' })
+    @IsOptional()
+    @IsDateString()
+    scheduledStartTime?: string;
+
+    @ApiProperty({ required: false, description: 'Scheduled end time' })
+    @IsOptional()
+    @IsDateString()
+    scheduledEndTime?: string;
 }
