@@ -49,10 +49,5 @@ export class RegisterTeamManagerDto extends RegisterDto {
 
     @ApiPropertyOptional({ description: 'The ID of the team to manage' })
     @IsString()
-<<<<<<< HEAD
     teamId: string;
-=======
-    @IsOptional()
-    teamId?: string;
->>>>>>> origin/live_stream
 }

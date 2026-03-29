@@ -32,11 +32,7 @@ export class RegisterDto {
     @ApiPropertyOptional({
         enum: UserRole,
         example: UserRole.PLAYER,
-<<<<<<< HEAD
-        description: 'User role (PLAYER, TEAM_MANAGER, REFEREE, or ADMIN)',
-=======
         description: 'User role (PLAYER, TEAM_MANAGER, REFEREE, SCOUTER, or ADMIN)',
->>>>>>> origin/live_stream
     })
     @IsEnum(UserRole)
     @IsOptional()
@@ -49,7 +45,6 @@ export class RegisterDto {
     @IsString()
     @IsOptional()
     region?: string;
-<<<<<<< HEAD
 
     @ApiPropertyOptional({
         example: 'TUNISIA',
@@ -58,6 +53,4 @@ export class RegisterDto {
     @IsString()
     @IsOptional()
     country?: string;
-=======
->>>>>>> origin/live_stream
 }

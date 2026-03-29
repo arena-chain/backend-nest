@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 import { LeagueMode, LeagueTier, RegionFilter } from '../schemas/league.schema';
@@ -53,43 +52,4 @@ export class CreateLeagueDto {
     @Min(0, { message: 'L\'ELO ne peut pas être négatif' })
     @IsOptional()
     minElo?: number;
-=======
-import { IsEnum, IsNotEmpty, IsString, IsOptional, IsBoolean, IsMongoId, Validate } from 'class-validator';
-import { LeagueLevel } from '../schemas/league.schema';
-import { IsValidRegionConstraint } from './is-valid-region.decorator';
-
-export class CreateLeagueDto {
-    @IsString()
-    @IsNotEmpty()
-    name: string;
-
-    @IsEnum(LeagueLevel)
-    @IsNotEmpty()
-    level: LeagueLevel;
-
-    @Validate(IsValidRegionConstraint)
-    @IsString()
-    @IsOptional()
-    regionId: string;
-
-    @IsString()
-    @IsNotEmpty()
-    gameId: string;
-
-    @IsString()
-    @IsOptional()
-    description?: string;
-
-    @IsString()
-    @IsOptional()
-    logoUrl?: string;
-
-    @IsBoolean()
-    @IsOptional()
-    isActive?: boolean;
-
-    @IsMongoId()
-    @IsOptional()
-    organiserId?: string;
->>>>>>> origin/live_stream
 }

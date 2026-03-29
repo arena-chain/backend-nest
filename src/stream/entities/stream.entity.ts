@@ -14,10 +14,6 @@ export class Stream {
     @Prop({ type: Types.ObjectId, ref: 'User', required: true })
     streamerId: Types.ObjectId;
 
-<<<<<<< HEAD
-    @Prop({ required: true })
-    streamUrl: string;
-=======
     @Prop({ type: Types.ObjectId, ref: 'Channel', required: true })
     channelId: Types.ObjectId;
 
@@ -26,7 +22,6 @@ export class Stream {
 
     @Prop()
     playbackUrl?: string;
->>>>>>> origin/live_stream
 
     @Prop({ default: false })
     isLive: boolean;
@@ -45,23 +40,17 @@ export class Stream {
 
     @Prop()
     endedAt?: Date;
-<<<<<<< HEAD
-=======
+
 
     @Prop()
     scheduledStartTime?: Date;
 
     @Prop()
     scheduledEndTime?: Date;
->>>>>>> origin/live_stream
 }
 
 export const StreamSchema = SchemaFactory.createForClass(Stream);
 
 // Create indexes
 StreamSchema.index({ streamerId: 1 });
-<<<<<<< HEAD
-=======
-StreamSchema.index({ channelId: 1 });
->>>>>>> origin/live_stream
-StreamSchema.index({ isLive: 1 });
+

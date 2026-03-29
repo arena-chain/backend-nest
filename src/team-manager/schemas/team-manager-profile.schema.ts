@@ -9,13 +9,9 @@ export class TeamManagerProfile {
     @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
     userId: Types.ObjectId;
 
-<<<<<<< HEAD
     @Prop({ type: Types.ObjectId, ref: 'Team', required: true })
     team: Types.ObjectId;
-=======
-    @Prop({ type: Types.ObjectId, ref: 'Team' })
-    team?: Types.ObjectId;
->>>>>>> origin/live_stream
+
 
     @Prop()
     organizationName?: string;
@@ -41,22 +37,18 @@ export class TeamManagerProfile {
     @Prop()
     phoneNumber?: string;
 
-<<<<<<< HEAD
-=======
     @Prop()
     photo?: string;
 
->>>>>>> origin/live_stream
     @Prop({ enum: ['pending', 'approved', 'rejected'], default: 'pending' })
     status: string;
 
     @Prop({ default: false })
     isVerified: boolean;
-<<<<<<< HEAD
+
     @Prop({ type: [{ type: Types.ObjectId, ref: 'Team' }], default: [] })
     managedTeams: Types.ObjectId[];
-=======
->>>>>>> origin/live_stream
+
 }
 
 export const TeamManagerProfileSchema = SchemaFactory.createForClass(TeamManagerProfile);

@@ -96,15 +96,6 @@ export class CreateTournementDto {
     @IsOptional()
     type?: TournamentType;
 
-<<<<<<< HEAD
-    @ApiPropertyOptional({ description: 'List of User IDs to invite', example: ['65bf...', '65bg...'] })
-    @IsArray()
-    @IsMongoId({ each: true })
-    @IsOptional()
-    invitedUserIds?: string[];
-
-=======
->>>>>>> origin/live_stream
     @ApiProperty({ description: 'Organizer User ID', example: 'user123' })
     @IsString()
     @IsNotEmpty()

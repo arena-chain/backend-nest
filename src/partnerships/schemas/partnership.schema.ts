@@ -11,16 +11,10 @@ export class Partnership {
     @Prop()
     logo: string;
 
-<<<<<<< HEAD
     @Prop({ enum: ['Event Sponsor', 'Platform Sponsor'], required: true })
     type: string;
 
-=======
-    @Prop({ enum: ['Title Sponsor', 'Event Sponsor', 'Platform Sponsor', 'Media Partner'], required: true })
-    type: string;
 
-
->>>>>>> origin/live_stream
     @Prop()
     description: string;
 
