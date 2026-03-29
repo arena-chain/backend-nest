@@ -1,34 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
-import { UpdateChatDto } from './dto/update-chat.dto';
 
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @Post()
-  create(@Body() createChatDto: CreateChatDto) {
-    return this.chatService.create(createChatDto);
+  @Post('user/:userId')
+  createForUser(
+    @Param('userId') userId: string,
+    @Body() createChatDto: CreateChatDto,
+  ) {
+    return this.chatService.createForUser(userId, createChatDto);
   }
 
-  @Get()
-  findAll() {
-    return this.chatService.findAll();
+  @Post('anonymous')
+  createAnonymous(
+    @Body() createChatDto: CreateChatDto,
+    @Body('guestNickname') guestNickname: string,
+  ) {
+    return this.chatService.createAnonymous(createChatDto, guestNickname);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.chatService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateChatDto: UpdateChatDto) {
-    return this.chatService.update(+id, updateChatDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.chatService.remove(+id);
+  @Get('channel/:channelId')
+  findByChannel(
+    @Param('channelId') channelId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.chatService.findByChannel(channelId, limit ? +limit : 50);
   }
 }

@@ -5,14 +5,20 @@ export type ChatDocument = Chat & Document;
 
 @Schema({ timestamps: true })
 export class Chat {
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    senderId: Types.ObjectId;
+    @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+    senderId: Types.ObjectId | null;
 
     @Prop({ type: Types.ObjectId, ref: 'User' })
     receiverId?: Types.ObjectId;
 
     @Prop({ type: Types.ObjectId, ref: 'Channel' })
     channelId?: Types.ObjectId;
+
+    @Prop()
+    senderNickname?: string;
+
+    @Prop()
+    senderRole?: string;
 
     @Prop({ required: true })
     message: string;

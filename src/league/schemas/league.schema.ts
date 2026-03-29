@@ -1,6 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+export enum LeagueLevel {
+    INTERNATIONAL = 'INTERNATIONAL',
+    CONTINENTAL = 'CONTINENTAL',
+    NATIONAL = 'NATIONAL',
+    REGIONAL = 'REGIONAL',
+}
+
 export enum LeagueTier {
     OFFICIAL = 'OFFICIAL',
     COMMUNITY = 'COMMUNITY',
