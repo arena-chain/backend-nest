@@ -49,6 +49,9 @@ import { ScoutingModule } from './scouting/scouting.module';
 import { NftModule } from './nft/nft.module';
 import { NewsModule } from './news/news.module';
 import { ReservationModule } from './reservation/reservation.module';
+import { RiotApiModule } from './riot-api/riot-api.module';
+import { MatchmakingModule } from './matchmaking/matchmaking.module';
+import { PresenceModule } from './presence/presence.module';
 
 @Module({
   imports: [
@@ -102,6 +105,9 @@ import { ReservationModule } from './reservation/reservation.module';
     NftModule,
     NewsModule,
     ReservationModule,
+    RiotApiModule,
+    MatchmakingModule,
+    PresenceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

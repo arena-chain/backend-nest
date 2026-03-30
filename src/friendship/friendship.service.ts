@@ -179,8 +179,8 @@ export class FriendshipService {
           { recipientId: new Types.ObjectId(userId), status: FriendshipStatus.ACCEPTED },
         ],
       })
-      .populate('requesterId', 'nickname email')
-      .populate('recipientId', 'nickname email')
+      .populate('requesterId', 'nickname email avatar')
+      .populate('recipientId', 'nickname email avatar')
       .exec();
   }
 
@@ -193,7 +193,7 @@ export class FriendshipService {
         recipientId: new Types.ObjectId(userId),
         status: FriendshipStatus.PENDING,
       })
-      .populate('requesterId', 'nickname email')
+      .populate('requesterId', 'nickname email avatar')
       .exec();
   }
 
@@ -206,7 +206,7 @@ export class FriendshipService {
         requesterId: new Types.ObjectId(userId),
         status: FriendshipStatus.PENDING,
       })
-      .populate('recipientId', 'nickname email')
+      .populate('recipientId', 'nickname email avatar')
       .exec();
   }
 
@@ -219,7 +219,7 @@ export class FriendshipService {
         requesterId: new Types.ObjectId(userId),
         status: FriendshipStatus.BLOCKED,
       })
-      .populate('recipientId', 'nickname email')
+      .populate('recipientId', 'nickname email avatar')
       .exec();
   }
 
