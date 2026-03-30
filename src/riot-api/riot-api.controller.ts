@@ -49,6 +49,23 @@ export class RiotApiController {
         return this.riotApiService.getDetailedTftMatchInfo(matchId, region, puuid);
     }
 
+    @Get('match-history')
+    @ApiOperation({ summary: 'Get match history for the logged-in user\'s linked Riot account' })
+    @ApiResponse({ status: 200, description: 'Match history retrieved' })
+    getMatchHistory(
+        @Req() req: any,
+        @Query('game') game: 'lol' | 'val' | 'all' = 'all',
+        @Query('start') start: string = '0',
+        @Query('count') count: string = '10',
+    ) {
+        return this.riotApiService.getMatchHistory(
+            req.user.userId,
+            game || 'all',
+            parseInt(start, 10) || 0,
+            Math.min(parseInt(count, 10) || 10, 20),
+        );
+    }
+
     // ── Account Linking ───────────────────────────────────────────────────
 
     @Post('link-account')

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestj
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
-import { FetchAccountDto, REGION_TO_ROUTING, REGION_TO_MATCH_ROUTING, RiotRegion } from './dto/fetch-account.dto';
+import { FetchAccountDto, REGION_TO_ROUTING, REGION_TO_MATCH_ROUTING, REGION_TO_VAL_SHARD, RiotRegion } from './dto/fetch-account.dto';
 import { PlayerService } from '../player/player.service';
 import { RiotLinkStatus } from '../player/schemas/player-profile.schema';
 import { LinkAccountDto } from './dto/link-account.dto';
@@ -571,6 +571,171 @@ export class RiotApiService {
             if (error instanceof HttpException) throw error;
             throw new HttpException(`Failed to fetch TFT match details`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    // ── Unified Match History (for Recent Games page) ─────────────────────
+
+    async getMatchHistory(
+        userId: string,
+        game: 'lol' | 'val' | 'all' = 'all',
+        start = 0,
+        count = 10,
+    ): Promise<{ linked: boolean; game: string; matches: any[]; total: number }> {
+        const profile = await this.playerService.findByUserId(userId);
+
+        if (!profile?.riotPuuid || profile.riotLinkStatus !== RiotLinkStatus.VERIFIED) {
+            return { linked: false, game, matches: [], total: 0 };
+        }
+
+        const region = profile.riotRegion as RiotRegion;
+        const puuid = profile.riotPuuid;
+        let allMatches: any[] = [];
+
+        if (game === 'lol' || game === 'all') {
+            try {
+                const lolMatches = await this.fetchLolMatchHistory(puuid, region, start, count);
+                allMatches.push(...lolMatches);
+            } catch (e) {
+                console.warn('Failed to fetch LoL matches:', e.message);
+            }
+        }
+
+        if (game === 'val' || game === 'all') {
+            try {
+                const valMatches = await this.fetchValMatchHistory(puuid, region, start, count);
+                allMatches.push(...valMatches);
+            } catch (e) {
+                console.warn('Failed to fetch Valorant matches:', e.message);
+            }
+        }
+
+        allMatches.sort((a, b) => b.gameCreation - a.gameCreation);
+
+        if (game === 'all') {
+            allMatches = allMatches.slice(0, count);
+        }
+
+        return {
+            linked: true,
+            game,
+            matches: allMatches,
+            total: allMatches.length,
+        };
+    }
+
+    private async fetchLolMatchHistory(
+        puuid: string,
+        region: RiotRegion,
+        start: number,
+        count: number,
+    ): Promise<any[]> {
+        const matchRouting = REGION_TO_MATCH_ROUTING[region];
+        const url = `https://${matchRouting}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`;
+
+        const resp = await firstValueFrom(
+            this.httpService.get<string[]>(url, { headers: { 'X-Riot-Token': this.apiKey } }),
+        );
+
+        const results = await Promise.allSettled(
+            resp.data.map(id => this.getMatchDetailsById(id, region, puuid)),
+        );
+
+        return results
+            .filter((r): r is PromiseFulfilledResult<RiotMatchInfo> => r.status === 'fulfilled')
+            .map(r => ({ ...r.value, gameType: 'lol' }));
+    }
+
+    private async fetchValMatchHistory(
+        puuid: string,
+        region: RiotRegion,
+        start: number,
+        count: number,
+    ): Promise<any[]> {
+        const shard = REGION_TO_VAL_SHARD[region] || 'eu';
+        const listUrl = `https://${shard}.api.riotgames.com/val/match/v1/matchlists/by-puuid/${puuid}`;
+
+        let matchIds: string[];
+        try {
+            const resp = await firstValueFrom(
+                this.httpService.get<any>(listUrl, { headers: { 'X-Riot-Token': this.apiKey } }),
+            );
+            const history = resp.data?.history || [];
+            matchIds = history.slice(start, start + count).map((h: any) => h.matchId);
+        } catch (e: any) {
+            if (e.response?.status === 403) {
+                console.warn('Valorant API not available with current API key');
+                return [];
+            }
+            throw e;
+        }
+
+        if (matchIds.length === 0) return [];
+
+        const results = await Promise.allSettled(
+            matchIds.map(id => this.getValMatchDetail(id, shard, puuid)),
+        );
+
+        return results
+            .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+            .map(r => r.value);
+    }
+
+    private async getValMatchDetail(
+        matchId: string,
+        shard: string,
+        puuid: string,
+    ): Promise<any> {
+        const url = `https://${shard}.api.riotgames.com/val/match/v1/matches/${matchId}`;
+
+        const resp = await firstValueFrom(
+            this.httpService.get<any>(url, { headers: { 'X-Riot-Token': this.apiKey } }),
+        );
+
+        const match = resp.data;
+        const player = match.players?.find((p: any) => p.puuid === puuid);
+        if (!player) throw new Error('Player not found in Valorant match');
+
+        const playerTeam = match.teams?.find((t: any) => t.teamId === player.teamId);
+        const k = player.stats?.kills ?? 0;
+        const d = player.stats?.deaths ?? 0;
+        const a = player.stats?.assists ?? 0;
+        const kdaValue = d === 0 ? (k + a).toFixed(2) : ((k + a) / d).toFixed(2);
+
+        const mapNames: Record<string, string> = {
+            '/Game/Maps/Ascent/Ascent': 'Ascent',
+            '/Game/Maps/Duality/Duality': 'Bind',
+            '/Game/Maps/Triad/Triad': 'Haven',
+            '/Game/Maps/Bonsai/Bonsai': 'Split',
+            '/Game/Maps/Port/Port': 'Icebox',
+            '/Game/Maps/Foxtrot/Foxtrot': 'Breeze',
+            '/Game/Maps/Canyon/Canyon': 'Fracture',
+            '/Game/Maps/Pitt/Pitt': 'Pearl',
+            '/Game/Maps/Jam/Jam': 'Lotus',
+            '/Game/Maps/Juliett/Juliett': 'Sunset',
+            '/Game/Maps/HURM/HURM_Alley/HURM_Alley': 'District',
+            '/Game/Maps/HURM/HURM_Bowl/HURM_Bowl': 'Kasbah',
+            '/Game/Maps/HURM/HURM_Yard/HURM_Yard': 'Piazza',
+        };
+
+        return {
+            gameType: 'val',
+            matchId,
+            characterId: player.characterId,
+            kills: k,
+            deaths: d,
+            assists: a,
+            kda: `${kdaValue}:1`,
+            score: player.stats?.score ?? 0,
+            win: playerTeam?.won ?? false,
+            roundsWon: playerTeam?.roundsWon ?? 0,
+            roundsLost: playerTeam?.roundsPlayed
+                ? (playerTeam.roundsPlayed - (playerTeam.roundsWon ?? 0))
+                : 0,
+            map: mapNames[match.matchInfo?.mapId] || match.matchInfo?.mapId || 'Unknown',
+            gameMode: match.matchInfo?.gameMode || 'Unknown',
+            gameLengthMs: match.matchInfo?.gameLengthMillis ?? 0,
+            gameCreation: match.matchInfo?.gameStartMillis ?? 0,
+        };
     }
 
     // ── Account Linking (Icon-Change Verification) ────────────────────────

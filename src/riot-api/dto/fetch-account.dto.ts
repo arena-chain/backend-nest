@@ -44,6 +44,20 @@ export const REGION_TO_MATCH_ROUTING: Record<string, string> = {
     [RiotRegion.OC1]: 'sea', // OC
 };
 
+export const REGION_TO_VAL_SHARD: Record<string, string> = {
+    [RiotRegion.NA1]: 'na',
+    [RiotRegion.BR1]: 'br',
+    [RiotRegion.LA1]: 'latam',
+    [RiotRegion.LA2]: 'latam',
+    [RiotRegion.EUW1]: 'eu',
+    [RiotRegion.EUN1]: 'eu',
+    [RiotRegion.TR1]: 'eu',
+    [RiotRegion.RU]: 'eu',
+    [RiotRegion.KR]: 'kr',
+    [RiotRegion.JP1]: 'ap',
+    [RiotRegion.OC1]: 'ap',
+};
+
 export class FetchAccountDto {
     @ApiProperty({ description: 'In-game name (without tag)', example: 'Faker' })
     @IsString()
