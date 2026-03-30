@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
+import { UsersService } from '../user/user.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
 import { Types } from 'mongoose';
@@ -8,7 +9,17 @@ import { Types } from 'mongoose';
 @ApiTags('admin')
 @Controller('admin')
 export class AdminController {
-    constructor(private readonly adminService: AdminService) { }
+    constructor(
+        private readonly adminService: AdminService,
+        private readonly usersService: UsersService,
+    ) { }
+
+    @Get('users/reported')
+    @ApiOperation({ summary: 'Get all reported users (admin view)' })
+    @ApiResponse({ status: 200, description: 'Returns users with at least one report, sorted by report count' })
+    getReportedUsers() {
+        return this.usersService.getReportedUsers();
+    }
 
     @Get()
     @ApiOperation({ summary: 'Get all admins' })

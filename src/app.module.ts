@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/user.module';
 import { PlayerModule } from './player/player.module';
 import { TeamManagerModule } from './team-manager/team-manager.module';
+import { TeamModule } from './team/team.module';
 import { RefereeModule } from './referee/referee.module';
 import { ScouterModule } from './scouter/scouter.module';
 import { AdminModule } from './admin/admin.module';
@@ -46,6 +47,8 @@ import { GroupModule } from './group/group.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { ScoutingModule } from './scouting/scouting.module';
 import { NftModule } from './nft/nft.module';
+import { NewsModule } from './news/news.module';
+import { ReservationModule } from './reservation/reservation.module';
 
 @Module({
   imports: [
@@ -59,6 +62,7 @@ import { NftModule } from './nft/nft.module';
     UsersModule,
     PlayerModule,
     TeamManagerModule,
+    TeamModule,
     RefereeModule,
     ScouterModule,
     AdminModule,
@@ -96,6 +100,8 @@ import { NftModule } from './nft/nft.module';
     InvitationModule,
     ScoutingModule,
     NftModule,
+    NewsModule,
+    ReservationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

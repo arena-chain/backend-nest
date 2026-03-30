@@ -54,6 +54,15 @@ export class User {
 
     @Prop()
     refreshToken?: string;
+
+    @Prop({ default: 0 })
+    reportCount: number;
+
+    @Prop({ default: false })
+    isReported: boolean;
+
+    @Prop({ type: [{ reportedBy: String, reason: String, createdAt: Date }], default: [] })
+    reports: { reportedBy: string; reason: string; createdAt: Date }[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

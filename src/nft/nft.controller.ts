@@ -99,43 +99,6 @@ export class NftController {
         return this.nftService.getStats();
     }
 
-    @Get(':id')
-    @ApiOperation({ summary: 'Get NFT by ID' })
-    @ApiParam({ name: 'id', description: 'NFT ID' })
-    @ApiResponse({ status: 200, description: 'NFT details with attributes' })
-    async findOne(@Param('id') id: string) {
-        const nft = await this.nftService.findOne(id);
-        const attributes = await this.nftService.getAttributes(id);
-        return { ...nft.toObject(), attributes };
-    }
-
-    @Patch(':id')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN)
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({ summary: 'Update an NFT (Admin only)' })
-    @ApiParam({ name: 'id', description: 'NFT ID' })
-    @ApiConsumes('multipart/form-data')
-    @ApiResponse({ status: 200, description: 'NFT updated successfully' })
-    @UseInterceptors(FileInterceptor('file', imageUploadOptions))
-    update(@Param('id') id: string, @Body() dto: UpdateNftDto, @UploadedFile() file: Express.Multer.File) {
-        if (file) {
-            dto.imageUrl = `/uploads/${file.filename}`;
-        }
-        return this.nftService.update(id, dto);
-    }
-
-    @Delete(':id')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(UserRole.ADMIN)
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({ summary: 'Delete an NFT (Admin only)' })
-    @ApiParam({ name: 'id', description: 'NFT ID' })
-    @ApiResponse({ status: 200, description: 'NFT deleted' })
-    remove(@Param('id') id: string) {
-        return this.nftService.remove(id);
-    }
-
     // ───────────────── Admin: NFT Attributes ─────────────────
 
     @Post('attributes')
@@ -146,14 +109,6 @@ export class NftController {
     @ApiResponse({ status: 201, description: 'Attribute added' })
     addAttribute(@Body() dto: CreateNftAttributeDto) {
         return this.nftService.addAttribute(dto);
-    }
-
-    @Get(':id/attributes')
-    @ApiOperation({ summary: 'Get all attributes of an NFT' })
-    @ApiParam({ name: 'id', description: 'NFT ID' })
-    @ApiResponse({ status: 200, description: 'List of attributes' })
-    getAttributes(@Param('id') id: string) {
-        return this.nftService.getAttributes(id);
     }
 
     @Delete('attributes/:attributeId')
@@ -200,14 +155,6 @@ export class NftController {
         return this.nftService.getItemsByOwner(req.user.userId);
     }
 
-    @Get('items/:itemId')
-    @ApiOperation({ summary: 'Get an NFT item by ID' })
-    @ApiParam({ name: 'itemId', description: 'NFT Item ID' })
-    @ApiResponse({ status: 200, description: 'NFT item details' })
-    getItem(@Param('itemId') itemId: string) {
-        return this.nftService.getItemById(itemId);
-    }
-
     @Post('items/transfer')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')
@@ -215,6 +162,14 @@ export class NftController {
     @ApiResponse({ status: 200, description: 'Item transferred' })
     transfer(@Req() req, @Body() dto: TransferNftItemDto) {
         return this.nftService.transferItem(req.user.userId, dto.nftItemId, dto.toUserId, dto.toWalletAddress);
+    }
+
+    @Get('items/:itemId')
+    @ApiOperation({ summary: 'Get an NFT item by ID' })
+    @ApiParam({ name: 'itemId', description: 'NFT Item ID' })
+    @ApiResponse({ status: 200, description: 'NFT item details' })
+    getItem(@Param('itemId') itemId: string) {
+        return this.nftService.getItemById(itemId);
     }
 
     // ───────────────── Admin: NFT Collections ─────────────────
@@ -237,20 +192,20 @@ export class NftController {
         return this.nftService.findAllCollections({ category });
     }
 
-    @Get('collections/:collectionId')
-    @ApiOperation({ summary: 'Get a collection by ID' })
-    @ApiParam({ name: 'collectionId', description: 'Collection ID' })
-    @ApiResponse({ status: 200, description: 'Collection details' })
-    findOneCollection(@Param('collectionId') collectionId: string) {
-        return this.nftService.findOneCollection(collectionId);
-    }
-
     @Get('collections/:collectionId/nfts')
     @ApiOperation({ summary: 'Get all NFTs in a collection' })
     @ApiParam({ name: 'collectionId', description: 'Collection ID' })
     @ApiResponse({ status: 200, description: 'List of NFTs in the collection' })
     getCollectionNfts(@Param('collectionId') collectionId: string) {
         return this.nftService.getCollectionNfts(collectionId);
+    }
+
+    @Get('collections/:collectionId')
+    @ApiOperation({ summary: 'Get a collection by ID' })
+    @ApiParam({ name: 'collectionId', description: 'Collection ID' })
+    @ApiResponse({ status: 200, description: 'Collection details' })
+    findOneCollection(@Param('collectionId') collectionId: string) {
+        return this.nftService.findOneCollection(collectionId);
     }
 
     @Patch('collections/:collectionId')
@@ -273,5 +228,52 @@ export class NftController {
     @ApiResponse({ status: 200, description: 'Collection deleted' })
     removeCollection(@Param('collectionId') collectionId: string) {
         return this.nftService.removeCollection(collectionId);
+    }
+
+    // ───────────────── Dynamic :id routes (must be last) ─────────────────
+
+    @Get(':id/attributes')
+    @ApiOperation({ summary: 'Get all attributes of an NFT' })
+    @ApiParam({ name: 'id', description: 'NFT ID' })
+    @ApiResponse({ status: 200, description: 'List of attributes' })
+    getAttributes(@Param('id') id: string) {
+        return this.nftService.getAttributes(id);
+    }
+
+    @Get(':id')
+    @ApiOperation({ summary: 'Get NFT by ID' })
+    @ApiParam({ name: 'id', description: 'NFT ID' })
+    @ApiResponse({ status: 200, description: 'NFT details with attributes' })
+    async findOne(@Param('id') id: string) {
+        const nft = await this.nftService.findOne(id);
+        const attributes = await this.nftService.getAttributes(id);
+        return { ...nft.toObject(), attributes };
+    }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Update an NFT (Admin only)' })
+    @ApiParam({ name: 'id', description: 'NFT ID' })
+    @ApiConsumes('multipart/form-data')
+    @ApiResponse({ status: 200, description: 'NFT updated successfully' })
+    @UseInterceptors(FileInterceptor('file', imageUploadOptions))
+    update(@Param('id') id: string, @Body() dto: UpdateNftDto, @UploadedFile() file: Express.Multer.File) {
+        if (file) {
+            dto.imageUrl = `/uploads/${file.filename}`;
+        }
+        return this.nftService.update(id, dto);
+    }
+
+    @Delete(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Delete an NFT (Admin only)' })
+    @ApiParam({ name: 'id', description: 'NFT ID' })
+    @ApiResponse({ status: 200, description: 'NFT deleted' })
+    remove(@Param('id') id: string) {
+        return this.nftService.remove(id);
     }
 }

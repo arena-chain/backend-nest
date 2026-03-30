@@ -136,6 +136,24 @@ export class UsersService {
      * @param query - Search query (nickname or email)
      * @param excludeUserId - Optional user ID to exclude from results (e.g., current user)
      */
+    async getReportedUsers(): Promise<UserDocument[]> {
+        return this.userModel
+            .find({ reportCount: { $gt: 0 } })
+            .select('-passwordHash -emailVerificationOtp -resetPasswordOtp -refreshToken')
+            .sort({ reportCount: -1 })
+            .exec();
+    }
+
+    async reportUser(targetId: string, reportedBy: string, reason: string): Promise<UserDocument> {
+        const user = await this.userModel.findById(targetId);
+        if (!user) throw new NotFoundException('User not found');
+
+        user.reports.push({ reportedBy, reason, createdAt: new Date() });
+        user.reportCount = user.reports.length;
+        user.isReported = user.reportCount > 0;
+        return user.save();
+    }
+
     async searchUsers(query: string, excludeUserId?: string): Promise<UserDocument[]> {
         const searchRegex = new RegExp(query, 'i'); // Case-insensitive search
 

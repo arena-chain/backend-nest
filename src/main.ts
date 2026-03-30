@@ -21,6 +21,9 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  // Global API prefix
+  app.setGlobalPrefix('api');
+
   // Global validation pipe
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
@@ -45,7 +48,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
@@ -53,7 +56,7 @@ async function bootstrap() {
   console.log(`\n🚀 Application is running!`);
   console.log(`📍 Local: http://localhost:${port}`);
   console.log(`📍 Network: http://0.0.0.0:${port}`);
-  console.log(`📚 Swagger API: http://localhost:${port}/api`);
+  console.log(`📚 Swagger API: http://localhost:${port}/docs`);
   console.log(`\n💡 For physical devices, use your computer's IP address instead of localhost`);
   console.log(`   Example: http://192.168.1.X:${port}\n`);
 }

@@ -16,9 +16,15 @@ export class RolesGuard implements CanActivate {
             return true;
         }
         const { user } = context.switchToHttp().getRequest();
+        if (!user) {
+            return false;
+        }
 
-        // Admin has access to everything if likely
-        // But strict check:
-        return requiredRoles.some((role) => user.roles?.includes(role));
+        return requiredRoles.some((role) => {
+            if (Array.isArray(user.roles)) {
+                return user.roles.includes(role);
+            }
+            return user.role === role;
+        });
     }
 }

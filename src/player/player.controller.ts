@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PlayerService } from './player.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { Types } from 'mongoose';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('player')
 @Controller('player')
@@ -23,6 +24,15 @@ export class PlayerController {
     @ApiResponse({ status: 400, description: 'Invalid data' })
     create(@Body() createPlayerDto: CreatePlayerDto, @Body('userId') userId: string) {
         return this.playerService.create(new Types.ObjectId(userId), createPlayerDto);
+    }
+
+    @Get('me')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Current user player profile (creates default if missing)' })
+    @ApiResponse({ status: 200, description: 'Player profile' })
+    getMe(@Request() req: { user: { userId: string } }) {
+        return this.playerService.findOrCreateByUserId(req.user.userId);
     }
 
     @Get(':userId')

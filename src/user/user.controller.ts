@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Delete, Param, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './user.service';
 
@@ -12,6 +12,32 @@ export class UsersController {
     @ApiResponse({ status: 200, description: 'Return all users' })
     findAll() {
         return this.usersService.findAll();
+    }
+
+    @Get('reported')
+    @ApiOperation({ summary: 'Get all reported users' })
+    @ApiResponse({ status: 200, description: 'Returns users with at least one report' })
+    getReportedUsers() {
+        return this.usersService.getReportedUsers();
+    }
+
+    @Get('reports')
+    @ApiOperation({ summary: 'Get all reported users (alias)' })
+    @ApiResponse({ status: 200, description: 'Returns users with at least one report' })
+    getReports() {
+        return this.usersService.getReportedUsers();
+    }
+
+    @Post(':id/report')
+    @ApiOperation({ summary: 'Report a user' })
+    @ApiParam({ name: 'id', description: 'Target user ID' })
+    @ApiResponse({ status: 201, description: 'User reported successfully' })
+    reportUser(
+        @Param('id') id: string,
+        @Body('reportedBy') reportedBy: string,
+        @Body('reason') reason: string,
+    ) {
+        return this.usersService.reportUser(id, reportedBy, reason);
     }
 
     @Get('search')
