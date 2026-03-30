@@ -52,6 +52,7 @@ import { ReservationModule } from './reservation/reservation.module';
 import { RiotApiModule } from './riot-api/riot-api.module';
 import { MatchmakingModule } from './matchmaking/matchmaking.module';
 import { PresenceModule } from './presence/presence.module';
+import { TrainingModule } from './training/training.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { PresenceModule } from './presence/presence.module';
     RiotApiModule,
     MatchmakingModule,
     PresenceModule,
+    TrainingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
