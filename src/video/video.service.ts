@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { Video, VideoDocument } from './schema/video.schema';
@@ -21,9 +23,16 @@ export class VideoService {
     return await createdVideo.save();
   }
 
-  async findAll(): Promise<Video[]> {
+  async findAll(filters?: { uploader?: string; game?: string }): Promise<Video[]> {
+    const query: Record<string, any> = {};
+    if (filters?.uploader && Types.ObjectId.isValid(filters.uploader)) {
+      query.uploader = new Types.ObjectId(filters.uploader);
+    }
+    if (filters?.game && Types.ObjectId.isValid(filters.game)) {
+      query.game = new Types.ObjectId(filters.game);
+    }
     return await this.videoModel
-      .find()
+      .find(query)
       .populate('uploader', 'username email avatar')
       .populate('game', 'title genre')
       .sort({ createdAt: -1 })
@@ -71,9 +80,22 @@ export class VideoService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid video ID');
     }
+    const existing = await this.videoModel.findById(id).exec();
     const result = await this.videoModel.findByIdAndDelete(id).exec();
     if (!result) {
       throw new NotFoundException(`Video with ID ${id} not found`);
+    }
+
+    // Best-effort cleanup for locally uploaded files.
+    if (existing?.url && existing.url.includes('/uploads/videos/')) {
+      try {
+        const rel = existing.url.split('/uploads/videos/')[1];
+        if (rel) {
+          await unlink(join(process.cwd(), 'uploads', 'videos', rel));
+        }
+      } catch {
+        // Ignore missing file or fs errors; DB delete already succeeded.
+      }
     }
     return { message: 'Video deleted successfully' };
   }
