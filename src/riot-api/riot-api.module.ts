@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { RiotApiController } from './riot-api.controller';
 import { RiotApiService } from './riot-api.service';
 import { PlayerModule } from '../player/player.module';
+import { MissionModule } from '../mission/mission.module';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { PlayerModule } from '../player/player.module';
         }),
         ConfigModule,
         PlayerModule,
+        MissionModule,
     ],
     controllers: [RiotApiController],
     providers: [RiotApiService],

@@ -2,12 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, PipelineStage } from 'mongoose';
 import { TrainingResult, TrainingResultDocument } from './schemas/training-result.schema';
+import { MissionService } from '../mission/mission.service';
 
 @Injectable()
 export class TrainingService {
   constructor(
     @InjectModel(TrainingResult.name)
     private trainingResultModel: Model<TrainingResultDocument>,
+    private readonly missionService: MissionService,
   ) {}
 
   async saveResult(userId: string, data: Partial<TrainingResult>) {
@@ -25,7 +27,9 @@ export class TrainingService {
       goodHits: data.goodHits || 0,
       badHits: data.badHits || 0,
     });
-    return result.save();
+    const savedResult = await result.save();
+    await this.missionService.onTrainingCompleted(userId, { game: 'all', amount: 1 });
+    return savedResult;
   }
 
   async getLeaderboard(difficulty?: string, limit = 10) {

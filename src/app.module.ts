@@ -53,10 +53,13 @@ import { RiotApiModule } from './riot-api/riot-api.module';
 import { MatchmakingModule } from './matchmaking/matchmaking.module';
 import { PresenceModule } from './presence/presence.module';
 import { TrainingModule } from './training/training.module';
+import { LevelModule } from './level/level.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/arenachain'),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
@@ -84,6 +87,7 @@ import { TrainingModule } from './training/training.module';
     HighlightsModule,
     TicketsModule,
     MissionModule,
+    LevelModule,
     AchievementsModule,
     PartnershipsModule,
     MailModule,

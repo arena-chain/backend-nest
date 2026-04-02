@@ -1,17 +1,150 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Model, Types } from 'mongoose';
 import { CreateMissionDto } from './dto/create-mission.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { Mission, MissionDocument } from './schemas/mission.schema';
 import { UserMissionProgress, UserMissionProgressDocument } from './schemas/user-mission-progress.schema';
+import { MissionEventLog, MissionEventLogDocument } from './schemas/mission-event-log.schema';
 
 @Injectable()
 export class MissionService {
     constructor(
         @InjectModel(Mission.name) private missionModel: Model<MissionDocument>,
         @InjectModel(UserMissionProgress.name) private progressModel: Model<UserMissionProgressDocument>,
+        @InjectModel(MissionEventLog.name) private eventLogModel: Model<MissionEventLogDocument>,
+        private readonly eventEmitter: EventEmitter2,
     ) {}
+
+    private normalizeGame(game?: string): 'lol' | 'valorant' | 'all' {
+        if (!game) return 'all';
+        const value = game.toLowerCase();
+        if (value.includes('val')) return 'valorant';
+        if (value.includes('lol') || value.includes('league')) return 'lol';
+        return 'all';
+    }
+
+    private async hasProcessedEvent(
+        userId: string,
+        criteriaType: string,
+        dedupeKey?: string,
+    ): Promise<boolean> {
+        if (!dedupeKey) return false;
+        try {
+            await this.eventLogModel.create({
+                userId: new Types.ObjectId(userId),
+                criteriaType,
+                dedupeKey,
+            });
+            return false;
+        } catch (error: any) {
+            // E11000 means this event was already processed for this user/criteria.
+            if (error?.code === 11000) {
+                return true;
+            }
+            throw error;
+        }
+    }
+
+    async incrementProgressForCriteria(
+        userId: string,
+        payload: {
+            criteriaType: string;
+            game?: 'lol' | 'valorant' | 'all' | string;
+            scope?: 'individual' | 'friends';
+            amount?: number;
+            dedupeKey?: string;
+        },
+    ) {
+        const { criteriaType, scope, amount = 1, dedupeKey } = payload;
+        const normalizedGame = this.normalizeGame(payload.game);
+
+        const alreadyProcessed = await this.hasProcessedEvent(userId, criteriaType, dedupeKey);
+        if (alreadyProcessed) return { updatedMissionIds: [], skipped: true };
+
+        const missionQuery: Record<string, any> = {
+            isActive: true,
+            'criteria.type': criteriaType,
+        };
+
+        if (scope) {
+            missionQuery.scope = scope;
+        }
+
+        if (normalizedGame !== 'all') {
+            missionQuery.game = { $in: ['all', normalizedGame] };
+        }
+
+        const missions = await this.missionModel.find(missionQuery).lean().exec();
+        if (missions.length === 0) return { updatedMissionIds: [], skipped: false };
+
+        const results = await Promise.all(
+            missions.map((mission: any) =>
+                this.incrementProgress(userId, mission._id.toString(), amount),
+            ),
+        );
+
+        return {
+            updatedMissionIds: missions.map((m: any) => m._id.toString()),
+            skipped: false,
+            results,
+        };
+    }
+
+    async onTrainingCompleted(userId: string, payload?: { game?: string; amount?: number }) {
+        return this.incrementProgressForCriteria(userId, {
+            criteriaType: 'complete_training',
+            game: payload?.game ?? 'all',
+            scope: 'individual',
+            amount: payload?.amount ?? 1,
+        });
+    }
+
+    async onFriendRequestSent(userId: string, payload?: { amount?: number }) {
+        return this.incrementProgressForCriteria(userId, {
+            criteriaType: 'send_friend_request',
+            scope: 'friends',
+            amount: payload?.amount ?? 1,
+        });
+    }
+
+    async onFriendshipAccepted(userId: string, payload?: { amount?: number }) {
+        return this.incrementProgressForCriteria(userId, {
+            criteriaType: 'add_friend',
+            scope: 'friends',
+            amount: payload?.amount ?? 1,
+        });
+    }
+
+    async onMatchCompleted(
+        userId: string,
+        payload: {
+            game: string;
+            amount?: number;
+            withFriends?: boolean;
+            dedupeKey?: string;
+        },
+    ) {
+        const amount = payload.amount ?? 1;
+
+        await this.incrementProgressForCriteria(userId, {
+            criteriaType: 'play_match',
+            game: payload.game,
+            amount,
+            dedupeKey: payload.dedupeKey,
+        });
+
+        if (payload.withFriends) {
+            await this.incrementProgressForCriteria(userId, {
+                criteriaType: 'play_with_friends',
+                game: payload.game,
+                scope: 'friends',
+                amount,
+                dedupeKey: payload.dedupeKey,
+            });
+        }
+    }
 
     // ── Cycle key helpers ──────────────────────────────────────
 
@@ -160,6 +293,15 @@ export class MissionService {
         progress.claimed = true;
         progress.claimedAt = new Date();
         await progress.save();
+
+        if (mission.rewardType === 'xp' && mission.rewardAmount > 0) {
+            this.eventEmitter.emit('mission.completed', {
+                userId,
+                missionId: mission._id.toString(),
+                xpReward: mission.rewardAmount,
+                eventId: `mission_claim_${userId}_${mission._id.toString()}_${cycleKey}`,
+            });
+        }
 
         return {
             rewardType: mission.rewardType,

@@ -6,6 +6,7 @@ import { FetchAccountDto, REGION_TO_ROUTING, REGION_TO_MATCH_ROUTING, REGION_TO_
 import { PlayerService } from '../player/player.service';
 import { RiotLinkStatus } from '../player/schemas/player-profile.schema';
 import { LinkAccountDto } from './dto/link-account.dto';
+import { MissionService } from '../mission/mission.service';
 
 interface RiotAccount {
     puuid: string;
@@ -135,6 +136,7 @@ export class RiotApiService {
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
         private readonly playerService: PlayerService,
+        private readonly missionService: MissionService,
     ) {
         const apiKey = this.configService.get<string>('RIOT_API_KEY');
         console.log('RiotApiService: Loading API Key from ConfigService...');
@@ -615,12 +617,45 @@ export class RiotApiService {
             allMatches = allMatches.slice(0, count);
         }
 
+        await this.syncPlayMatchMissionsFromRiotHistory(userId, allMatches);
+
         return {
             linked: true,
             game,
             matches: allMatches,
             total: allMatches.length,
         };
+    }
+
+    /**
+     * When Recent Games (or any client) loads Riot match history, advance play_match missions
+     * for each match once per Riot matchId (dedupe via MissionEventLog).
+     * play_with_friends is not inferred from Riot payloads here (no reliable party metadata).
+     */
+    private async syncPlayMatchMissionsFromRiotHistory(userId: string, matches: any[]): Promise<void> {
+        for (const m of matches) {
+            const matchId = m?.matchId;
+            if (!matchId) continue;
+
+            const rawType = (m.gameType || m.game || '').toString().toLowerCase();
+            const missionGame =
+                rawType === 'val' || rawType.includes('valorant') ? 'valorant' : 'lol';
+            const dedupeKey = `riot:${missionGame}:${matchId}`;
+
+            try {
+                await this.missionService.onMatchCompleted(userId, {
+                    game: missionGame,
+                    amount: 1,
+                    withFriends: false,
+                    dedupeKey,
+                });
+            } catch (err) {
+                console.warn(
+                    `[RiotApiService] Mission sync skipped for ${dedupeKey}:`,
+                    err?.message || err,
+                );
+            }
+        }
     }
 
     private async fetchLolMatchHistory(
