@@ -7,20 +7,19 @@ import {
     MatchmakingTicket,
     MatchmakingTicketSchema,
 } from './schemas/matchmaking-ticket.schema';
-import {
-    PlayerProfile,
-    PlayerProfileSchema,
-} from '../player/schemas/player-profile.schema';
+import { PlayerRank, PlayerRankSchema } from '../rank/schemas/rank.schema';
 import { Catalog, CatalogSchema } from '../catalog/schemas/catalog.entity';
+import { RankModule } from '../rank/rank.module';
 
 @Module({
     imports: [
         MongooseModule.forFeature([
             { name: Game.name, schema: GameSchema },
             { name: MatchmakingTicket.name, schema: MatchmakingTicketSchema },
-            { name: PlayerProfile.name, schema: PlayerProfileSchema },
+            { name: PlayerRank.name, schema: PlayerRankSchema },
             { name: Catalog.name, schema: CatalogSchema },
         ]),
+        RankModule,
     ],
     controllers: [MatchmakingController],
     providers: [MatchmakingService],

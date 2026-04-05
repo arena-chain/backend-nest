@@ -64,6 +64,19 @@ export class PresenceGateway
       });
     }
 
+    const friends = await this.presenceService.getFriendsPresence(userId);
+    const sorted = friends.sort((a, b) => {
+      const order = {
+        [UserStatus.IN_GAME]: 0,
+        [UserStatus.IN_QUEUE]: 1,
+        [UserStatus.ONLINE]: 2,
+        [UserStatus.AWAY]: 3,
+        [UserStatus.OFFLINE]: 4,
+      };
+      return (order[a.status] ?? 5) - (order[b.status] ?? 5);
+    });
+    socket.emit('presence-ready', { friends: sorted });
+
     this.logger.log(`presence connected: ${userId} (${socket.id})`);
   }
 

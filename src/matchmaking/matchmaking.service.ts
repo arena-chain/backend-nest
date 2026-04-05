@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+    Injectable,
+    Logger,
+    NotFoundException,
+    BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Interval } from '@nestjs/schedule';
@@ -7,33 +12,85 @@ import {
     MatchmakingTicket,
     MatchmakingTicketDocument,
 } from './schemas/matchmaking-ticket.schema';
-import {
-    PlayerProfile,
-    PlayerProfileDocument,
-} from '../player/schemas/player-profile.schema';
+import { PlayerRank, PlayerRankDocument } from '../rank/schemas/rank.schema';
 import { Catalog, CatalogDocument } from '../catalog/schemas/catalog.entity';
+import { RankService } from '../rank/rank.service';
 import { JoinQueueDto } from './dto/join-queue.dto';
 
+// ──────────────────────────────────────────────────────────
+// CONFIGURATION
+// ──────────────────────────────────────────────────────────
+
 const MODES = [
-    { mode: 'CUSTOM_1V1', requiredPlayers: 2, eloThreshold: 150 },
-    { mode: 'CUSTOM_2V2', requiredPlayers: 4, eloThreshold: 250 },
-    { mode: 'CUSTOM_5V5', requiredPlayers: 10, eloThreshold: 250 },
+    { mode: 'CUSTOM_1V1', requiredPlayers: 2 },
+    { mode: 'CUSTOM_2V2', requiredPlayers: 4 },
+    { mode: 'CUSTOM_5V5', requiredPlayers: 10 },
 ];
+
+const INITIAL_ELO_RANGE = 50;
+const EXPAND_PER_INTERVAL = 50;
+const EXPAND_INTERVAL_MS = 30_000;
+const MAX_ELO_RANGE = 500;
+
+const GAME_ACCEPTANCE_TIMEOUT_S = 15;
 
 @Injectable()
 export class MatchmakingService {
     private readonly logger = new Logger(MatchmakingService.name);
+    private catalogCache = new Map<string, Types.ObjectId>();
 
     constructor(
         @InjectModel(Game.name)
         private readonly gameModel: Model<GameDocument>,
         @InjectModel(MatchmakingTicket.name)
         private readonly ticketModel: Model<MatchmakingTicketDocument>,
-        @InjectModel(PlayerProfile.name)
-        private readonly playerProfileModel: Model<PlayerProfileDocument>,
+        @InjectModel(PlayerRank.name)
+        private readonly playerRankModel: Model<PlayerRankDocument>,
         @InjectModel(Catalog.name)
         private readonly catalogModel: Model<CatalogDocument>,
+        private readonly rankService: RankService,
     ) {}
+
+    // ──────────────────────────────────────────────────────────
+    // CATALOG RESOLUTION (with in-memory cache)
+    // ──────────────────────────────────────────────────────────
+
+    private async resolveCatalogId(gameKey: string): Promise<Types.ObjectId | null> {
+        if (this.catalogCache.has(gameKey)) {
+            return this.catalogCache.get(gameKey)!;
+        }
+
+        const patterns: Record<string, RegExp> = {
+            LOL: /league of legends|lol/i,
+            VALORANT: /valorant/i,
+        };
+
+        const regex = patterns[gameKey.toUpperCase()];
+        if (!regex) return null;
+
+        const catalog = await this.catalogModel.findOne({ title: { $regex: regex } }).exec();
+        if (catalog) {
+            this.catalogCache.set(gameKey, catalog._id as Types.ObjectId);
+            return catalog._id as Types.ObjectId;
+        }
+
+        return null;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // DYNAMIC ELO THRESHOLD
+    // ──────────────────────────────────────────────────────────
+
+    private calculateDynamicThreshold(ticketCreatedAt: Date): number {
+        const waitMs = Date.now() - ticketCreatedAt.getTime();
+        const expansions = Math.floor(waitMs / EXPAND_INTERVAL_MS);
+        const range = Math.min(INITIAL_ELO_RANGE + expansions * EXPAND_PER_INTERVAL, MAX_ELO_RANGE);
+        return range * 2;
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // JOIN QUEUE — reads elo from PlayerRank (single source of truth)
+    // ──────────────────────────────────────────────────────────
 
     async joinQueue(userId: string, dto: JoinQueueDto) {
         const isScheduled = !!dto.scheduledAt;
@@ -81,10 +138,11 @@ export class MatchmakingService {
             }
         }
 
-        const profile = await this.playerProfileModel.findOne({
-            userId: new Types.ObjectId(userId),
-        });
-        const elo = profile?.elo ?? 1000;
+        const catalogId = await this.resolveCatalogId(dto.game);
+        let elo = 1000;
+        if (catalogId) {
+            elo = await this.rankService.getPlayerElo(userId, catalogId.toString());
+        }
 
         const ticket = await this.ticketModel.create({
             userId: new Types.ObjectId(userId),
@@ -101,6 +159,10 @@ export class MatchmakingService {
         return ticket;
     }
 
+    // ──────────────────────────────────────────────────────────
+    // CANCEL QUEUE
+    // ──────────────────────────────────────────────────────────
+
     async cancelQueue(ticketId: string, userId: string) {
         const ticket = await this.ticketModel.findOne({
             _id: new Types.ObjectId(ticketId),
@@ -114,6 +176,10 @@ export class MatchmakingService {
         ticket.status = 'CANCELLED';
         await ticket.save();
     }
+
+    // ──────────────────────────────────────────────────────────
+    // RESPOND TO MATCH (accept/decline)
+    // ──────────────────────────────────────────────────────────
 
     async respondToMatch(gameId: string, userId: string, accept: boolean) {
         const game = await this.gameModel.findById(gameId);
@@ -152,6 +218,57 @@ export class MatchmakingService {
 
         return this.gameModel.findById(gameId);
     }
+
+    // ──────────────────────────────────────────────────────────
+    // COMPLETE MATCH — triggers automatic elo update
+    // ──────────────────────────────────────────────────────────
+
+    async completeMatch(gameId: string, winningTeam: 'BLUE' | 'RED') {
+        const game = await this.gameModel.findById(gameId);
+        if (!game) {
+            throw new NotFoundException('Game not found');
+        }
+
+        const validStatuses = ['IN_PROGRESS', 'ACCEPTED'];
+        if (!validStatuses.includes(game.status)) {
+            throw new BadRequestException(
+                `Game cannot be completed from status "${game.status}". Must be IN_PROGRESS or ACCEPTED.`,
+            );
+        }
+
+        if (game.match_type !== 'MATCHMAKING') {
+            throw new BadRequestException('Only MATCHMAKING games use automatic elo updates');
+        }
+
+        const catalogId = game.game_id;
+        const participants = game.participants.map((p) => ({
+            userId: p.userId,
+            team: p.team,
+            elo: p.elo,
+        }));
+
+        const eloResults = await this.rankService.processMatchCompletion(
+            catalogId,
+            participants,
+            winningTeam,
+            gameId,
+        );
+
+        game.status = 'COMPLETED';
+        game.winningTeam = winningTeam;
+        game.finished_at = new Date();
+        await game.save();
+
+        this.logger.log(
+            `Match ${gameId} completed | winner=${winningTeam} | elo changes: ${eloResults.map((r) => `${r.userId}:${r.eloChange > 0 ? '+' : ''}${r.eloChange}`).join(', ')}`,
+        );
+
+        return { game, eloUpdates: eloResults };
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // READS
+    // ──────────────────────────────────────────────────────────
 
     async getGame(gameId: string) {
         const game = await this.gameModel.findById(gameId);
@@ -214,6 +331,10 @@ export class MatchmakingService {
             .sort({ createdAt: -1 });
     }
 
+    // ──────────────────────────────────────────────────────────
+    // ROOM CREATION
+    // ──────────────────────────────────────────────────────────
+
     private async createRoomForGame(gameId: string) {
         const roomId = 'X-' + gameId.toString().slice(-6).toUpperCase();
         const map = "Summoner's Rift";
@@ -223,14 +344,18 @@ export class MatchmakingService {
         });
     }
 
+    // ──────────────────────────────────────────────────────────
+    // MATCHMAKING LOOP (runs every 3 seconds)
+    // ──────────────────────────────────────────────────────────
+
     @Interval(3000)
     async matchmakingLoop() {
         await this.activateScheduledTickets();
         await this.expireUnacceptedGames();
 
-        for (const { mode, requiredPlayers, eloThreshold } of MODES) {
+        for (const { mode, requiredPlayers } of MODES) {
             try {
-                await this.tryMatchForMode(mode, requiredPlayers, eloThreshold);
+                await this.tryMatchForMode(mode, requiredPlayers);
             } catch (err) {
                 this.logger.error(
                     `Matchmaking error for mode ${mode}: ${err.message}`,
@@ -240,8 +365,7 @@ export class MatchmakingService {
     }
 
     private async expireUnacceptedGames() {
-        const expirationSeconds = 15;
-        const cutoff = new Date(Date.now() - expirationSeconds * 1000);
+        const cutoff = new Date(Date.now() - GAME_ACCEPTANCE_TIMEOUT_S * 1000);
 
         const expiredGames = await this.gameModel.find({
             status: 'PENDING_ACCEPTANCE',
@@ -260,7 +384,7 @@ export class MatchmakingService {
             );
 
             this.logger.warn(
-                `Game ${game._id} expired (no response within ${expirationSeconds}s)`,
+                `Game ${game._id} expired (no response within ${GAME_ACCEPTANCE_TIMEOUT_S}s)`,
             );
         }
     }
@@ -281,16 +405,11 @@ export class MatchmakingService {
         }
     }
 
-    private areRegionsCompatible(r1: string, r2: string): boolean {
-        if (r1 === 'ALL' || r2 === 'ALL') return true;
-        return r1 === r2;
-    }
+    // ──────────────────────────────────────────────────────────
+    // MATCHING LOGIC — dynamic elo threshold
+    // ──────────────────────────────────────────────────────────
 
-    private async tryMatchForMode(
-        mode: string,
-        requiredPlayers: number,
-        eloThreshold: number,
-    ) {
+    private async tryMatchForMode(mode: string, requiredPlayers: number) {
         const allTickets = await this.ticketModel
             .find({ game: 'LOL', mode, status: 'SEARCHING' })
             .sort({ elo: 1, createdAt: 1 })
@@ -317,10 +436,14 @@ export class MatchmakingService {
             for (let i = 0; i + requiredPlayers - 1 < tickets.length; i++) {
                 if (matched.has(tickets[i]._id.toString())) continue;
 
-                const group: MatchmakingTicketDocument[] = [];
-                group.push(tickets[i]);
+                const anchor = tickets[i];
+                const dynamicThreshold = this.calculateDynamicThreshold(
+                    (anchor as any).createdAt,
+                );
 
-                let effectiveRegion = (tickets[i].region ?? 'ALL').toUpperCase();
+                const group: MatchmakingTicketDocument[] = [anchor];
+
+                let effectiveRegion = (anchor.region ?? 'ALL').toUpperCase();
 
                 for (
                     let j = i + 1;
@@ -333,7 +456,7 @@ export class MatchmakingService {
                     const minElo = Math.min(...elos);
                     const maxElo = Math.max(...elos);
 
-                    if (maxElo - minElo > eloThreshold) continue;
+                    if (maxElo - minElo > dynamicThreshold) continue;
 
                     const candidateRegion = (tickets[j].region ?? 'ALL').toUpperCase();
 
@@ -361,19 +484,8 @@ export class MatchmakingService {
         group: MatchmakingTicketDocument[],
         mode: string,
     ) {
-        let lolCatalog = await this.catalogModel
-            .findOne({ title: { $regex: /league of legends/i } })
-            .exec();
-
-        if (!lolCatalog) {
-            lolCatalog = await this.catalogModel
-                .findOne({ title: { $regex: /lol/i } })
-                .exec();
-        }
-
-        const catalogId = lolCatalog
-            ? lolCatalog._id
-            : new Types.ObjectId();
+        const catalogId = await this.resolveCatalogId('LOL');
+        const finalCatalogId = catalogId ?? new Types.ObjectId();
 
         const requiredPlayers = group.length;
         const half = Math.ceil(requiredPlayers / 2);
@@ -389,7 +501,7 @@ export class MatchmakingService {
         }));
 
         const game = await this.gameModel.create({
-            game_id: catalogId,
+            game_id: finalCatalogId,
             match_type: 'MATCHMAKING',
             status: 'PENDING_ACCEPTANCE',
             mode,

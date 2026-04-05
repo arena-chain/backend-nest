@@ -62,13 +62,19 @@ export class PresenceService {
     const userId = this.socketToUser.get(socketId);
     if (!userId) return null;
 
+    this.socketToUser.delete(socketId);
+
     const entry = this.onlineUsers.get(userId);
     if (entry && entry.socketId === socketId) {
       this.onlineUsers.delete(userId);
+      this.logger.log(`user offline: ${userId}`);
+      return userId;
     }
-    this.socketToUser.delete(socketId);
-    this.logger.log(`user offline: ${userId}`);
-    return userId;
+
+    this.logger.log(
+      `stale socket removed for ${userId}, user still online with another socket`,
+    );
+    return null;
   }
 
   getUserIdBySocket(socketId: string): string | null {

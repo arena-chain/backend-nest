@@ -278,7 +278,7 @@ async function seed() {
       nickname: p.nick, role: 'player',
       country: p.country, region: 'EUROPE', isEmailVerified: true,
     });
-    await PlayerProfileModel.create({ userId: u._id, elo: p.elo, rank: p.rank, isPro: p.isPro });
+    await PlayerProfileModel.create({ userId: u._id, isPro: p.isPro });
     playerUsers.push(u);
   }
   console.log(`   ✅ 20 players created (last 2 are free agents)\n`);

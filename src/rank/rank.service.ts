@@ -3,30 +3,39 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreatePlayerRankDto } from './dto/create-rank.dto';
-import { UpdateEloDto, MatchResult } from './dto/update-elo.dto';
 import { ApplyPenaltyDto } from './dto/apply-penalty.dto';
 import { PlayerRank, PlayerRankDocument } from './schemas/rank.schema';
 import { RankHistory, RankHistoryDocument, EloChangeReason } from './schemas/rank-history.schema';
 import { Penalty, PenaltyDocument, PenaltyStatus } from './schemas/penalty.schema';
 import { RankTierConfig, RankTierConfigDocument, TierName } from './schemas/rank-tier-config.schema';
 
-// ELO Configuration
-const ELO_WIN_AMOUNT = 400;
-const ELO_LOSS_AMOUNT = 400;
-const STARTING_ELO = 0;
+const STARTING_ELO = 1000;
+const K_FACTOR = 32;
 
-// Tier thresholds (ELO ranges)
-const TIER_THRESHOLDS = [
-  { tier: TierName.IRON, minElo: 0, maxElo: 999, divisions: 3 },
-  { tier: TierName.BRONZE, minElo: 1000, maxElo: 1999, divisions: 3 },
-  { tier: TierName.SILVER, minElo: 2000, maxElo: 2999, divisions: 3 },
-  { tier: TierName.GOLD, minElo: 3000, maxElo: 3999, divisions: 3 },
-  { tier: TierName.PLATINUM, minElo: 4000, maxElo: 4999, divisions: 3 },
-  { tier: TierName.DIAMOND, minElo: 5000, maxElo: 5999, divisions: 3 },
-  { tier: TierName.MASTER, minElo: 6000, maxElo: 6999, divisions: 2 },
-  { tier: TierName.GRANDMASTER, minElo: 7000, maxElo: 7999, divisions: 2 },
-  { tier: TierName.CHALLENGER, minElo: 8000, maxElo: Infinity, divisions: 1 },
+const TIER_THRESHOLDS: { tier: TierName; minElo: number; maxElo: number; divisions: number }[] = [
+  { tier: TierName.IRON, minElo: 0, maxElo: 499, divisions: 3 },
+  { tier: TierName.BRONZE, minElo: 500, maxElo: 999, divisions: 3 },
+  { tier: TierName.GOLD, minElo: 1000, maxElo: 1499, divisions: 3 },
+  { tier: TierName.PLATINUM, minElo: 1500, maxElo: 1999, divisions: 3 },
+  { tier: TierName.DIAMOND, minElo: 2000, maxElo: 2499, divisions: 3 },
+  { tier: TierName.MASTER, minElo: 2500, maxElo: 2999, divisions: 2 },
+  { tier: TierName.GRANDMASTER, minElo: 3000, maxElo: 3499, divisions: 2 },
+  { tier: TierName.CHALLENGER, minElo: 3500, maxElo: Infinity, divisions: 1 },
 ];
+
+export interface MatchParticipant {
+  userId: Types.ObjectId;
+  team: 'BLUE' | 'RED';
+  elo: number;
+}
+
+export interface EloUpdateResult {
+  userId: Types.ObjectId;
+  previousElo: number;
+  newElo: number;
+  eloChange: number;
+  didWin: boolean;
+}
 
 @Injectable()
 export class RankService {
@@ -36,15 +45,166 @@ export class RankService {
     @InjectModel(Penalty.name) private penaltyModel: Model<PenaltyDocument>,
     @InjectModel(RankTierConfig.name) private rankTierConfigModel: Model<RankTierConfigDocument>,
     private eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
-  /**
-   * Initialize a new player rank for a specific game
-   */
+  // ──────────────────────────────────────────────────────────
+  // ELO FORMULA (K=32, standard Elo)
+  // ──────────────────────────────────────────────────────────
+
+  calculateNewElo(playerElo: number, opponentAvgElo: number, didWin: boolean): number {
+    const expected = 1 / (1 + Math.pow(10, (opponentAvgElo - playerElo) / 400));
+    const score = didWin ? 1 : 0;
+    return Math.max(0, Math.round(playerElo + K_FACTOR * (score - expected)));
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // CORE: Process a completed match — the SINGLE path for elo updates
+  // ──────────────────────────────────────────────────────────
+
+  async processMatchCompletion(
+    catalogId: Types.ObjectId,
+    participants: MatchParticipant[],
+    winningTeam: 'BLUE' | 'RED',
+    gameId: string,
+  ): Promise<EloUpdateResult[]> {
+    const blueTeam = participants.filter(p => p.team === 'BLUE');
+    const redTeam = participants.filter(p => p.team === 'RED');
+
+    if (blueTeam.length === 0 || redTeam.length === 0) {
+      throw new BadRequestException('Both teams must have at least one player');
+    }
+
+    const blueAvgElo = blueTeam.reduce((sum, p) => sum + p.elo, 0) / blueTeam.length;
+    const redAvgElo = redTeam.reduce((sum, p) => sum + p.elo, 0) / redTeam.length;
+
+    const results: EloUpdateResult[] = [];
+
+    for (const participant of participants) {
+      const didWin = participant.team === winningTeam;
+      const opponentAvgElo = participant.team === 'BLUE' ? redAvgElo : blueAvgElo;
+      const previousElo = participant.elo;
+      const newElo = this.calculateNewElo(previousElo, opponentAvgElo, didWin);
+      const eloChange = newElo - previousElo;
+
+      const rank = await this.getOrCreateRank(participant.userId.toString(), catalogId.toString());
+
+      const previousTier = rank.tier;
+      const previousLevel = rank.level;
+
+      rank.elo = newElo;
+      rank.totalMatches += 1;
+      rank.lastMatchDate = new Date();
+
+      if (didWin) {
+        rank.wins += 1;
+        rank.currentStreak = Math.max(0, rank.currentStreak) + 1;
+        rank.longestWinStreak = Math.max(rank.longestWinStreak, rank.currentStreak);
+      } else {
+        rank.losses += 1;
+        rank.currentStreak = Math.min(0, rank.currentStreak) - 1;
+      }
+
+      if (rank.totalMatches > 0) {
+        rank.winRate = Math.round((rank.wins / rank.totalMatches) * 100);
+      }
+
+      const { tier, division, level } = this.calculateTierAndLevel(newElo);
+      rank.tier = tier;
+      rank.division = division;
+      rank.level = level;
+
+      if (newElo > rank.peakElo) {
+        rank.peakElo = newElo;
+        rank.peakTier = tier;
+        rank.peakDivision = division;
+      }
+
+      await rank.save();
+
+      const isTierPromotion = this.isTierHigher(tier, previousTier);
+      const isTierDemotion = this.isTierLower(tier, previousTier);
+
+      await this.rankHistoryModel.create({
+        playerRank: rank._id,
+        user: participant.userId,
+        game: catalogId,
+        previousElo,
+        newElo,
+        eloChange,
+        reason: didWin ? EloChangeReason.WIN : EloChangeReason.LOSS,
+        reasonDetails: `Matchmaking ${didWin ? 'win' : 'loss'}`,
+        match: Types.ObjectId.isValid(gameId) ? new Types.ObjectId(gameId) : undefined,
+        previousTier,
+        newTier: tier,
+        previousLevel,
+        newLevel: level,
+        isTierPromotion,
+        isTierDemotion,
+      });
+
+      this.eventEmitter.emit('match.completed', {
+        matchId: gameId,
+        userId: participant.userId.toString(),
+        mode: 'RANKED',
+        won: didWin,
+      });
+
+      results.push({ userId: participant.userId, previousElo, newElo, eloChange, didWin });
+    }
+
+    return results;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // GET OR CREATE — ensures every player has a rank record
+  // ──────────────────────────────────────────────────────────
+
+  async getOrCreateRank(userId: string, gameId: string): Promise<PlayerRankDocument> {
+    let rank = await this.playerRankModel.findOne({
+      user: new Types.ObjectId(userId),
+      game: new Types.ObjectId(gameId),
+    });
+
+    if (!rank) {
+      const { tier, division, level } = this.calculateTierAndLevel(STARTING_ELO);
+      rank = await this.playerRankModel.create({
+        user: new Types.ObjectId(userId),
+        game: new Types.ObjectId(gameId),
+        elo: STARTING_ELO,
+        level,
+        tier,
+        division,
+        peakElo: STARTING_ELO,
+        peakTier: tier,
+        peakDivision: division,
+        wins: 0,
+        losses: 0,
+        winRate: 0,
+        totalMatches: 0,
+        currentStreak: 0,
+        longestWinStreak: 0,
+        season: 1,
+      });
+    }
+
+    return rank;
+  }
+
+  async getPlayerElo(userId: string, gameId: string): Promise<number> {
+    const rank = await this.playerRankModel.findOne({
+      user: new Types.ObjectId(userId),
+      game: new Types.ObjectId(gameId),
+    });
+    return rank?.elo ?? STARTING_ELO;
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // READS (unchanged from before, kept for leaderboard / profile)
+  // ──────────────────────────────────────────────────────────
+
   async initializePlayerRank(createPlayerRankDto: CreatePlayerRankDto) {
     const { userId, gameId } = createPlayerRankDto;
 
-    // Check if rank already exists
     const existingRank = await this.playerRankModel.findOne({
       user: new Types.ObjectId(userId),
       game: new Types.ObjectId(gameId),
@@ -56,7 +216,7 @@ export class RankService {
 
     const { tier, division, level } = this.calculateTierAndLevel(STARTING_ELO);
 
-    const newRank = await this.playerRankModel.create({
+    return this.playerRankModel.create({
       user: new Types.ObjectId(userId),
       game: new Types.ObjectId(gameId),
       elo: STARTING_ELO,
@@ -74,13 +234,8 @@ export class RankService {
       longestWinStreak: 0,
       season: 1,
     });
-
-    return newRank;
   }
 
-  /**
-   * Get player rank for a specific game
-   */
   async getPlayerRank(userId: string, gameId: string) {
     const rank = await this.playerRankModel
       .findOne({
@@ -98,108 +253,52 @@ export class RankService {
     return rank;
   }
 
-  /**
-   * Update ELO after a match result
-   */
-  async updateElo(updateEloDto: UpdateEloDto, adminId?: string) {
-    const { userId, gameId, result, matchId, tournamentId, reasonDetails } = updateEloDto;
-
-    // Get or create player rank
-    let playerRank = await this.playerRankModel.findOne({
-      user: new Types.ObjectId(userId),
-      game: new Types.ObjectId(gameId),
-    });
-
-    if (!playerRank) {
-      // Auto-initialize if doesn't exist
-      playerRank = await this.initializePlayerRank({ userId, gameId });
-    }
-
-    const previousElo = playerRank.elo;
-    const previousTier = playerRank.tier;
-    const previousLevel = playerRank.level;
-
-    let eloChange = 0;
-    let reason: EloChangeReason;
-
-    if (result === MatchResult.WIN) {
-      eloChange = ELO_WIN_AMOUNT;
-      reason = EloChangeReason.WIN;
-      playerRank.wins += 1;
-      playerRank.currentStreak = Math.max(0, playerRank.currentStreak) + 1;
-      playerRank.longestWinStreak = Math.max(playerRank.longestWinStreak, playerRank.currentStreak);
-    } else {
-      eloChange = -ELO_LOSS_AMOUNT;
-      reason = EloChangeReason.LOSS;
-      playerRank.losses += 1;
-      playerRank.currentStreak = Math.min(0, playerRank.currentStreak) - 1;
-    }
-
-    const newElo = Math.max(0, previousElo + eloChange); // Prevent negative ELO
-    playerRank.elo = newElo;
-    playerRank.totalMatches += 1;
-    playerRank.lastMatchDate = new Date();
-
-    // Calculate win rate
-    if (playerRank.totalMatches > 0) {
-      playerRank.winRate = Math.round((playerRank.wins / playerRank.totalMatches) * 100);
-    }
-
-    // Update tier and level
-    const { tier, division, level } = this.calculateTierAndLevel(newElo);
-    playerRank.tier = tier;
-    playerRank.division = division;
-    playerRank.level = level;
-
-    // Update peak if new ELO is higher
-    if (newElo > playerRank.peakElo) {
-      playerRank.peakElo = newElo;
-      playerRank.peakTier = tier;
-      playerRank.peakDivision = division;
-    }
-
-    await playerRank.save();
-
-    // Record in history
-    const isTierPromotion = this.isTierHigher(tier, previousTier);
-    const isTierDemotion = this.isTierLower(tier, previousTier);
-
-    await this.rankHistoryModel.create({
-      playerRank: playerRank._id,
-      user: new Types.ObjectId(userId),
-      game: new Types.ObjectId(gameId),
-      previousElo,
-      newElo,
-      eloChange,
-      reason,
-      reasonDetails: reasonDetails || `Match ${result.toLowerCase()}`,
-      match: matchId ? new Types.ObjectId(matchId) : undefined,
-      tournament: tournamentId ? new Types.ObjectId(tournamentId) : undefined,
-      previousTier,
-      newTier: tier,
-      previousLevel,
-      newLevel: level,
-      isTierDemotion,
-    });
-
-    // Emit event for LEVEL/XP system
-    this.eventEmitter.emit('match.completed', {
-      matchId: matchId || `rank_update_${Date.now()}`,
-      userId,
-      mode: 'RANKED',
-      won: result === MatchResult.WIN,
-    });
-
-    return playerRank;
+  async getRankHistory(userId: string, gameId: string, limit: number = 50) {
+    return this.rankHistoryModel
+      .find({
+        user: new Types.ObjectId(userId),
+        game: new Types.ObjectId(gameId),
+      })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('match')
+      .populate('tournament')
+      .populate('penalty')
+      .exec();
   }
 
-  /**
-   * Apply a penalty to a player
-   */
+  async getLeaderboard(gameId: string, season?: number, limit: number = 100) {
+    if (!Types.ObjectId.isValid(gameId)) {
+      return [];
+    }
+
+    const query: any = { game: new Types.ObjectId(gameId) };
+    if (season) query.season = season;
+
+    return this.playerRankModel
+      .find(query)
+      .sort({ elo: -1 })
+      .limit(limit)
+      .populate('user', 'nickname email region country avatar')
+      .populate('game', 'title')
+      .exec();
+  }
+
+  async getUserRanks(userId: string) {
+    return this.playerRankModel
+      .find({ user: new Types.ObjectId(userId) })
+      .populate('game', 'title genre coverImageUrl')
+      .sort({ elo: -1 })
+      .exec();
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // PENALTIES (kept for admin tooling)
+  // ──────────────────────────────────────────────────────────
+
   async applyPenalty(applyPenaltyDto: ApplyPenaltyDto, issuedBy: string) {
     const { userId, gameId, type, severity, eloDeduction, notes, evidence, matchId, tournamentId, expiresAt, includesRankReset } = applyPenaltyDto;
 
-    // Get player rank
     const playerRank = await this.playerRankModel.findOne({
       user: new Types.ObjectId(userId),
       game: new Types.ObjectId(gameId),
@@ -213,7 +312,6 @@ export class RankService {
     const previousTier = playerRank.tier;
     const previousLevel = playerRank.level;
 
-    // Create penalty record
     const penalty = await this.penaltyModel.create({
       user: new Types.ObjectId(userId),
       game: new Types.ObjectId(gameId),
@@ -230,33 +328,29 @@ export class RankService {
       includesRankReset: includesRankReset || false,
     });
 
-    // Apply ELO deduction
-    const newElo = Math.max(0, previousElo - eloDeduction);
-    playerRank.elo = newElo;
-
-    // Recalculate tier and level
-    const { tier, division, level } = this.calculateTierAndLevel(newElo);
-    playerRank.tier = tier;
-    playerRank.division = division;
-    playerRank.level = level;
-
-    // If includes rank reset, reset to starting values
     if (includesRankReset) {
       playerRank.elo = STARTING_ELO;
-      playerRank.tier = TierName.IRON;
-      playerRank.division = 1;
-      playerRank.level = 1;
+      const reset = this.calculateTierAndLevel(STARTING_ELO);
+      playerRank.tier = reset.tier;
+      playerRank.division = reset.division;
+      playerRank.level = reset.level;
       playerRank.wins = 0;
       playerRank.losses = 0;
       playerRank.totalMatches = 0;
       playerRank.winRate = 0;
       playerRank.currentStreak = 0;
+    } else {
+      const newElo = Math.max(0, previousElo - eloDeduction);
+      playerRank.elo = newElo;
+      const { tier, division, level } = this.calculateTierAndLevel(newElo);
+      playerRank.tier = tier;
+      playerRank.division = division;
+      playerRank.level = level;
     }
 
     await playerRank.save();
 
-    // Record in history
-    const isTierDemotion = this.isTierLower(tier, previousTier);
+    const isTierDemotion = this.isTierLower(playerRank.tier, previousTier);
 
     await this.rankHistoryModel.create({
       playerRank: playerRank._id,
@@ -279,75 +373,22 @@ export class RankService {
     return { penalty, updatedRank: playerRank };
   }
 
-  /**
-   * Get rank history for a player
-   */
-  async getRankHistory(userId: string, gameId: string, limit: number = 50) {
-    const history = await this.rankHistoryModel
-      .find({
-        user: new Types.ObjectId(userId),
-        game: new Types.ObjectId(gameId),
-      })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate('match')
-      .populate('tournament')
-      .populate('penalty')
-      .exec();
+  // ──────────────────────────────────────────────────────────
+  // SEASON RESET
+  // ──────────────────────────────────────────────────────────
 
-    return history;
-  }
-
-  /**
-   * Get leaderboard for a game
-   */
-  async getLeaderboard(gameId: string, season?: number, limit: number = 100) {
-    if (!Types.ObjectId.isValid(gameId)) {
-      return [];
-    }
-
-    const query: any = {
-      game: new Types.ObjectId(gameId),
-    };
-
-    if (season) {
-      query.season = season;
-    }
-
-    return this.playerRankModel
-      .find(query)
-      .sort({ elo: -1 })
-      .limit(limit)
-      .populate('user', 'nickname email region country avatar')
-      .populate('game', 'title')
-      .exec();
-  }
-
-  /**
-   * Get all ranks for a user across all games
-   */
-  async getUserRanks(userId: string) {
-    const ranks = await this.playerRankModel
-      .find({ user: new Types.ObjectId(userId) })
-      .populate('game', 'title genre coverImageUrl')
-      .sort({ elo: -1 })
-      .exec();
-
-    return ranks;
-  }
-
-  /**
-   * Reset season ranks
-   */
   async resetSeasonRanks(gameId: string, newSeason: number) {
     const ranks = await this.playerRankModel.find({
       game: new Types.ObjectId(gameId),
     });
 
     for (const rank of ranks) {
-      // Soft reset - retain partial ELO
-      const resetElo = Math.floor(rank.elo * 0.5); // Keep 50% of current ELO
+      const previousElo = rank.elo;
+      const resetElo = Math.max(STARTING_ELO, Math.floor(rank.elo * 0.5 + STARTING_ELO * 0.5));
       const { tier, division, level } = this.calculateTierAndLevel(resetElo);
+
+      const previousTier = rank.tier;
+      const previousLevel = rank.level;
 
       rank.elo = resetElo;
       rank.tier = tier;
@@ -362,51 +403,64 @@ export class RankService {
 
       await rank.save();
 
-      // Record season reset in history
       await this.rankHistoryModel.create({
         playerRank: rank._id,
         user: rank.user,
         game: rank.game,
-        previousElo: rank.elo * 2,
+        previousElo,
         newElo: resetElo,
-        eloChange: -Math.floor(rank.elo),
+        eloChange: resetElo - previousElo,
         reason: EloChangeReason.SEASON_RESET,
         reasonDetails: `Season ${newSeason} reset`,
-        previousTier: rank.tier,
+        previousTier,
         newTier: tier,
-        previousLevel: rank.level,
+        previousLevel,
         newLevel: level,
         isTierPromotion: false,
-        isTierDemotion: true,
+        isTierDemotion: this.isTierLower(tier, previousTier),
       });
     }
 
     return { message: `Reset ${ranks.length} ranks for season ${newSeason}` };
   }
 
-  /**
-   * Calculate tier, division, and level from ELO
-   */
-  private calculateTierAndLevel(elo: number): { tier: TierName; division: number; level: number } {
+  // ──────────────────────────────────────────────────────────
+  // PENALTIES READ
+  // ──────────────────────────────────────────────────────────
+
+  async getUserPenalties(userId: string, gameId?: string) {
+    const query: any = { user: new Types.ObjectId(userId) };
+    if (gameId) query.game = new Types.ObjectId(gameId);
+
+    return this.penaltyModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .populate('issuedBy', 'nickname')
+      .populate('game', 'title')
+      .exec();
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // TIER CALCULATION
+  // ──────────────────────────────────────────────────────────
+
+  calculateTierAndLevel(elo: number): { tier: TierName; division: number; level: number } {
     let cumulativeLevel = 1;
 
     for (const threshold of TIER_THRESHOLDS) {
       if (elo >= threshold.minElo && elo <= threshold.maxElo) {
-        const eloRange = threshold.maxElo - threshold.minElo;
+        const eloRange = threshold.maxElo === Infinity ? 500 : threshold.maxElo - threshold.minElo;
         const eloInTier = elo - threshold.minElo;
         const divisionSize = eloRange / threshold.divisions;
 
-        // Calculate division (1-based, descending - higher division = lower ELO within tier)
         let division = Math.floor(eloInTier / divisionSize) + 1;
         division = Math.min(division, threshold.divisions);
 
-        // Calculate level for this tier
-        const levelInTier = division;
-        const level = cumulativeLevel + (levelInTier - 1);
+        const level = cumulativeLevel + (division - 1);
 
         return {
           tier: threshold.tier,
-          division: threshold.divisions - division + 1, // Invert so division 3 is highest
+          division: threshold.divisions - division + 1,
           level,
         };
       }
@@ -414,46 +468,16 @@ export class RankService {
       cumulativeLevel += threshold.divisions;
     }
 
-    // Default to highest tier if ELO exceeds all thresholds
-    return {
-      tier: TierName.CHALLENGER,
-      division: 1,
-      level: cumulativeLevel,
-    };
+    return { tier: TierName.CHALLENGER, division: 1, level: cumulativeLevel };
   }
 
-  /**
-   * Check if tier A is higher than tier B
-   */
   private isTierHigher(tierA: string, tierB: string): boolean {
     const tierOrder = Object.values(TierName);
     return tierOrder.indexOf(tierA as TierName) > tierOrder.indexOf(tierB as TierName);
   }
 
-  /**
-   * Check if tier A is lower than tier B
-   */
   private isTierLower(tierA: string, tierB: string): boolean {
     const tierOrder = Object.values(TierName);
     return tierOrder.indexOf(tierA as TierName) < tierOrder.indexOf(tierB as TierName);
-  }
-
-  /**
-   * Get penalty statistics for a user
-   */
-  async getUserPenalties(userId: string, gameId?: string) {
-    const query: any = { user: new Types.ObjectId(userId) };
-    if (gameId) {
-      query.game = new Types.ObjectId(gameId);
-    }
-
-    const penalties = await this.penaltyModel
-      .find(query)
-      .sort({ createdAt: -1 })
-      .populate('issuedBy', 'nickname')
-      .populate('game', 'title')
-      .exec();
-
-    return penalties;
   }
 }

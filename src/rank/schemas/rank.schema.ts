@@ -11,22 +11,22 @@ export class PlayerRank {
     @Prop({ type: Types.ObjectId, ref: 'Catalog', required: true })
     game: Types.ObjectId;
 
-    @Prop({ default: 0, min: 0 })
+    @Prop({ default: 1000, min: 0 })
     elo: number;
 
     @Prop({ default: 1, min: 1 })
     level: number;
 
-    @Prop({ default: 'IRON' })
-    tier: string; // IRON, BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, MASTER, GRANDMASTER, CHALLENGER
+    @Prop({ default: 'GOLD' })
+    tier: string;
 
     @Prop({ default: 1, min: 1, max: 3 })
-    division: number; // 1-3 within each tier
+    division: number;
 
-    @Prop({ default: 0 })
+    @Prop({ default: 1000 })
     peakElo: number;
 
-    @Prop({ default: 'IRON' })
+    @Prop({ default: 'GOLD' })
     peakTier: string;
 
     @Prop({ default: 1 })
