@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { MatchmakingController } from './matchmaking.controller';
 import { MatchmakingService } from './matchmaking.service';
+import { MatchmakingGateway } from './matchmaking.gateway';
 import { Game, GameSchema } from '../games/entities/game.entity';
 import {
     MatchmakingTicket,
@@ -19,10 +22,18 @@ import { RankModule } from '../rank/rank.module';
             { name: PlayerRank.name, schema: PlayerRankSchema },
             { name: Catalog.name, schema: CatalogSchema },
         ]),
+        JwtModule.registerAsync({
+            imports: [ConfigModule],
+            useFactory: async (configService: ConfigService) => ({
+                secret: configService.get<string>('JWT_SECRET') || 'yourSecretKey',
+            }),
+            inject: [ConfigService],
+        }),
+        ConfigModule,
         RankModule,
     ],
     controllers: [MatchmakingController],
-    providers: [MatchmakingService],
+    providers: [MatchmakingService, MatchmakingGateway],
     exports: [MatchmakingService],
 })
 export class MatchmakingModule {}

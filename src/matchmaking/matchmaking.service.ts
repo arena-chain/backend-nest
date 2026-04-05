@@ -3,6 +3,8 @@ import {
     Logger,
     NotFoundException,
     BadRequestException,
+    Inject,
+    forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -15,6 +17,7 @@ import {
 import { PlayerRank, PlayerRankDocument } from '../rank/schemas/rank.schema';
 import { Catalog, CatalogDocument } from '../catalog/schemas/catalog.entity';
 import { RankService } from '../rank/rank.service';
+import { MatchmakingGateway } from './matchmaking.gateway';
 import { JoinQueueDto } from './dto/join-queue.dto';
 
 // ──────────────────────────────────────────────────────────
@@ -49,6 +52,8 @@ export class MatchmakingService {
         @InjectModel(Catalog.name)
         private readonly catalogModel: Model<CatalogDocument>,
         private readonly rankService: RankService,
+        @Inject(forwardRef(() => MatchmakingGateway))
+        private readonly gateway: MatchmakingGateway,
     ) {}
 
     // ──────────────────────────────────────────────────────────
@@ -89,7 +94,7 @@ export class MatchmakingService {
     }
 
     // ──────────────────────────────────────────────────────────
-    // JOIN QUEUE — reads elo from PlayerRank (single source of truth)
+    // JOIN QUEUE
     // ──────────────────────────────────────────────────────────
 
     async joinQueue(userId: string, dto: JoinQueueDto) {
@@ -97,10 +102,7 @@ export class MatchmakingService {
 
         if (!isScheduled) {
             await this.ticketModel.updateMany(
-                {
-                    userId: new Types.ObjectId(userId),
-                    status: 'MATCHED',
-                },
+                { userId: new Types.ObjectId(userId), status: 'MATCHED' },
                 { $set: { status: 'CANCELLED' } },
             );
 
@@ -178,7 +180,7 @@ export class MatchmakingService {
     }
 
     // ──────────────────────────────────────────────────────────
-    // RESPOND TO MATCH (accept/decline)
+    // RESPOND TO MATCH (accept/decline) → WS push
     // ──────────────────────────────────────────────────────────
 
     async respondToMatch(gameId: string, userId: string, accept: boolean) {
@@ -210,17 +212,26 @@ export class MatchmakingService {
                 },
                 { $set: { status: 'CANCELLED' } },
             );
-        } else if (updated.participants.every((p) => p.accepted === true)) {
-            updated.status = 'ACCEPTED';
-            await updated.save();
-            await this.createRoomForGame(gameId);
+
+            this.gateway.emitMatchCancelled(gameId, 'player_declined');
+        } else {
+            this.gateway.emitPlayerResponse(gameId, userId, accept, updated);
+
+            if (updated.participants.every((p) => p.accepted === true)) {
+                updated.status = 'ACCEPTED';
+                await updated.save();
+                await this.createRoomForGame(gameId);
+
+                const final = await this.gameModel.findById(gameId);
+                this.gateway.emitGameRoomReady(gameId, final);
+            }
         }
 
         return this.gameModel.findById(gameId);
     }
 
     // ──────────────────────────────────────────────────────────
-    // COMPLETE MATCH — triggers automatic elo update
+    // COMPLETE MATCH → automatic elo update + WS push
     // ──────────────────────────────────────────────────────────
 
     async completeMatch(gameId: string, winningTeam: 'BLUE' | 'RED') {
@@ -258,6 +269,12 @@ export class MatchmakingService {
         game.winningTeam = winningTeam;
         game.finished_at = new Date();
         await game.save();
+
+        this.gateway.emitMatchCompleted(gameId, {
+            game,
+            eloUpdates: eloResults,
+            winningTeam,
+        });
 
         this.logger.log(
             `Match ${gameId} completed | winner=${winningTeam} | elo changes: ${eloResults.map((r) => `${r.userId}:${r.eloChange > 0 ? '+' : ''}${r.eloChange}`).join(', ')}`,
@@ -383,6 +400,11 @@ export class MatchmakingService {
                 { $set: { status: 'CANCELLED' } },
             );
 
+            this.gateway.emitMatchCancelled(
+                game._id.toString(),
+                'expired',
+            );
+
             this.logger.warn(
                 `Game ${game._id} expired (no response within ${GAME_ACCEPTANCE_TIMEOUT_S}s)`,
             );
@@ -392,10 +414,7 @@ export class MatchmakingService {
     private async activateScheduledTickets() {
         const now = new Date();
         const result = await this.ticketModel.updateMany(
-            {
-                status: 'SCHEDULED',
-                scheduledAt: { $lte: now },
-            },
+            { status: 'SCHEDULED', scheduledAt: { $lte: now } },
             { $set: { status: 'SEARCHING' } },
         );
         if (result.modifiedCount > 0) {
@@ -406,7 +425,7 @@ export class MatchmakingService {
     }
 
     // ──────────────────────────────────────────────────────────
-    // MATCHING LOGIC — dynamic elo threshold
+    // MATCHING LOGIC — dynamic elo threshold + WS push
     // ──────────────────────────────────────────────────────────
 
     private async tryMatchForMode(mode: string, requiredPlayers: number) {
@@ -415,16 +434,12 @@ export class MatchmakingService {
             .sort({ elo: 1, createdAt: 1 })
             .exec();
 
-        if (allTickets.length < requiredPlayers) {
-            return;
-        }
+        if (allTickets.length < requiredPlayers) return;
 
         const byServer = new Map<string, MatchmakingTicketDocument[]>();
         for (const ticket of allTickets) {
             const server = (ticket.server ?? ticket.region ?? 'UNKNOWN').toUpperCase();
-            if (!byServer.has(server)) {
-                byServer.set(server, []);
-            }
+            if (!byServer.has(server)) byServer.set(server, []);
             byServer.get(server)!.push(ticket);
         }
 
@@ -442,7 +457,6 @@ export class MatchmakingService {
                 );
 
                 const group: MatchmakingTicketDocument[] = [anchor];
-
                 let effectiveRegion = (anchor.region ?? 'ALL').toUpperCase();
 
                 for (
@@ -453,22 +467,15 @@ export class MatchmakingService {
                     if (matched.has(tickets[j]._id.toString())) continue;
 
                     const elos = [...group.map((t) => t.elo), tickets[j].elo];
-                    const minElo = Math.min(...elos);
-                    const maxElo = Math.max(...elos);
-
-                    if (maxElo - minElo > dynamicThreshold) continue;
+                    if (Math.max(...elos) - Math.min(...elos) > dynamicThreshold) continue;
 
                     const candidateRegion = (tickets[j].region ?? 'ALL').toUpperCase();
 
                     if (effectiveRegion === 'ALL') {
                         group.push(tickets[j]);
-                        if (candidateRegion !== 'ALL') {
-                            effectiveRegion = candidateRegion;
-                        }
-                    } else {
-                        if (candidateRegion === 'ALL' || candidateRegion === effectiveRegion) {
-                            group.push(tickets[j]);
-                        }
+                        if (candidateRegion !== 'ALL') effectiveRegion = candidateRegion;
+                    } else if (candidateRegion === 'ALL' || candidateRegion === effectiveRegion) {
+                        group.push(tickets[j]);
                     }
                 }
 
@@ -487,9 +494,7 @@ export class MatchmakingService {
         const catalogId = await this.resolveCatalogId('LOL');
         const finalCatalogId = catalogId ?? new Types.ObjectId();
 
-        const requiredPlayers = group.length;
-        const half = Math.ceil(requiredPlayers / 2);
-
+        const half = Math.ceil(group.length / 2);
         const hasScheduledTicket = group.some((t) => t.scheduledAt != null);
 
         const participants = group.map((ticket, index) => ({
@@ -517,6 +522,9 @@ export class MatchmakingService {
             { _id: { $in: group.map((t) => t._id) } },
             { $set: { status: 'MATCHED', gameId: game._id } },
         );
+
+        const userIds = group.map((t) => t.userId.toString());
+        this.gateway.emitMatchFound(userIds, game);
 
         this.logger.log(
             `Match created: ${game._id} | mode=${mode} | server=${group[0].server} | players=${group.length}`,

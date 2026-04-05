@@ -49,5 +49,6 @@ export const RankTierConfigSchema = SchemaFactory.createForClass(RankTierConfig)
 
 // Unique index for game + tier combination
 RankTierConfigSchema.index({ game: 1, tier: 1 }, { unique: true });
-// Index for ELO range queries
+// Index for git status
+// range queries
 RankTierConfigSchema.index({ minElo: 1, maxElo: 1 });

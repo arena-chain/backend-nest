@@ -1,13 +1,15 @@
 // src/auth/dto/login.dto.ts
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
     @ApiProperty({
         example: 'user@example.com',
-        description: 'User email address',
+        description: 'Email address or username (nickname)',
     })
-    @IsEmail()
+    @IsString()
+    @IsNotEmpty()
+    @MinLength(1)
     email: string;
 
     @ApiProperty({
