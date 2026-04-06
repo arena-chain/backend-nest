@@ -247,38 +247,55 @@ export class AuthService {
     const user = await this.usersService.findByEmailOrNickname(dto.email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
+    if (
+      user.passwordHash === 'google_auth_no_password' ||
+      user.passwordHash === 'steam_auth_no_password'
+    ) {
+      throw new UnauthorizedException(
+        'This account uses social sign-in. Use Google or Steam instead of a password.',
+      );
+    }
+
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    // Determine user's role
+    const roleKey = ((user.role as string) || UserRole.PLAYER).toLowerCase();
     let role: UserRole;
     let profile: any;
 
     try {
-      profile = await this.playerService.findByUserId(user._id);
-      role = UserRole.PLAYER;
-    } catch {
-      try {
-        profile = await this.teamManagerService.findByUserId(user._id);
-        role = UserRole.TEAM_MANAGER;
-      } catch {
-        try {
+      switch (roleKey) {
+        case UserRole.PLAYER:
+          profile = await this.playerService.findOrCreateByUserId(user._id);
+          role = UserRole.PLAYER;
+          break;
+        case UserRole.TEAM_MANAGER:
+          profile = await this.teamManagerService.findByUserId(user._id);
+          role = UserRole.TEAM_MANAGER;
+          break;
+        case UserRole.REFEREE:
           profile = await this.refereeService.findByUserId(user._id);
           role = UserRole.REFEREE;
-        } catch {
-          try {
-            profile = await this.scouterService.findByUserId(user._id);
-            role = UserRole.SCOUTER;
-          } catch {
-            try {
-              profile = await this.adminService.findByUserId(user._id);
-              role = UserRole.ADMIN;
-            } catch {
-              throw new UnauthorizedException('No profile found for user');
-            }
-          }
-        }
+          break;
+        case UserRole.SCOUTER:
+          profile = await this.scouterService.findByUserId(user._id);
+          role = UserRole.SCOUTER;
+          break;
+        case UserRole.ADMIN:
+          profile = await this.adminService.findByUserId(user._id);
+          role = UserRole.ADMIN;
+          break;
+        default:
+          profile = await this.playerService.findOrCreateByUserId(user._id);
+          role = UserRole.PLAYER;
       }
+    } catch (e) {
+      if (e instanceof NotFoundException) {
+        throw new UnauthorizedException(
+          'Profile data is missing for this account. Complete registration or contact support.',
+        );
+      }
+      throw e;
     }
 
     const tokens = await this.generateTokens(user._id.toString(), user.email, role);
