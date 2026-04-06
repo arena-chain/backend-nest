@@ -1,7 +1,13 @@
 // src/auth/auth.service.ts
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Registration, RegistrationDocument } from './schemas/registration.schema';
@@ -22,9 +28,12 @@ import { UserRole } from '../common/enums/role.enum';
 import { MailService } from '../mail/mail.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UserDocument } from '../user/schemas/user.schema';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(Registration.name) private registrationModel: Model<RegistrationDocument>,
     private usersService: UsersService,
@@ -36,6 +45,48 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
   ) { }
+
+  /**
+   * Verifies password. Supports bcrypt hashes and legacy plaintext (e.g. manual MongoDB inserts);
+   * upgrades plaintext to bcrypt on successful match.
+   */
+  private async findPendingRegistration(identifier: string) {
+    if (identifier.includes('@')) {
+      return this.registrationModel
+        .findOne({ email: identifier.toLowerCase() })
+        .exec();
+    }
+    const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.registrationModel
+      .findOne({ nickname: new RegExp(`^${escaped}$`, 'i') })
+      .exec();
+  }
+
+  private async verifyPasswordAndUpgradeIfNeeded(
+    plainPassword: string,
+    user: UserDocument,
+  ): Promise<boolean> {
+    const hash = user.passwordHash;
+    if (!hash || typeof hash !== 'string') {
+      this.logger.warn(`Login failed: user ${user._id} has empty or missing passwordHash`);
+      return false;
+    }
+    try {
+      if (hash.startsWith('$2')) {
+        return await bcrypt.compare(plainPassword, hash);
+      }
+      if (hash === plainPassword) {
+        const newHash = await bcrypt.hash(plainPassword, 10);
+        await this.usersService.update(user._id.toString(), { passwordHash: newHash });
+        this.logger.log(`Upgraded plaintext password to bcrypt for user ${user._id}`);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      this.logger.warn(`Login password check failed for user ${user._id}: ${e}`);
+      return false;
+    }
+  }
 
   private async sendRegistrationOtp(email: string) {
     const otp = this.generateOtp();
@@ -244,8 +295,17 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmailOrNickname(dto.email);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    const identifier = dto.email.trim();
+    const user = await this.usersService.findByEmailOrNickname(identifier);
+    if (!user) {
+      const pending = await this.findPendingRegistration(identifier);
+      if (pending) {
+        throw new UnauthorizedException(
+          'Complete email verification (OTP) before signing in. Check your inbox.',
+        );
+      }
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     if (
       user.passwordHash === 'google_auth_no_password' ||
@@ -256,7 +316,7 @@ export class AuthService {
       );
     }
 
-    const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    const valid = await this.verifyPasswordAndUpgradeIfNeeded(dto.password, user);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     const roleKey = ((user.role as string) || UserRole.PLAYER).toLowerCase();
