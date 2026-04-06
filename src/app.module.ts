@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
@@ -56,11 +56,28 @@ import { TrainingModule } from './training/training.module';
 import { LevelModule } from './level/level.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
+const mongoLogger = new Logger('MongoDB');
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/arenachain'),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => {
+        const uri =
+          config.get<string>('MONGO_URI') || 'mongodb://localhost:27017/arenachain';
+        const dbName = config.get<string>('MONGO_DB_NAME') || 'arenachain';
+        mongoLogger.log(
+          `Using database name "${dbName}" (set MONGO_DB_NAME in env if your Atlas DB differs)`,
+        );
+        return {
+          uri,
+          dbName,
+        };
+      },
+      inject: [ConfigService],
+    }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
