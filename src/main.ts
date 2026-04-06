@@ -79,12 +79,24 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
 
+  const publicBase =
+    process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, '') ||
+    process.env.PUBLIC_URL?.replace(/\/$/, '');
+
   console.log(`\n🚀 Application is running!`);
-  console.log(`📍 Local: http://localhost:${port}`);
-  console.log(`📍 Network: http://0.0.0.0:${port}`);
-  console.log(`📍 Root info: http://localhost:${port}/  (JSON with links)`);
-  console.log(`📚 Swagger API: http://localhost:${port}/docs`);
-  console.log(`\n💡 For physical devices, use your computer's IP address instead of localhost`);
-  console.log(`   Example: http://192.168.1.X:${port}\n`);
+  console.log(`📍 Listening on 0.0.0.0:${port}`);
+
+  if (publicBase) {
+    console.log(`🌐 Public URL (use this in browser / Postman): ${publicBase}`);
+    console.log(`   Health: ${publicBase}/api/health`);
+    console.log(`   Swagger: ${publicBase}/docs`);
+    console.log(`   Root: ${publicBase}/`);
+  } else {
+    console.log(`📍 Local dev: http://localhost:${port}`);
+    console.log(`📍 Root info: http://localhost:${port}/`);
+    console.log(`📚 Swagger: http://localhost:${port}/docs`);
+    console.log(`\n💡 On another device on LAN: http://<your-ip>:${port}`);
+  }
+  console.log('');
 }
 bootstrap();

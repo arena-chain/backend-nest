@@ -295,6 +295,12 @@ export class AuthService {
     const identifier = dto.email.trim();
     const user = await this.usersService.findByEmailOrNickname(identifier);
 
+    if (user) {
+      await this.registrationModel
+        .deleteMany({ email: user.email })
+        .catch(() => undefined);
+    }
+
     if (!user) {
       const pending = await this.findPendingRegistration(identifier);
       if (pending) {
