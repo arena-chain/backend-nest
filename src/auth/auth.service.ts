@@ -293,7 +293,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const identifier = dto.email.trim();
-    const user = await this.usersService.findByEmailOrNickname(identifier);
+    let user = await this.usersService.findByEmailOrNickname(identifier);
 
     if (user) {
       await this.registrationModel
@@ -304,10 +304,21 @@ export class AuthService {
     if (!user) {
       const pending = await this.findPendingRegistration(identifier);
       if (pending) {
-        throw new UnauthorizedException(
-          'Complete email verification (OTP) before signing in. Check your inbox.',
-        );
+        user = await this.usersService.findByEmail(pending.email);
+        if (user) {
+          await this.registrationModel.deleteOne({ _id: pending._id }).catch(() => undefined);
+          this.logger.warn(
+            `Removed stale registration for ${pending.email}; user already exists.`,
+          );
+        } else {
+          throw new UnauthorizedException(
+            'Complete email verification (OTP) before signing in. Check your inbox.',
+          );
+        }
       }
+    }
+
+    if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
