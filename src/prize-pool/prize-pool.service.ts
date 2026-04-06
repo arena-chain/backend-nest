@@ -19,6 +19,10 @@ export class PrizePoolService {
         return this.prizePoolModel.create(dto);
     }
 
+    async findAll(): Promise<PrizePool[]> {
+        return this.prizePoolModel.find().populate('sponsorId').sort({ createdAt: -1 }).exec();
+    }
+
     async findBySeason(seasonId: string): Promise<PrizePool | null> {
         return this.prizePoolModel
             .findOne({ seasonId })

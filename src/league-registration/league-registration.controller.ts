@@ -12,6 +12,11 @@ export class LeagueRegistrationController {
         return this.service.register(dto);
     }
 
+    @Get()
+    findAll() {
+        return this.service.findAll();
+    }
+
     @Get('season/:seasonId')
     findBySeason(@Param('seasonId') seasonId: string) {
         return this.service.findBySeason(seasonId);

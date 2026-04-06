@@ -6,13 +6,13 @@ import { CreateBracketDto, AdvanceSlotDto } from './dto/create-bracket.dto';
 export class BracketController {
     constructor(private readonly bracketService: BracketService) {}
 
-    /** GET /brackets?seasonId=xxx — same as GET /brackets/by-season?seasonId=xxx */
+    /** GET /brackets — returns all brackets; optionally filter by ?seasonId=xxx */
     @Get()
-    findByIdOrSeason(@Query('seasonId') seasonId: string) {
-        if (!seasonId) {
-            return null;
+    findAll(@Query('seasonId') seasonId?: string) {
+        if (seasonId) {
+            return this.bracketService.findBySeason(seasonId);
         }
-        return this.bracketService.findBySeason(seasonId);
+        return this.bracketService.findAll();
     }
 
     @Post('generate')

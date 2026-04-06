@@ -1,5 +1,14 @@
-import { IsString, IsNotEmpty, IsOptional, IsMongoId, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsMongoId,
+  IsNumber,
+  Min,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { HighlightVisibility } from '../schemas/highlight.schema';
 
 export class CreateHighlightDto {
     @ApiProperty({ description: 'Highlight title' })
@@ -33,4 +42,16 @@ export class CreateHighlightDto {
     @IsMongoId()
     @IsNotEmpty()
     creator: string;
+
+    @ApiPropertyOptional({
+      description: 'Clip file path or URL (required for manual create)',
+    })
+    @IsString()
+    @IsOptional()
+    clipUrl?: string;
+
+    @ApiPropertyOptional({ enum: HighlightVisibility, default: 'private' })
+    @IsEnum(HighlightVisibility)
+    @IsOptional()
+    visibility?: HighlightVisibility;
 }

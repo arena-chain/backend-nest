@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsMongoId, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  IsMongoId,
+  Min,
+  IsIn,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateVideoDto {
@@ -37,4 +45,12 @@ export class CreateVideoDto {
     @Min(0)
     @IsOptional()
     duration?: number;
+
+    @ApiPropertyOptional({
+      enum: ['public', 'private'],
+      description: 'Show this upload on the channel page when public',
+    })
+    @IsOptional()
+    @IsIn(['public', 'private'])
+    channelVisibility?: 'public' | 'private';
 }

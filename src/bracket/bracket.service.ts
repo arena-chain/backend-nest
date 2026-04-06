@@ -280,6 +280,10 @@ export class BracketService {
         }
     }
 
+    async findAll(): Promise<Bracket[]> {
+        return this.bracketModel.find().sort({ createdAt: -1 }).exec();
+    }
+
     async findBySeason(seasonId: string): Promise<Bracket | null> {
         return this.bracketModel.findOne({ seasonId }).exec();
     }

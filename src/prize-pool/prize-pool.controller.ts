@@ -12,6 +12,11 @@ export class PrizePoolController {
         return this.prizePoolService.create(dto);
     }
 
+    @Get()
+    findAll() {
+        return this.prizePoolService.findAll();
+    }
+
     @Get('by-season')
     findBySeason(@Query('seasonId') seasonId: string) {
         return this.prizePoolService.findBySeason(seasonId);

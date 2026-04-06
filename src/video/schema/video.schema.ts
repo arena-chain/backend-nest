@@ -28,6 +28,10 @@ export class Video {
 
     @Prop()
     duration: number; // in seconds
+
+    /** When public, shown on the uploader's channel pages (VOD library). */
+    @Prop({ enum: ['public', 'private'], default: 'private' })
+    channelVisibility: 'public' | 'private';
 }
 
 export const VideoSchema = SchemaFactory.createForClass(Video);

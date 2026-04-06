@@ -50,6 +50,7 @@ import { NftModule } from './nft/nft.module';
 import { NewsModule } from './news/news.module';
 import { ReservationModule } from './reservation/reservation.module';
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),

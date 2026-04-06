@@ -81,6 +81,10 @@ export class LeagueRegistrationService {
         return entry;
     }
 
+    async findAll(): Promise<SeasonTeam[]> {
+        return this.seasonTeamModel.find().sort({ seasonId: 1, seed: 1 }).exec();
+    }
+
     async findBySeason(seasonId: string): Promise<SeasonTeam[]> {
         return this.seasonTeamModel.find({ seasonId }).sort({ seed: 1 }).exec();
     }

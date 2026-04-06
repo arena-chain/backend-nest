@@ -1,0 +1,73 @@
+[
+  {
+    "_id": {"$oid": "663000000000000000000001"},
+    "name": "MENA Valorant Champions League",
+    "gameId": "663000000000000000099999",
+    "tier": "OFFICIAL",
+    "mode": "TEAM",
+    "regionFilter": "REGION",
+    "regionValue": "MENA",
+    "startDate": {"$date": "2024-02-01T00:00:00.000Z"},
+    "endDate": {"$date": "2024-06-30T00:00:00.000Z"},
+    "maxParticipants": 8,
+    "minElo": 1200,
+    "createdBy": {"$oid": "662000000000000000000061"},
+    "supervisedBy": [{"$oid": "662000000000000000000066"}],
+    "status": "ONGOING",
+    "rewards": [
+      {"rank": 1, "prize": "$5000", "points": 1000},
+      {"rank": 2, "prize": "$2500", "points": 750},
+      {"rank": 3, "prize": "$1000", "points": 500}
+    ],
+    "rewardsDistributed": false,
+    "createdAt": {"$date": "2024-01-15T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000000002"},
+    "name": "Maghreb Valorant Cup",
+    "gameId": "663000000000000000099999",
+    "tier": "OFFICIAL",
+    "mode": "TEAM",
+    "regionFilter": "REGION",
+    "regionValue": "Maghreb",
+    "startDate": {"$date": "2024-03-01T00:00:00.000Z"},
+    "endDate": {"$date": "2024-06-15T00:00:00.000Z"},
+    "maxParticipants": 6,
+    "minElo": 1200,
+    "createdBy": {"$oid": "662000000000000000000062"},
+    "supervisedBy": [{"$oid": "662000000000000000000061"}, {"$oid": "662000000000000000000065"}],
+    "status": "ONGOING",
+    "rewards": [
+      {"rank": 1, "prize": "$3000", "points": 800},
+      {"rank": 2, "prize": "$1500", "points": 600},
+      {"rank": 3, "prize": "$500", "points": 400}
+    ],
+    "rewardsDistributed": false,
+    "createdAt": {"$date": "2024-02-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-15T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000000003"},
+    "name": "Arab Elite Valorant Series",
+    "gameId": "663000000000000000099999",
+    "tier": "COMMUNITY",
+    "mode": "TEAM",
+    "regionFilter": "REGION",
+    "regionValue": "MENA",
+    "startDate": {"$date": "2024-03-15T00:00:00.000Z"},
+    "endDate": {"$date": "2024-05-30T00:00:00.000Z"},
+    "maxParticipants": 4,
+    "minElo": 1350,
+    "createdBy": {"$oid": "662000000000000000000066"},
+    "supervisedBy": [],
+    "status": "ONGOING",
+    "rewards": [
+      {"rank": 1, "prize": "$2000", "points": 600},
+      {"rank": 2, "prize": "$800", "points": 400}
+    ],
+    "rewardsDistributed": false,
+    "createdAt": {"$date": "2024-02-15T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-20T10:00:00.000Z"}
+  }
+]

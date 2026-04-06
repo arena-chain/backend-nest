@@ -7,7 +7,7 @@ import { StreamController } from './stream.controller';
 import { Stream, StreamSchema } from './entities/stream.entity';
 import { ChannelModule } from '../channel/channel.module';
 import { StreamGateway } from './stream.gateway';
-import { ChatModule } from '../chat/chat.module';
+import { ChatModule } from '../chat/chat.module.js';
 import { UsersModule } from '../user/user.module';
 
 @Module({

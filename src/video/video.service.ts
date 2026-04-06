@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { unlink } from 'fs/promises';
@@ -18,18 +23,26 @@ export class VideoService {
       ...createVideoDto,
       uploader: new Types.ObjectId(createVideoDto.uploader),
       game: createVideoDto.game ? new Types.ObjectId(createVideoDto.game) : undefined,
+      channelVisibility: createVideoDto.channelVisibility ?? 'private',
     };
     const createdVideo = new this.videoModel(videoData);
     return await createdVideo.save();
   }
 
-  async findAll(filters?: { uploader?: string; game?: string }): Promise<Video[]> {
+  async findAll(filters?: {
+    uploader?: string;
+    game?: string;
+    channelPublic?: boolean;
+  }): Promise<Video[]> {
     const query: Record<string, any> = {};
     if (filters?.uploader && Types.ObjectId.isValid(filters.uploader)) {
       query.uploader = new Types.ObjectId(filters.uploader);
     }
     if (filters?.game && Types.ObjectId.isValid(filters.game)) {
       query.game = new Types.ObjectId(filters.game);
+    }
+    if (filters?.channelPublic) {
+      query.channelVisibility = 'public';
     }
     return await this.videoModel
       .find(query)
@@ -61,7 +74,8 @@ export class VideoService {
     }
 
     const updateData: any = { ...updateVideoDto };
-    if (updateData.uploader) delete updateData.uploader; // Prevent changing uploader roughly, or convert if needed
+    if (updateData.uploader) delete updateData.uploader;
+    if (updateData.url) delete updateData.url;
     if (updateData.game) updateData.game = new Types.ObjectId(updateData.game);
 
     const updatedVideo = await this.videoModel
@@ -74,6 +88,29 @@ export class VideoService {
       throw new NotFoundException(`Video with ID ${id} not found`);
     }
     return updatedVideo;
+  }
+
+  async assertOwner(id: string, userId: string): Promise<VideoDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid video ID');
+    }
+    const doc = await this.videoModel.findById(id).exec();
+    if (!doc) {
+      throw new NotFoundException(`Video with ID ${id} not found`);
+    }
+    if (doc.uploader.toString() !== userId) {
+      throw new ForbiddenException('You can only modify your own videos');
+    }
+    return doc;
+  }
+
+  async updateForOwner(
+    id: string,
+    userId: string,
+    updateVideoDto: UpdateVideoDto,
+  ): Promise<Video> {
+    await this.assertOwner(id, userId);
+    return this.update(id, updateVideoDto);
   }
 
   async remove(id: string): Promise<{ message: string }> {
@@ -98,5 +135,13 @@ export class VideoService {
       }
     }
     return { message: 'Video deleted successfully' };
+  }
+
+  async removeForOwner(
+    id: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    await this.assertOwner(id, userId);
+    return this.remove(id);
   }
 }

@@ -10,8 +10,8 @@ import {
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
-import { ChatService } from '../chat/chat.service';
-import { UsersService } from '../user/user.service';
+import { ChatService } from '../chat/chat.service.js';
+import { UsersService } from '../user/user.service.js';
 
 type JoinPayload = {
   channelId: string;
