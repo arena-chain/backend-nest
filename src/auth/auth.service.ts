@@ -46,10 +46,7 @@ export class AuthService {
     private mailService: MailService,
   ) { }
 
-  /**
-   * Verifies password. Supports bcrypt hashes and legacy plaintext (e.g. manual MongoDB inserts);
-   * upgrades plaintext to bcrypt on successful match.
-   */
+  /** Find a pending signup in `registrations` by email or nickname. */
   private async findPendingRegistration(identifier: string) {
     if (identifier.includes('@')) {
       return this.registrationModel
@@ -296,16 +293,14 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const identifier = dto.email.trim();
-    let user = await this.usersService.findByEmailOrNickname(identifier);
+    const user = await this.usersService.findByEmailOrNickname(identifier);
 
     if (!user) {
       const pending = await this.findPendingRegistration(identifier);
       if (pending) {
-        const pwOk = await this.verifyPendingPassword(dto.password, pending);
-        if (!pwOk) throw new UnauthorizedException('Invalid credentials');
-
-        this.logger.log(`Auto-completing registration for ${pending.email}`);
-        return this.completePendingRegistration(pending);
+        throw new UnauthorizedException(
+          'Complete email verification (OTP) before signing in. Check your inbox.',
+        );
       }
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -372,73 +367,6 @@ export class AuthService {
         role,
         profile,
         isEmailVerified: user.isEmailVerified,
-      },
-    };
-  }
-
-  /**
-   * Verify password against a pending Registration document (hash is bcrypt).
-   */
-  private async verifyPendingPassword(plain: string, pending: any): Promise<boolean> {
-    try {
-      const hash = pending.passwordHash;
-      if (!hash) return false;
-      if (hash.startsWith('$2')) return bcrypt.compare(plain, hash);
-      return hash === plain;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Promote a `registrations` doc into a real `users` + profile, return tokens.
-   */
-  private async completePendingRegistration(pending: any) {
-    const user = await this.usersService.create({
-      email: pending.email,
-      password: pending.passwordHash,
-      nickname: pending.nickname,
-      region: pending.region || 'EUROPE',
-      role: pending.role,
-    });
-
-    let profile: any;
-    const roleData = pending.roleData || {};
-    switch (pending.role) {
-      case UserRole.PLAYER:
-        profile = await this.playerService.create(user._id as Types.ObjectId, roleData);
-        break;
-      case UserRole.TEAM_MANAGER:
-        profile = await this.teamManagerService.create(user._id as Types.ObjectId, roleData);
-        break;
-      case UserRole.REFEREE:
-        profile = await this.refereeService.create(user._id as Types.ObjectId, roleData);
-        break;
-      case UserRole.SCOUTER:
-        profile = await this.scouterService.create(user._id as Types.ObjectId, roleData);
-        break;
-      case UserRole.ADMIN:
-        profile = await this.adminService.create(user._id as Types.ObjectId, roleData);
-        break;
-      default:
-        profile = await this.playerService.create(user._id as Types.ObjectId, {});
-    }
-
-    await this.usersService.update(user._id.toString(), { isEmailVerified: true });
-    await this.registrationModel.deleteOne({ _id: pending._id });
-
-    const role = (pending.role as UserRole) || UserRole.PLAYER;
-    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
-
-    return {
-      ...tokens,
-      user: {
-        id: user._id,
-        email: user.email,
-        nickname: user.nickname,
-        role,
-        profile,
-        isEmailVerified: true,
       },
     };
   }

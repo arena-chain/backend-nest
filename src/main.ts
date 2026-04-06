@@ -20,6 +20,25 @@ async function bootstrap() {
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
+  const httpServer = app.getHttpAdapter().getInstance();
+  httpServer.get('/', (_req, res) => {
+    res.status(200).json({
+      service: 'arena-chain-api',
+      status: 'ok',
+      hint: 'Routes use the /api prefix. Try GET /api/health',
+      links: {
+        health: '/api/health',
+        apiRoot: '/api',
+        docs: '/docs',
+      },
+    });
+  });
+
+  app.use((req: express.Request, _res, next) => {
+    console.log(`[HTTP] ${req.method} ${req.url}`);
+    next();
+  });
+
   // Enable CORS for mobile apps
   app.enableCors({
     origin: true, // Allow all origins (mobile apps)
@@ -63,6 +82,7 @@ async function bootstrap() {
   console.log(`\n🚀 Application is running!`);
   console.log(`📍 Local: http://localhost:${port}`);
   console.log(`📍 Network: http://0.0.0.0:${port}`);
+  console.log(`📍 Root info: http://localhost:${port}/  (JSON with links)`);
   console.log(`📚 Swagger API: http://localhost:${port}/docs`);
   console.log(`\n💡 For physical devices, use your computer's IP address instead of localhost`);
   console.log(`   Example: http://192.168.1.X:${port}\n`);
