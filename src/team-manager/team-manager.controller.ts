@@ -1,39 +1,14 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum } from 'class-validator';
-import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiProperty } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 import { TeamManagerService } from './team-manager.service';
 import { UpdateTeamManagerDto } from './dto/update-team-manager.dto';
+import { TeamManagerTeamBodyDto } from './dto/team-manager-team-body.dto';
+import { TeamManagerTeamUpdateDto } from './dto/team-manager-team-update.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/role.enum';
-
-class CreateTeamDto {
-    @ApiProperty({ description: 'Team name (must be unique)' })
-    @IsString()
-    name: string;
-
-    @ApiPropertyOptional({ description: 'Organization name (auto-filled from profile if omitted)' })
-    @IsOptional()
-    @IsString()
-    organizationName?: string;
-
-    @ApiPropertyOptional({ description: 'Team logo — base64 string or URL' })
-    @IsOptional()
-    @IsString()
-    logo?: string;
-
-    @ApiPropertyOptional({ description: 'Team description' })
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @ApiPropertyOptional({ enum: ['amateur', 'pro'], default: 'amateur' })
-    @IsOptional()
-    @IsEnum(['amateur', 'pro'])
-    type?: string;
-}
 
 class InvitePlayerDto {
     @ApiProperty({ description: 'User ID of the player to invite' })
@@ -110,7 +85,7 @@ export class TeamManagerController {
     @ApiOperation({ summary: 'Create a team for my profile' })
     @ApiResponse({ status: 201, description: 'Team created and linked to manager' })
     @ApiResponse({ status: 409, description: 'Manager already has a team' })
-    createTeam(@Request() req, @Body() dto: CreateTeamDto) {
+    createTeam(@Request() req, @Body() dto: TeamManagerTeamBodyDto) {
         return this.teamManagerService.createTeamForManager(req.user.userId, dto);
     }
 
@@ -128,7 +103,7 @@ export class TeamManagerController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Update my team (name, logo, description, etc.)' })
-    updateMyTeam(@Request() req, @Body() dto: CreateTeamDto) {
+    updateMyTeam(@Request() req, @Body() dto: TeamManagerTeamUpdateDto) {
         return this.teamManagerService.updateTeam(req.user.userId, dto);
     }
 
