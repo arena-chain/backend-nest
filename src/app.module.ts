@@ -54,6 +54,7 @@ import { MatchmakingModule } from './matchmaking/matchmaking.module';
 import { PresenceModule } from './presence/presence.module';
 import { TrainingModule } from './training/training.module';
 import { LevelModule } from './level/level.module';
+import { LiveGameModule } from './live-game/live-game.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
 const mongoLogger = new Logger('MongoDB');
@@ -131,6 +132,7 @@ const mongoLogger = new Logger('MongoDB');
     MatchmakingModule,
     PresenceModule,
     TrainingModule,
+    LiveGameModule,
   ],
   controllers: [AppController],
   providers: [AppService],
