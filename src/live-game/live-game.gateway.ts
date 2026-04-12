@@ -37,6 +37,8 @@ export class LiveGameGateway {
                 gameTime: Number(gameData?.gameTime ?? 0),
                 gameMode: String(gameData?.gameMode ?? ''),
                 team: String(localPlayerData?.team ?? ''),
+                // orderTeam and chaosTeam are passed through as-is from Electron.
+                // Each player object now includes: isDead, respawnTimer, items[]
                 orderTeam: orderTeam ?? [],
                 chaosTeam: chaosTeam ?? [],
             };
