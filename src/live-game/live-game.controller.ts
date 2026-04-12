@@ -15,9 +15,11 @@ export class LiveGameController {
             localPlayerData?: Record<string, unknown>;
             localPlayerName?: string;
             newEvents?: unknown[];
+            orderTeam?: unknown[];
+            chaosTeam?: unknown[];
         },
     ) {
-        const { activePlayer, gameData, newEvents, localPlayerData } = body;
+        const { activePlayer, gameData, newEvents, localPlayerData, orderTeam, chaosTeam } = body;
         if (Array.isArray(newEvents)) {
             for (const ev of newEvents) {
                 if (ev && typeof ev === 'object' && !Array.isArray(ev)) {
@@ -26,12 +28,18 @@ export class LiveGameController {
             }
         }
         if (activePlayer && gameData) {
+            const local =
+                localPlayerData && typeof localPlayerData === 'object' && !Array.isArray(localPlayerData)
+                    ? localPlayerData
+                    : {};
+            const ord = Array.isArray(orderTeam) ? orderTeam : [];
+            const ch = Array.isArray(chaosTeam) ? chaosTeam : [];
             this.liveGameGateway.broadcastGameState(
                 activePlayer,
                 gameData,
-                (localPlayerData && typeof localPlayerData === 'object' && !Array.isArray(localPlayerData)
-                    ? localPlayerData
-                    : {}) as Record<string, unknown>,
+                local as Record<string, unknown>,
+                ord,
+                ch,
             );
         }
         return { ok: true };

@@ -16,6 +16,8 @@ export class LiveGameGateway {
         activePlayer: Record<string, unknown>,
         gameData: Record<string, unknown>,
         localPlayerData: Record<string, unknown> = {},
+        orderTeam: unknown[] = [],
+        chaosTeam: unknown[] = [],
     ) {
         try {
             const scores = (localPlayerData?.scores as Record<string, unknown>) || {};
@@ -35,6 +37,8 @@ export class LiveGameGateway {
                 gameTime: Number(gameData?.gameTime ?? 0),
                 gameMode: String(gameData?.gameMode ?? ''),
                 team: String(localPlayerData?.team ?? ''),
+                orderTeam: orderTeam ?? [],
+                chaosTeam: chaosTeam ?? [],
             };
             console.log('[Gateway] Broadcasting game-state:', JSON.stringify(payload));
             this.server.emit('game-state', payload);
