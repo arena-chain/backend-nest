@@ -33,7 +33,7 @@ export class NftItem {
     acquiredAt?: Date;
 
     @Prop({
-        enum: ['MINTED', 'PURCHASED', 'REWARD', 'TRANSFER', 'AIRDROP'],
+        enum: ['MINTED', 'PURCHASED', 'REWARD', 'TRANSFER', 'AIRDROP', 'CRAFTED'],
         default: 'MINTED',
     })
     acquiredVia: string;

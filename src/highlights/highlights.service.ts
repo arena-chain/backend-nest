@@ -62,15 +62,76 @@ export class HighlightsService {
     });
   }
 
-  // Fake detection: return 3 highlights (replace later with AI)
-  detectHighlights(video: VideoDocument) {
-    // duration is in seconds
-    const highlights: { start: number; duration: number }[] = [];
-    const interval = Math.min(20, Math.floor((video.duration || 120) / 3));
-    for (let i = 0; i < 3; i++) {
-      highlights.push({ start: i * interval, duration: interval });
+  private overlapRatio(
+    aStart: number,
+    aEnd: number,
+    bStart: number,
+    bEnd: number,
+  ): number {
+    const inter = Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
+    const aLen = Math.max(1, aEnd - aStart);
+    return inter / aLen;
+  }
+
+  /**
+   * Lightweight highlight picker (non-AI):
+   * - creates multiple candidates across the timeline
+   * - favors candidates that do NOT overlap existing highlights too much
+   * - adds randomness so re-running can produce different clips
+   */
+  detectHighlights(
+    video: VideoDocument,
+    existingRanges: { start: number; end: number }[] = [],
+  ) {
+    const durationSec = Math.max(30, Math.floor(video.duration || 120));
+    const clipDuration = Math.min(20, Math.max(8, Math.floor(durationSec / 12)));
+    const maxStart = Math.max(0, durationSec - clipDuration);
+    const step = Math.max(3, Math.floor(clipDuration / 2));
+
+    const candidates: { start: number; duration: number }[] = [];
+    for (let s = 0; s <= maxStart; s += step) {
+      const e = s + clipDuration;
+      const overlapsOld = existingRanges.some((r) =>
+        this.overlapRatio(s, e, r.start, r.end) > 0.35,
+      );
+      if (!overlapsOld) {
+        candidates.push({ start: s, duration: clipDuration });
+      }
     }
-    return highlights;
+
+    // Fallback: if everything overlaps, still allow candidates.
+    const pool =
+      candidates.length >= 3
+        ? candidates
+        : Array.from({ length: Math.floor(maxStart / step) + 1 }, (_, i) => ({
+            start: i * step,
+            duration: clipDuration,
+          }));
+
+    // Shuffle for variability on each generation run.
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+
+    const picked: { start: number; duration: number }[] = [];
+    for (const c of pool) {
+      const cEnd = c.start + c.duration;
+      const clashesWithPicked = picked.some((p) => {
+        const pEnd = p.start + p.duration;
+        return this.overlapRatio(c.start, cEnd, p.start, pEnd) > 0.3;
+      });
+      if (!clashesWithPicked) picked.push(c);
+      if (picked.length >= 3) break;
+    }
+
+    if (picked.length < 3) {
+      picked.push(...pool.slice(0, 3 - picked.length));
+    }
+
+    return picked
+      .slice(0, 3)
+      .sort((a, b) => a.start - b.start);
   }
 
   // Process video: detect + generate + save highlights
@@ -82,7 +143,17 @@ export class HighlightsService {
     const videoId = video._id as Types.ObjectId;
     const visibility =
       options?.visibility ?? HighlightVisibility.PRIVATE;
-    const highlights = this.detectHighlights(video);
+    const existing = await this.highlightModel
+      .find({ video: videoId })
+      .select('startTime endTime')
+      .lean()
+      .exec();
+    const existingRanges = existing.map((h) => ({
+      start: Number(h.startTime || 0),
+      end: Number(h.endTime || 0),
+    }));
+
+    const highlights = this.detectHighlights(video, existingRanges);
 
     const clipsDir = path.join(process.cwd(), 'uploads', 'clips');
     fs.mkdirSync(clipsDir, { recursive: true });
@@ -91,7 +162,7 @@ export class HighlightsService {
 
     for (let i = 0; i < highlights.length; i++) {
       const h = highlights[i];
-      const fileName = `${videoId.toString()}_${i}.mp4`;
+      const fileName = `${videoId.toString()}_${Date.now()}_${i}.mp4`;
       const outputPath = path.join(clipsDir, fileName);
       const clipUrl = path.posix.join('uploads', 'clips', fileName);
 

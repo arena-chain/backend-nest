@@ -99,6 +99,9 @@ export class InventoryService {
 
         const item = await this.nftItemModel.findById(dto.nftItemId).populate('nftId');
         if (!item) throw new NotFoundException('NFT Item not found');
+        if (item.status === 'LISTED') {
+            throw new BadRequestException('Unlist the item before equipping');
+        }
 
         const nft = item.nftId as any;
         if (!nft.isEquippable) {

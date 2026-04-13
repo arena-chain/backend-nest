@@ -27,7 +27,7 @@ export const imageUploadOptions = {
 
 export const videoUploadOptions = {
     limits: {
-        fileSize: 200 * 1024 * 1024, // 200MB
+        fileSize: 2 * 1024 * 1024 * 1024, // 2GB
     },
     fileFilter: (req: any, file: any, cb: any) => {
         const allowed = ['video/mp4', 'video/webm', 'video/quicktime'];

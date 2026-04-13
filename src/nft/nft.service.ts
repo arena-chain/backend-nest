@@ -14,6 +14,9 @@ import { CreateNftCollectionDto } from './dto/create-nft-collection.dto';
 import { UpdateNftCollectionDto } from './dto/update-nft-collection.dto';
 import { BlockchainService } from './blockchain.service';
 import { ConfigService } from '@nestjs/config';
+import { InventoryService } from './inventory.service';
+import { SaveConfiguredNftItemDto } from './dto/save-configured-nft-item.dto';
+import { ListNftItemDto } from './dto/list-nft-item.dto';
 
 @Injectable()
 export class NftService {
@@ -26,6 +29,7 @@ export class NftService {
         @InjectModel(NftCollection.name) private nftCollectionModel: Model<NftCollectionDocument>,
         private readonly blockchainService: BlockchainService,
         private readonly configService: ConfigService,
+        private readonly inventoryService: InventoryService,
     ) {}
 
     // ───────────────── NFT CRUD (Admin) ─────────────────
@@ -44,12 +48,21 @@ export class NftService {
         return nft.save();
     }
 
-    async findAll(filters?: { category?: string; rarity?: string; status?: string; collectionId?: string }): Promise<NftDocument[]> {
+    async findAll(filters?: {
+        category?: string;
+        rarity?: string;
+        status?: string;
+        collectionId?: string;
+        gameId?: string;
+        tag?: string;
+    }): Promise<NftDocument[]> {
         const query: any = {};
         if (filters?.category) query.category = filters.category;
         if (filters?.rarity) query.rarity = filters.rarity;
         if (filters?.status) query.status = filters.status;
         if (filters?.collectionId) query.collectionId = new Types.ObjectId(filters.collectionId);
+        if (filters?.gameId) query.compatibleGames = new Types.ObjectId(filters.gameId);
+        if (filters?.tag) query.tags = filters.tag;
         return this.nftModel.find(query).populate('compatibleGames', 'title genre').populate('collectionId', 'name category').exec();
     }
 
@@ -230,6 +243,9 @@ export class NftService {
         if (item.ownerId.toString() !== fromUserId) {
             throw new BadRequestException('You do not own this item');
         }
+        if (item.status === 'LISTED') {
+            throw new BadRequestException('Unlist the item before transferring');
+        }
         if (item.status === 'EQUIPPED') {
             throw new BadRequestException('Unequip the item before transferring');
         }
@@ -255,6 +271,158 @@ export class NftService {
         item.acquiredVia = 'TRANSFER';
         item.acquiredAt = new Date();
         return item.save();
+    }
+
+    // ───────────────── Configured piece → owned NFT item ─────────────────
+
+    /**
+     * Creates a new owned NftItem from a base NFT template, stores configuration in item.metadata,
+     * increments supply, and adds the item to the user's inventory.
+     */
+    async saveConfiguredNftItem(ownerId: string, dto: SaveConfiguredNftItemDto): Promise<NftItemDocument> {
+        const nft = await this.nftModel.findById(dto.baseNftId);
+        if (!nft) throw new NotFoundException('NFT not found');
+        if (nft.status === 'BURNED') throw new BadRequestException('Invalid base NFT');
+
+        if (nft.maxSupply > 0 && nft.supply >= nft.maxSupply) {
+            throw new BadRequestException('Max supply reached for this NFT');
+        }
+
+        nft.supply += 1;
+        await nft.save();
+
+        const meta: Record<string, any> = {
+            ...(dto.config && typeof dto.config === 'object' ? dto.config : {}),
+            baseNftId: dto.baseNftId,
+        };
+        if (dto.displayName) meta.displayName = dto.displayName;
+
+        const nftItem = new this.nftItemModel({
+            nftId: nft._id,
+            ownerId: new Types.ObjectId(ownerId),
+            edition: nft.supply,
+            status: 'OWNED',
+            acquiredAt: new Date(),
+            acquiredVia: 'CRAFTED',
+            metadata: meta,
+        });
+
+        const saved = await nftItem.save();
+        await this.inventoryService.addItemToInventory(ownerId, saved._id.toString());
+        return this.getItemById(saved._id.toString());
+    }
+
+    // ───────────────── Marketplace (listing / browse / purchase) ─────────────────
+
+    async listNftItemForSale(ownerId: string, dto: ListNftItemDto): Promise<NftItemDocument> {
+        const item = await this.nftItemModel.findById(dto.nftItemId).populate('nftId');
+        if (!item) throw new NotFoundException('NFT Item not found');
+        if (item.ownerId.toString() !== ownerId) {
+            throw new BadRequestException('You do not own this item');
+        }
+        if (item.status === 'EQUIPPED') {
+            throw new BadRequestException('Unequip the item before listing');
+        }
+        const nft = item.nftId as any;
+        if (!nft?.isTradeable) {
+            throw new BadRequestException('This NFT is not tradeable');
+        }
+
+        item.status = 'LISTED';
+        item.metadata = {
+            ...(item.metadata || {}),
+            marketplace: {
+                price: dto.price,
+                currency: dto.currency || 'USD',
+                listedAt: new Date().toISOString(),
+            },
+        };
+        return item.save();
+    }
+
+    async unlistNftItem(ownerId: string, nftItemId: string): Promise<NftItemDocument> {
+        const item = await this.nftItemModel.findById(nftItemId);
+        if (!item) throw new NotFoundException('NFT Item not found');
+        if (item.ownerId.toString() !== ownerId) {
+            throw new BadRequestException('You do not own this item');
+        }
+        if (item.status !== 'LISTED') {
+            throw new BadRequestException('Item is not listed');
+        }
+        item.status = 'OWNED';
+        const meta = { ...(item.metadata || {}) };
+        delete meta.marketplace;
+        item.metadata = meta;
+        return item.save();
+    }
+
+    async getMarketplaceListings(filters?: {
+        gameId?: string;
+        category?: string;
+        skip?: number;
+        limit?: number;
+    }): Promise<NftItemDocument[]> {
+        const items = await this.nftItemModel
+            .find({ status: 'LISTED' })
+            .populate({
+                path: 'nftId',
+                populate: { path: 'compatibleGames', select: 'title genre' },
+            })
+            .sort({ updatedAt: -1 })
+            .exec();
+
+        let filtered = items;
+        if (filters?.category) {
+            filtered = filtered.filter((i) => (i.nftId as any)?.category === filters.category);
+        }
+        if (filters?.gameId) {
+            filtered = filtered.filter((i) => {
+                const games = (i.nftId as any)?.compatibleGames || [];
+                return games.some(
+                    (g: any) =>
+                        (g._id && g._id.toString() === filters.gameId) ||
+                        (typeof g === 'object' && g?.toString?.() === filters.gameId),
+                );
+            });
+        }
+
+        const skip = Math.max(0, filters?.skip ?? 0);
+        const limit = Math.min(Math.max(1, filters?.limit ?? 50), 100);
+        return filtered.slice(skip, skip + limit);
+    }
+
+    /**
+     * Transfers ownership to the buyer and removes marketplace metadata.
+     * Payment / escrow is not implemented — integrate your payment flow before calling this.
+     */
+    async purchaseListing(buyerId: string, nftItemId: string): Promise<NftItemDocument> {
+        const item = await this.nftItemModel.findById(nftItemId).populate('nftId');
+        if (!item) throw new NotFoundException('NFT Item not found');
+        if (item.status !== 'LISTED') {
+            throw new BadRequestException('Item is not for sale');
+        }
+        if (item.ownerId.toString() === buyerId) {
+            throw new BadRequestException('Cannot buy your own listing');
+        }
+
+        const sellerId = item.ownerId.toString();
+        item.ownerId = new Types.ObjectId(buyerId);
+        item.status = 'OWNED';
+        const meta = { ...(item.metadata || {}) };
+        delete meta.marketplace;
+        item.metadata = meta;
+        item.acquiredVia = 'PURCHASED';
+        item.acquiredAt = new Date();
+        await item.save();
+
+        try {
+            await this.inventoryService.removeItemFromInventory(sellerId, nftItemId);
+        } catch {
+            /* seller inventory row may omit this item */
+        }
+        await this.inventoryService.addItemToInventory(buyerId, nftItemId);
+
+        return this.getItemById(nftItemId);
     }
 
     // ───────────────── Stats ─────────────────

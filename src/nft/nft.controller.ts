@@ -27,6 +27,10 @@ import { AirdropNftDto } from './dto/airdrop-nft.dto';
 import { TransferNftItemDto } from './dto/transfer-nft-item.dto';
 import { CreateNftCollectionDto } from './dto/create-nft-collection.dto';
 import { UpdateNftCollectionDto } from './dto/update-nft-collection.dto';
+import { SaveConfiguredNftItemDto } from './dto/save-configured-nft-item.dto';
+import { ListNftItemDto } from './dto/list-nft-item.dto';
+import { UnlistNftItemDto } from './dto/unlist-nft-item.dto';
+import { PurchaseListingDto } from './dto/purchase-listing.dto';
 import { imageUploadOptions } from 'src/common/utils/file-upload.utils';
 
 @ApiTags('nft')
@@ -79,14 +83,76 @@ export class NftController {
     @ApiQuery({ name: 'rarity', required: false, enum: ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] })
     @ApiQuery({ name: 'status', required: false, enum: ['DRAFT', 'MINTED', 'LISTED', 'BURNED'] })
     @ApiQuery({ name: 'collectionId', required: false, description: 'Filter by collection ID' })
+    @ApiQuery({ name: 'gameId', required: false, description: 'Catalog game id — NFT.compatibleGames contains this id' })
+    @ApiQuery({ name: 'tag', required: false, description: 'Match a tag on the NFT (exact)' })
     @ApiResponse({ status: 200, description: 'List of NFTs' })
     findAll(
         @Query('category') category?: string,
         @Query('rarity') rarity?: string,
         @Query('status') status?: string,
         @Query('collectionId') collectionId?: string,
+        @Query('gameId') gameId?: string,
+        @Query('tag') tag?: string,
     ) {
-        return this.nftService.findAll({ category, rarity, status, collectionId });
+        return this.nftService.findAll({ category, rarity, status, collectionId, gameId, tag });
+    }
+
+    @Get('marketplace/listings')
+    @ApiOperation({ summary: 'Browse listed NFT items (marketplace)' })
+    @ApiQuery({ name: 'gameId', required: false })
+    @ApiQuery({ name: 'category', required: false })
+    @ApiQuery({ name: 'skip', required: false })
+    @ApiQuery({ name: 'limit', required: false })
+    getMarketplaceListings(
+        @Query('gameId') gameId?: string,
+        @Query('category') category?: string,
+        @Query('skip') skip?: string,
+        @Query('limit') limit?: string,
+    ) {
+        return this.nftService.getMarketplaceListings({
+            gameId,
+            category,
+            skip: skip !== undefined ? parseInt(skip, 10) : undefined,
+            limit: limit !== undefined ? parseInt(limit, 10) : undefined,
+        });
+    }
+
+    @Post('marketplace/list')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'List one of my NFT items for sale' })
+    listForSale(@Req() req, @Body() dto: ListNftItemDto) {
+        return this.nftService.listNftItemForSale(req.user.userId, dto);
+    }
+
+    @Post('marketplace/unlist')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Remove my item from the marketplace' })
+    unlist(@Req() req, @Body() dto: UnlistNftItemDto) {
+        return this.nftService.unlistNftItem(req.user.userId, dto.nftItemId);
+    }
+
+    @Post('marketplace/purchase')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({
+        summary: 'Buy a listed item (ownership transfer only)',
+        description: 'Does not process payment — call after your checkout succeeds.',
+    })
+    purchase(@Req() req, @Body() dto: PurchaseListingDto) {
+        return this.nftService.purchaseListing(req.user.userId, dto.nftItemId);
+    }
+
+    @Post('items/save-configured')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({
+        summary: 'Save current configuration as an owned NFT item',
+        description: 'Mints a new inventory item from a base NFT template; stores config in item.metadata.',
+    })
+    saveConfigured(@Req() req, @Body() dto: SaveConfiguredNftItemDto) {
+        return this.nftService.saveConfiguredNftItem(req.user.userId, dto);
     }
 
     @Get('stats')

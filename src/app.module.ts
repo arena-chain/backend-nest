@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/user.module';
@@ -47,18 +48,30 @@ import { GroupModule } from './group/group.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { ScoutingModule } from './scouting/scouting.module';
 import { NftModule } from './nft/nft.module';
+import { GameAssetsModule } from './game-assets/game-assets.module';
+import { AssetPresetModule } from './asset-preset/asset-preset.module';
 import { NewsModule } from './news/news.module';
 import { ReservationModule } from './reservation/reservation.module';
 
+const uploadRoot = join(__dirname, '..', 'uploads');
+const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost/arenachain'),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
+      rootPath: uploadRoot,
       serveRoot: '/uploads',
     }),
+    ...(existsSync(inventoryStaticRoot)
+      ? [
+            ServeStaticModule.forRoot({
+                rootPath: inventoryStaticRoot,
+                serveRoot: '/inventory-files',
+            }),
+        ]
+      : []),
     AuthModule,
     UsersModule,
     PlayerModule,
@@ -101,6 +114,8 @@ import { ReservationModule } from './reservation/reservation.module';
     InvitationModule,
     ScoutingModule,
     NftModule,
+    GameAssetsModule,
+    AssetPresetModule,
     NewsModule,
     ReservationModule,
   ],
