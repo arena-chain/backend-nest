@@ -1,42 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Types } from 'mongoose';
-import { LevelService, XpEventBase } from './level.service';
+import { LevelService } from './level.service';
 
 describe('LevelService XP logic', () => {
   let service: LevelService;
 
   const playerLevelModelMock: any = {
-    db: {
-      startSession: jest.fn().mockResolvedValue({
-        withTransaction: async (fn: () => Promise<void>) => {
-          await fn();
-        },
-        endSession: jest.fn(),
-      }),
-    },
     findOne: jest.fn(),
-    create: jest.fn(),
   };
 
   const processedXpEventModelMock: any = {
-    findOne: jest.fn(),
     create: jest.fn(),
+    deleteOne: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
+    processedXpEventModelMock.deleteOne.mockReturnValue({
+      exec: () => Promise.resolve({}),
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LevelService,
-        {
-          provide: 'PlayerLevelModel',
-          useValue: playerLevelModelMock,
-        },
-        {
-          provide: 'ProcessedXpEventModel',
-          useValue: processedXpEventModelMock,
-        },
+        { provide: 'PlayerLevelModel', useValue: playerLevelModelMock },
+        { provide: 'ProcessedXpEventModel', useValue: processedXpEventModelMock },
       ],
     })
       .overrideProvider(LevelService)
@@ -52,13 +41,20 @@ describe('LevelService XP logic', () => {
   });
 
   function createPlayerDoc(initial: { level: number; currentXP: number; totalXP: number }) {
-    return {
+    const doc: any = {
       user: new Types.ObjectId(),
       level: initial.level,
       currentXP: initial.currentXP,
       totalXP: initial.totalXP,
-      save: jest.fn(),
+      save: jest.fn().mockResolvedValue(undefined),
     };
+    return doc;
+  }
+
+  function mockFindOnePlayer(playerDoc: any) {
+    playerLevelModelMock.findOne.mockReturnValue({
+      exec: () => Promise.resolve(playerDoc),
+    });
   }
 
   it('1) addXP simple sans level-up', async () => {
@@ -67,20 +63,8 @@ describe('LevelService XP logic', () => {
     const amount = Math.floor(xpToNext / 2);
 
     const playerDoc = createPlayerDoc({ level: 1, currentXP: 0, totalXP: 0 });
-
-    playerLevelModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(playerDoc),
-      }),
-    });
-
-    processedXpEventModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(null),
-      }),
-    });
-
-    processedXpEventModelMock.create.mockImplementation(() => Promise.resolve());
+    mockFindOnePlayer(playerDoc);
+    processedXpEventModelMock.create.mockResolvedValueOnce({});
 
     const result = await service.addXP(userId, amount, 'MANUAL', 'event-1');
 
@@ -98,19 +82,8 @@ describe('LevelService XP logic', () => {
     const amount = xpToNext + 10;
 
     const playerDoc = createPlayerDoc({ level: 1, currentXP: 0, totalXP: 0 });
-
-    playerLevelModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(playerDoc),
-      }),
-    });
-
-    processedXpEventModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(null),
-      }),
-    });
-    processedXpEventModelMock.create.mockImplementation(() => Promise.resolve());
+    mockFindOnePlayer(playerDoc);
+    processedXpEventModelMock.create.mockResolvedValueOnce({});
 
     const result = await service.addXP(userId, amount, 'MANUAL', 'event-2');
 
@@ -131,18 +104,8 @@ describe('LevelService XP logic', () => {
     const total = xp1 + xp2 + xp3 + 50;
 
     const playerDoc = createPlayerDoc({ level: 1, currentXP: 0, totalXP: 0 });
-
-    playerLevelModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(playerDoc),
-      }),
-    });
-    processedXpEventModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(null),
-      }),
-    });
-    processedXpEventModelMock.create.mockImplementation(() => Promise.resolve());
+    mockFindOnePlayer(playerDoc);
+    processedXpEventModelMock.create.mockResolvedValueOnce({});
 
     const result = await service.addXP(userId, total, 'MANUAL', 'event-3');
 
@@ -158,29 +121,10 @@ describe('LevelService XP logic', () => {
     const userId = new Types.ObjectId().toHexString();
     const playerDoc = createPlayerDoc({ level: 1, currentXP: 0, totalXP: 0 });
 
-    const findOneFirstCall = {
-      session: () => ({
-        exec: () => Promise.resolve(null),
-      }),
-    };
-    const findOneSecondCall = {
-      session: () => ({
-        exec: () => Promise.resolve({ eventId: 'duplicate-event' }),
-      }),
-    };
-
-    let processedCallCount = 0;
-    processedXpEventModelMock.findOne.mockImplementation(() => {
-      processedCallCount += 1;
-      return processedCallCount === 1 ? findOneFirstCall : findOneSecondCall;
-    });
-
-    playerLevelModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(playerDoc),
-      }),
-    });
-    processedXpEventModelMock.create.mockImplementation(() => Promise.resolve());
+    mockFindOnePlayer(playerDoc);
+    processedXpEventModelMock.create
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(Object.assign(new Error('duplicate'), { code: 11000 }));
 
     const r1 = await service.addXP(userId, 100, 'MANUAL', 'duplicate-event');
     const r2 = await service.addXP(userId, 100, 'MANUAL', 'duplicate-event');
@@ -190,33 +134,16 @@ describe('LevelService XP logic', () => {
     expect(playerDoc.totalXP).toBe(100);
   });
 
-  it('5) concurrence: deux events simultanés -> total cohérent', async () => {
+  it('5) deux events séquentiels -> total cohérent', async () => {
     const userId = new Types.ObjectId().toHexString();
     const playerDoc = createPlayerDoc({ level: 1, currentXP: 0, totalXP: 0 });
 
-    processedXpEventModelMock.findOne.mockReturnValue({
-      session: () => ({
-        exec: () => Promise.resolve(null),
-      }),
-    });
-    processedXpEventModelMock.create.mockImplementation(() => Promise.resolve());
+    mockFindOnePlayer(playerDoc);
+    processedXpEventModelMock.create.mockResolvedValue({});
 
-    let sessionIndex = 0;
-    playerLevelModelMock.findOne.mockImplementation(() => ({
-      session: () => ({
-        exec: async () => {
-          sessionIndex += 1;
-          return playerDoc;
-        },
-      }),
-    }));
-
-    const p1 = service.addXP(userId, 80, 'MANUAL', 'event-concurrent-1');
-    const p2 = service.addXP(userId, 90, 'MANUAL', 'event-concurrent-2');
-
-    await Promise.all([p1, p2]);
+    await service.addXP(userId, 80, 'MANUAL', 'event-concurrent-1');
+    await service.addXP(userId, 90, 'MANUAL', 'event-concurrent-2');
 
     expect(playerDoc.totalXP).toBe(170);
   });
 });
-

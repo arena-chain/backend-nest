@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MatchmakingService } from './matchmaking.service';
 import { JoinQueueDto } from './dto/join-queue.dto';
 import { RespondMatchDto } from './dto/respond-match.dto';
+import { CompleteMatchDto } from './dto/complete-match.dto';
 
 @Controller('matchmaking')
 @UseGuards(JwtAuthGuard)
@@ -51,12 +52,19 @@ export class MatchmakingController {
         @Body() dto: RespondMatchDto,
     ) {
         const userId = req.user.userId;
-        const game = await this.matchmakingService.respondToMatch(
+        return this.matchmakingService.respondToMatch(
             gameId,
             userId,
             dto.accept,
         );
-        return game;
+    }
+
+    @Post('games/:gameId/complete')
+    async completeMatch(
+        @Param('gameId') gameId: string,
+        @Body() dto: CompleteMatchDto,
+    ) {
+        return this.matchmakingService.completeMatch(gameId, dto.winningTeam);
     }
 
     @Post('games/:gameId/acknowledge')

@@ -34,10 +34,11 @@ export class LevelListener {
         userId: string;
         missionId: string;
         xpReward: number;
+        eventId?: string;
     }) {
         this.logger.log(`Handling mission.completed for user ${payload.userId}`);
         await this.levelService.applyEvent({
-            id: `mission_${payload.missionId}_${Date.now()}`, // Should ideally have a unique instance ID
+            id: payload.eventId ?? `mission_${payload.missionId}_${Date.now()}`,
             userId: payload.userId,
             type: 'MISSION_COMPLETED',
             payload: {

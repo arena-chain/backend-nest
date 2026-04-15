@@ -104,6 +104,10 @@ export class LevelService {
     };
   }
 
+  /**
+   * Applies XP without multi-document transactions so standalone MongoDB (no replica set) works.
+   * Idempotency: unique `eventId` on ProcessedXpEvent; insert first, rollback marker if save fails.
+   */
   async addXP(
     userId: string,
     amount: number,
@@ -116,100 +120,92 @@ export class LevelService {
     }
 
     const userObjectId = new Types.ObjectId(userId);
-    const session = await this.playerLevelModel.db.startSession();
 
     try {
-      let result: AddXpResult | null = null;
-
-      await session.withTransaction(async () => {
-        const existingProcessed = await this.processedXpEventModel
-          .findOne({ eventId })
-          .session(session)
-          .exec();
-
-        if (existingProcessed) {
-          result = null;
-          return;
-        }
-
-        let player = await this.playerLevelModel
-          .findOne({ user: userObjectId })
-          .session(session)
-          .exec();
-
-        if (!player) {
-          player = new this.playerLevelModel({
-            user: userObjectId,
-            level: 1,
-            currentXP: 0,
-            totalXP: 0,
-          });
-        }
-
-        if (player.level < 1) {
-          player.level = 1;
-        }
-        if (player.currentXP < 0) {
-          player.currentXP = 0;
-        }
-        if (player.totalXP < 0) {
-          player.totalXP = 0;
-        }
-
-        const oldLevel = player.level;
-
-        let remainingXP = amount;
-        let levelUpCount = 0;
-
-        player.totalXP += remainingXP;
-
-        while (remainingXP > 0) {
-          const xpToNext = this.computeXpToNext(player.level);
-          const xpMissingForLevel = xpToNext - player.currentXP;
-
-          if (remainingXP >= xpMissingForLevel) {
-            remainingXP -= xpMissingForLevel;
-            player.level += 1;
-            levelUpCount += 1;
-            player.currentXP = 0;
-          } else {
-            player.currentXP += remainingXP;
-            remainingXP = 0;
-          }
-        }
-
-        player.updatedAt = new Date();
-
-        await player.save({ session });
-
-        await this.processedXpEventModel.create(
-          [
-            {
-              eventId,
-              user: userObjectId,
-              type: source,
-              payloadHash: metadata?.payloadHash,
-            },
-          ],
-          { session },
-        );
-
-        result = {
-          userId,
-          source,
-          levelUpCount,
-          oldLevel,
-          newLevel: player.level,
-          addedXP: amount,
-          newCurrentXP: player.currentXP,
-          newTotalXP: player.totalXP,
-        };
+      await this.processedXpEventModel.create({
+        eventId,
+        user: userObjectId,
+        type: source,
+        payloadHash: metadata?.payloadHash,
       });
-
-      return result;
-    } finally {
-      await session.endSession();
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        return null;
+      }
+      throw error;
     }
+
+    try {
+      return await this.applyXpToPlayerDocument(userId, userObjectId, amount, source);
+    } catch (err) {
+      await this.processedXpEventModel.deleteOne({ eventId }).exec();
+      throw err;
+    }
+  }
+
+  private async applyXpToPlayerDocument(
+    userId: string,
+    userObjectId: Types.ObjectId,
+    amount: number,
+    source: XpEventType,
+  ): Promise<AddXpResult> {
+    let player = await this.playerLevelModel.findOne({ user: userObjectId }).exec();
+
+    if (!player) {
+      player = new this.playerLevelModel({
+        user: userObjectId,
+        level: 1,
+        currentXP: 0,
+        totalXP: 0,
+      });
+    }
+
+    if (player.level < 1) {
+      player.level = 1;
+    }
+    if (player.currentXP < 0) {
+      player.currentXP = 0;
+    }
+    if (player.totalXP < 0) {
+      player.totalXP = 0;
+    }
+
+    const oldLevel = player.level;
+
+    let remainingXP = amount;
+    let levelUpCount = 0;
+
+    player.totalXP += remainingXP;
+
+    while (remainingXP > 0) {
+      const xpToNext = this.computeXpToNext(player.level);
+      const xpMissingForLevel = xpToNext - player.currentXP;
+
+      if (remainingXP >= xpMissingForLevel) {
+        remainingXP -= xpMissingForLevel;
+        player.level += 1;
+        levelUpCount += 1;
+        player.currentXP = 0;
+      } else {
+        player.currentXP += remainingXP;
+        remainingXP = 0;
+      }
+    }
+
+    player.updatedAt = new Date();
+
+    await player.save();
+
+    return {
+      userId,
+      source,
+      levelUpCount,
+      oldLevel,
+      newLevel: player.level,
+      addedXP: amount,
+      newCurrentXP: player.currentXP,
+      newTotalXP: player.totalXP,
+    };
   }
 
   async applyEvent(event: XpEventBase): Promise<AddXpResult | null> {

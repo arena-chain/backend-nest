@@ -2,26 +2,17 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nest
 import { AuthGuard } from '@nestjs/passport';
 import { RankService } from './rank.service';
 import { CreatePlayerRankDto } from './dto/create-rank.dto';
-import { UpdateEloDto } from './dto/update-elo.dto';
 import { ApplyPenaltyDto } from './dto/apply-penalty.dto';
 
 @Controller('rank')
 export class RankController {
-  constructor(private readonly rankService: RankService) { }
+  constructor(private readonly rankService: RankService) {}
 
-  /**
-   * Initialize a player rank for a game
-   * POST /rank/initialize
-   */
   @Post('initialize')
   async initializeRank(@Body() createPlayerRankDto: CreatePlayerRankDto) {
     return this.rankService.initializePlayerRank(createPlayerRankDto);
   }
 
-  /**
-   * Get leaderboard for a game
-   * GET /rank/leaderboard/:gameId
-   */
   @Get('leaderboard/:gameId')
   async getLeaderboard(
     @Param('gameId') gameId: string,
@@ -33,10 +24,6 @@ export class RankController {
     return this.rankService.getLeaderboard(gameId, seasonNum, limitNum);
   }
 
-  /**
-   * Get all ranks for the current authenticated user across all games
-   * GET /rank/me/all
-   */
   @UseGuards(AuthGuard('jwt'))
   @Get('me/all')
   async getMyRanks(@Req() req: any) {
@@ -44,19 +31,11 @@ export class RankController {
     return this.rankService.getUserRanks(userId);
   }
 
-  /**
-   * Get all ranks for a specific user across all games
-   * GET /rank/user/:userId/all
-   */
   @Get('user/:userId/all')
   async getUserRanks(@Param('userId') userId: string) {
     return this.rankService.getUserRanks(userId);
   }
 
-  /**
-   * Get rank history for a player
-   * GET /rank/history/:userId/:gameId
-   */
   @Get('history/:userId/:gameId')
   async getRankHistory(
     @Param('userId') userId: string,
@@ -67,10 +46,6 @@ export class RankController {
     return this.rankService.getRankHistory(userId, gameId, limitNum);
   }
 
-  /**
-   * Get user penalties
-   * GET /rank/penalties/:userId
-   */
   @Get('penalties/:userId')
   async getUserPenalties(
     @Param('userId') userId: string,
@@ -79,10 +54,6 @@ export class RankController {
     return this.rankService.getUserPenalties(userId, gameId);
   }
 
-  /**
-   * Get a player's rank for a specific game
-   * GET /rank/:userId/:gameId (DYNAMIC ROUTE - SHOULD BE AT BOTTOM)
-   */
   @Get(':userId/:gameId')
   async getPlayerRank(
     @Param('userId') userId: string,
@@ -91,34 +62,12 @@ export class RankController {
     return this.rankService.getPlayerRank(userId, gameId);
   }
 
-  /**
-   * Update ELO after a match
-   * POST /rank/update-elo
-   */
-  @Post('update-elo')
-  async updateElo(@Body() updateEloDto: UpdateEloDto) {
-    return this.rankService.updateElo(updateEloDto);
-  }
-
-  /**
-   * Apply a penalty to a player (Admin only - add auth guard later)
-   * POST /rank/penalty
-   */
   @Post('penalty')
-  // @UseGuards(AdminGuard) // TODO: Add admin authentication guard
-  async applyPenalty(
-    @Body() applyPenaltyDto: ApplyPenaltyDto,
-    // @CurrentUser() admin: any, // TODO: Get admin from auth context
-  ) {
-    // For now, using a placeholder admin ID - replace with real admin ID from auth
-    const adminId = '000000000000000000000000'; // TODO: Replace with actual admin ID from request
+  async applyPenalty(@Body() applyPenaltyDto: ApplyPenaltyDto) {
+    const adminId = '000000000000000000000000';
     return this.rankService.applyPenalty(applyPenaltyDto, adminId);
   }
 
-  /**
-   * Reset season ranks (Admin only)
-   * POST /rank/reset-season/:gameId
-   */
   @Post('reset-season/:gameId')
   async resetSeasonRanks(
     @Param('gameId') gameId: string,

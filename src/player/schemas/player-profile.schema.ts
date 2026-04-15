@@ -21,12 +21,6 @@ export class PlayerProfile {
     @Prop({ default: false })
     isVerified: boolean;
 
-    @Prop({ default: 1000 })
-    elo: number;
-
-    @Prop({ default: 'Unranked' })
-    rank: string;
-
     @Prop({ type: Object, default: {} })
     stats: Record<string, any>;
 

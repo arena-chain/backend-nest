@@ -56,6 +56,9 @@ export class Game {
     @Prop({ default: false })
     isScheduled: boolean;
 
+    @Prop({ type: String, enum: ['BLUE', 'RED'], default: null })
+    winningTeam?: 'BLUE' | 'RED' | null;
+
     @Prop({
         type: [
             {

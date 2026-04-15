@@ -3,11 +3,13 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Friendship, FriendshipDocument, FriendshipStatus } from './schemas/friendship.schema';
+import { MissionService } from '../mission/mission.service';
 
 @Injectable()
 export class FriendshipService {
   constructor(
     @InjectModel(Friendship.name) private friendshipModel: Model<FriendshipDocument>,
+    private readonly missionService: MissionService,
   ) { }
 
   /**
@@ -46,7 +48,9 @@ export class FriendshipService {
       status: FriendshipStatus.PENDING,
     });
 
-    return friendship.save();
+    const savedFriendship = await friendship.save();
+    await this.missionService.onFriendRequestSent(requesterId, { amount: 1 });
+    return savedFriendship;
   }
 
   /**
@@ -71,7 +75,10 @@ export class FriendshipService {
     friendship.status = FriendshipStatus.ACCEPTED;
     friendship.acceptedAt = new Date();
 
-    return friendship.save();
+    const acceptedFriendship = await friendship.save();
+    await this.missionService.onFriendshipAccepted(userId, { amount: 1 });
+    await this.missionService.onFriendshipAccepted(friendship.requesterId.toString(), { amount: 1 });
+    return acceptedFriendship;
   }
 
   /**
@@ -179,8 +186,8 @@ export class FriendshipService {
           { recipientId: new Types.ObjectId(userId), status: FriendshipStatus.ACCEPTED },
         ],
       })
-      .populate('requesterId', 'nickname email')
-      .populate('recipientId', 'nickname email')
+      .populate('requesterId', 'nickname email avatar')
+      .populate('recipientId', 'nickname email avatar')
       .exec();
   }
 
@@ -193,7 +200,7 @@ export class FriendshipService {
         recipientId: new Types.ObjectId(userId),
         status: FriendshipStatus.PENDING,
       })
-      .populate('requesterId', 'nickname email')
+      .populate('requesterId', 'nickname email avatar')
       .exec();
   }
 
@@ -206,7 +213,7 @@ export class FriendshipService {
         requesterId: new Types.ObjectId(userId),
         status: FriendshipStatus.PENDING,
       })
-      .populate('recipientId', 'nickname email')
+      .populate('recipientId', 'nickname email avatar')
       .exec();
   }
 
@@ -219,7 +226,7 @@ export class FriendshipService {
         requesterId: new Types.ObjectId(userId),
         status: FriendshipStatus.BLOCKED,
       })
-      .populate('recipientId', 'nickname email')
+      .populate('recipientId', 'nickname email avatar')
       .exec();
   }
 

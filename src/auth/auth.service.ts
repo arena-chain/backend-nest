@@ -1,7 +1,13 @@
 // src/auth/auth.service.ts
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Registration, RegistrationDocument } from './schemas/registration.schema';
@@ -22,9 +28,12 @@ import { UserRole } from '../common/enums/role.enum';
 import { MailService } from '../mail/mail.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UserDocument } from '../user/schemas/user.schema';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(Registration.name) private registrationModel: Model<RegistrationDocument>,
     private usersService: UsersService,
@@ -36,6 +45,45 @@ export class AuthService {
     private jwtService: JwtService,
     private mailService: MailService,
   ) { }
+
+  /** Find a pending signup in `registrations` by email or nickname. */
+  private async findPendingRegistration(identifier: string) {
+    if (identifier.includes('@')) {
+      return this.registrationModel
+        .findOne({ email: identifier.toLowerCase() })
+        .exec();
+    }
+    const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return this.registrationModel
+      .findOne({ nickname: new RegExp(`^${escaped}$`, 'i') })
+      .exec();
+  }
+
+  private async verifyPasswordAndUpgradeIfNeeded(
+    plainPassword: string,
+    user: UserDocument,
+  ): Promise<boolean> {
+    const hash = user.passwordHash;
+    if (!hash || typeof hash !== 'string') {
+      this.logger.warn(`Login failed: user ${user._id} has empty or missing passwordHash`);
+      return false;
+    }
+    try {
+      if (hash.startsWith('$2')) {
+        return await bcrypt.compare(plainPassword, hash);
+      }
+      if (hash === plainPassword) {
+        const newHash = await bcrypt.hash(plainPassword, 10);
+        await this.usersService.update(user._id.toString(), { passwordHash: newHash });
+        this.logger.log(`Upgraded plaintext password to bcrypt for user ${user._id}`);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      this.logger.warn(`Login password check failed for user ${user._id}: ${e}`);
+      return false;
+    }
+  }
 
   private async sendRegistrationOtp(email: string) {
     const otp = this.generateOtp();
@@ -244,41 +292,85 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByEmail(dto.email);
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    const identifier = dto.email.trim();
+    let user = await this.usersService.findByEmailOrNickname(identifier);
 
-    const valid = await bcrypt.compare(dto.password, user.passwordHash);
+    if (user) {
+      await this.registrationModel
+        .deleteMany({ email: user.email })
+        .catch(() => undefined);
+    }
+
+    if (!user) {
+      const pending = await this.findPendingRegistration(identifier);
+      if (pending) {
+        user = await this.usersService.findByEmail(pending.email);
+        if (user) {
+          await this.registrationModel.deleteOne({ _id: pending._id }).catch(() => undefined);
+          this.logger.warn(
+            `Removed stale registration for ${pending.email}; user already exists.`,
+          );
+        } else {
+          throw new UnauthorizedException(
+            'Complete email verification (OTP) before signing in. Check your inbox.',
+          );
+        }
+      }
+    }
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (
+      user.passwordHash === 'google_auth_no_password' ||
+      user.passwordHash === 'steam_auth_no_password'
+    ) {
+      throw new UnauthorizedException(
+        'This account uses social sign-in. Use Google or Steam instead of a password.',
+      );
+    }
+
+    const valid = await this.verifyPasswordAndUpgradeIfNeeded(dto.password, user);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    // Determine user's role
+    const roleKey = ((user.role as string) || UserRole.PLAYER).toLowerCase();
     let role: UserRole;
     let profile: any;
 
     try {
-      profile = await this.playerService.findByUserId(user._id);
-      role = UserRole.PLAYER;
-    } catch {
-      try {
-        profile = await this.teamManagerService.findByUserId(user._id);
-        role = UserRole.TEAM_MANAGER;
-      } catch {
-        try {
+      switch (roleKey) {
+        case UserRole.PLAYER:
+          profile = await this.playerService.findOrCreateByUserId(user._id);
+          role = UserRole.PLAYER;
+          break;
+        case UserRole.TEAM_MANAGER:
+          profile = await this.teamManagerService.findByUserId(user._id);
+          role = UserRole.TEAM_MANAGER;
+          break;
+        case UserRole.REFEREE:
           profile = await this.refereeService.findByUserId(user._id);
           role = UserRole.REFEREE;
-        } catch {
-          try {
-            profile = await this.scouterService.findByUserId(user._id);
-            role = UserRole.SCOUTER;
-          } catch {
-            try {
-              profile = await this.adminService.findByUserId(user._id);
-              role = UserRole.ADMIN;
-            } catch {
-              throw new UnauthorizedException('No profile found for user');
-            }
-          }
-        }
+          break;
+        case UserRole.SCOUTER:
+          profile = await this.scouterService.findByUserId(user._id);
+          role = UserRole.SCOUTER;
+          break;
+        case UserRole.ADMIN:
+          profile = await this.adminService.findByUserId(user._id);
+          role = UserRole.ADMIN;
+          break;
+        default:
+          profile = await this.playerService.findOrCreateByUserId(user._id);
+          role = UserRole.PLAYER;
       }
+    } catch (e) {
+      if (e instanceof NotFoundException) {
+        throw new UnauthorizedException(
+          'Profile data is missing for this account. Complete registration or contact support.',
+        );
+      }
+      throw e;
     }
 
     const tokens = await this.generateTokens(user._id.toString(), user.email, role);

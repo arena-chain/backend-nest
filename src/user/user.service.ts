@@ -47,6 +47,20 @@ export class UsersService {
         return this.userModel.findOne({ email: email.toLowerCase() });
     }
 
+    /** Login: match by email (case-insensitive) or exact nickname (case-insensitive). */
+    async findByEmailOrNickname(identifier: string): Promise<UserDocument | null> {
+        const trimmed = identifier.trim();
+        if (!trimmed) return null;
+
+        const byEmail = await this.findByEmail(trimmed);
+        if (byEmail) return byEmail;
+
+        const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return this.userModel
+            .findOne({ nickname: new RegExp(`^${escaped}$`, 'i') })
+            .exec();
+    }
+
     async findByGoogleId(googleId: string): Promise<UserDocument | null> {
         return this.userModel.findOne({ googleId });
     }
