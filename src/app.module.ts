@@ -48,6 +48,7 @@ import { GroupModule } from './group/group.module';
 import { InvitationModule } from './invitation/invitation.module';
 import { ScoutingModule } from './scouting/scouting.module';
 import { NftModule } from './nft/nft.module';
+import { CurrencyModule } from './currency/currency.module';
 import { GameAssetsModule } from './game-assets/game-assets.module';
 import { AssetPresetModule } from './asset-preset/asset-preset.module';
 import { NewsModule } from './news/news.module';
@@ -140,6 +141,7 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
     InvitationModule,
     ScoutingModule,
     NftModule,
+    CurrencyModule,
     GameAssetsModule,
     AssetPresetModule,
     NewsModule,

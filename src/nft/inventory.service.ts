@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ethers } from 'ethers';
 import { Inventory, InventoryDocument } from './schemas/inventory.entity';
 import { NftItem, NftItemDocument } from './schemas/nft-item.entity';
 import { EquipItemDto } from './dto/equip-item.dto';
@@ -148,9 +149,14 @@ export class InventoryService {
     }
 
     async setWalletAddress(userId: string, walletAddress: string): Promise<InventoryDocument> {
+        const trimmed = walletAddress?.trim();
+        if (!trimmed || !ethers.utils.isAddress(trimmed)) {
+            throw new BadRequestException('Invalid EVM wallet address');
+        }
+        const normalized = ethers.utils.getAddress(trimmed);
         const inventory = await this.inventoryModel.findOneAndUpdate(
             { userId: new Types.ObjectId(userId) },
-            { walletAddress },
+            { walletAddress: normalized },
             { new: true, upsert: true },
         );
         return inventory;
