@@ -1,0 +1,26 @@
+---
+description: Prevents AI from modifying any backend NestJS files. Only the Electron frontend can be modified.
+alwaysApply: true
+---
+
+# No Backend Modifications — Electron Frontend Only
+
+You are working on two projects in this workspace:
+1. **Backend (NestJS)** — READ-ONLY reference. Located in `backend-nest1/`
+2. **Electron Frontend (Vanilla HTML/CSS/JS + Tailwind)** — This is where ALL changes go. Located in `front-end-desktop/`
+
+## Strict Rules
+
+- **NEVER** create, edit, delete, or modify any file in the backend NestJS project (`backend-nest1/`)
+- The backend is **read-only reference** — use it only to understand API endpoints, DTOs, request/response shapes, and auth flow
+- **ALL** code changes must target the Electron frontend project (`front-end-desktop/`) only
+- If a backend change seems needed, STOP and tell the user — do NOT make the change
+
+## Electron Project Context
+
+- Stack: Vanilla HTML + Tailwind CSS v4 + plain JS (no React/Vue/Angular)
+- Entry: `index.js` (Electron main process with IPC routing)
+- Design: Dark theme (`#0a0b0f`), glassmorphism, neon green (`#00ff87`) / cyan (`#0bc6e3`) / orange (`#ff7800`) accents
+- Font: Inter (Google Fonts)
+- Auth: JWT tokens stored in localStorage, sent as `Authorization: Bearer <token>`
+- API base URL should be configurable (default: `http://localhost:3000`)
