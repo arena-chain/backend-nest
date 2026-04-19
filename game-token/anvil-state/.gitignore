@@ -1,0 +1,3 @@
+# Persisted chain snapshot (large); keep directory in repo for --state path.
+*
+!.gitignore

@@ -5,13 +5,12 @@ import {
     Delete,
     Body,
     Param,
-    Patch,
     UseGuards,
     Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { InventoryService } from './inventory.service';
+import { InventoryService } from './inventory.service.js';
 import { EquipItemDto } from './dto/equip-item.dto';
 
 @ApiTags('inventory')
@@ -64,13 +63,5 @@ export class InventoryController {
     @ApiResponse({ status: 200, description: 'Equipped items' })
     getEquipped(@Req() req) {
         return this.inventoryService.getEquippedItems(req.user.userId);
-    }
-
-    @Patch('wallet/:walletAddress')
-    @ApiOperation({ summary: 'Set wallet address on inventory' })
-    @ApiParam({ name: 'walletAddress', description: 'Blockchain wallet address' })
-    @ApiResponse({ status: 200, description: 'Wallet address updated' })
-    setWallet(@Req() req, @Param('walletAddress') walletAddress: string) {
-        return this.inventoryService.setWalletAddress(req.user.userId, walletAddress);
     }
 }

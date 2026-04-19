@@ -5,7 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/user.module';
 import { PlayerModule } from './player/player.module';
@@ -68,7 +68,11 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      // Load `.env` from repo root even if `process.cwd()` differs (e.g. `node dist/main` from another folder).
+      envFilePath: [resolve(process.cwd(), '.env'), join(__dirname, '..', '.env')],
+    }),
     EventEmitterModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

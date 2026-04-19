@@ -14,7 +14,7 @@ import { CreateNftCollectionDto } from './dto/create-nft-collection.dto';
 import { UpdateNftCollectionDto } from './dto/update-nft-collection.dto';
 import { BlockchainService } from './blockchain.service';
 import { ConfigService } from '@nestjs/config';
-import { InventoryService } from './inventory.service';
+import { InventoryService } from './inventory.service.js';
 import { SaveConfiguredNftItemDto } from './dto/save-configured-nft-item.dto';
 import { ListNftItemDto } from './dto/list-nft-item.dto';
 

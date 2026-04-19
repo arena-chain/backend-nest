@@ -148,18 +148,76 @@ export class InventoryService {
         return this.getOrCreateInventory(userId);
     }
 
-    async setWalletAddress(userId: string, walletAddress: string): Promise<InventoryDocument> {
-        const trimmed = walletAddress?.trim();
-        if (!trimmed || !ethers.utils.isAddress(trimmed)) {
-            throw new BadRequestException('Invalid EVM wallet address');
+    /**
+     * Creates an in-app EVM address for GTK/VEX (custodial-style: server knows the address for mints).
+     * Optional `metadata.custodialPrivateKey` when GTK_CUSTODIAL_INSECURE_STORE=true (local dev only — never in production).
+     */
+    async ensureAppWallet(userId: string): Promise<InventoryDocument> {
+        let inv = await this.inventoryModel.findOne({ userId: new Types.ObjectId(userId) });
+        const w = ethers.Wallet.createRandom();
+        const addr = ethers.utils.getAddress(w.address);
+        const insecure = process.env.GTK_CUSTODIAL_INSECURE_STORE?.trim().toLowerCase() === 'true';
+        const meta: Record<string, unknown> = {
+            ...(inv?.metadata && typeof inv.metadata === 'object' ? inv.metadata : {}),
+            appWalletProvisioned: true,
+        };
+        if (insecure) {
+            meta.custodialPrivateKey = w.privateKey;
         }
-        const normalized = ethers.utils.getAddress(trimmed);
-        const inventory = await this.inventoryModel.findOneAndUpdate(
-            { userId: new Types.ObjectId(userId) },
-            { walletAddress: normalized },
-            { new: true, upsert: true },
-        );
-        return inventory;
+        if (!inv) {
+            return this.inventoryModel.create({
+                userId: new Types.ObjectId(userId),
+                items: [],
+                equippedItems: [],
+                walletAddress: addr,
+                metadata: meta,
+            });
+        }
+        if (inv.walletAddress) {
+            return inv;
+        }
+        inv.walletAddress = addr;
+        inv.metadata = meta as typeof inv.metadata;
+        await inv.save();
+        return inv;
+    }
+
+    /**
+     * Sets inventory.walletAddress to a user-controlled EOA (e.g. MetaMask).
+     * Replaces any prior in-app provisioned address; strips custodial key material from metadata when present.
+     */
+    async linkExternalWallet(userId: string, requestedAddress: string): Promise<InventoryDocument> {
+        let checksum: string;
+        try {
+            checksum = ethers.utils.getAddress(requestedAddress.trim());
+        } catch {
+            throw new BadRequestException('Invalid Ethereum address');
+        }
+
+        let inv = await this.inventoryModel.findOne({ userId: new Types.ObjectId(userId) });
+        const baseMeta =
+            inv?.metadata && typeof inv.metadata === 'object' && inv.metadata !== null
+                ? { ...(inv.metadata as Record<string, unknown>) }
+                : ({} as Record<string, unknown>);
+        delete baseMeta.custodialPrivateKey;
+        delete baseMeta.appWalletProvisioned;
+        baseMeta.externalWallet = true;
+        baseMeta.externalWalletLinkedAt = new Date().toISOString();
+
+        if (!inv) {
+            return this.inventoryModel.create({
+                userId: new Types.ObjectId(userId),
+                items: [],
+                equippedItems: [],
+                walletAddress: checksum,
+                metadata: baseMeta,
+            });
+        }
+
+        inv.walletAddress = checksum;
+        inv.metadata = baseMeta as typeof inv.metadata;
+        await inv.save();
+        return inv;
     }
 
     async getEquippedItems(userId: string): Promise<any[]> {

@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
-import { HighlightsService } from '../highlights.service';
+import { HighlightsService } from '../highlights.service.js';
 import {
   HIGHLIGHT_QUEUE_NAME,
   HighlightJobPayload,

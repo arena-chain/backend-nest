@@ -7,7 +7,7 @@ import { NftItem, NftItemSchema } from './schemas/nft-item.entity';
 import { Inventory, InventorySchema } from './schemas/inventory.entity';
 import { NftCollection, NftCollectionSchema } from './schemas/nft-collection.entity';
 import { NftService } from './nft.service';
-import { InventoryService } from './inventory.service';
+import { InventoryService } from './inventory.service.js';
 import { BlockchainService } from './blockchain.service';
 import { NftController } from './nft.controller';
 import { InventoryController } from './inventory.controller';
