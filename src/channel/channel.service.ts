@@ -1,14 +1,18 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { Channel, ChannelDocument } from './entities/channel.entity';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationCategory } from '../notification/entities/notification.entity';
+import { NotificationType } from '../notification/dto/create-notification.dto';
 
 @Injectable()
 export class ChannelService {
   constructor(
     @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
+    private readonly notificationService: NotificationService,
   ) { }
 
   async create(ownerId: string, createChannelDto: CreateChannelDto): Promise<ChannelDocument> {
@@ -28,7 +32,7 @@ export class ChannelService {
   }
 
   async findAll(): Promise<ChannelDocument[]> {
-    return this.channelModel.find().populate('ownerId', 'email nickname').exec();
+    return this.channelModel.find().populate('ownerId', 'email nickname').sort({ isActive: -1, viewerCount: -1 }).exec();
   }
 
   async findMine(ownerId: string): Promise<ChannelDocument | null> {
@@ -91,5 +95,79 @@ export class ChannelService {
     }
 
     return channel;
+  }
+
+  async subscribe(id: string, userId: string): Promise<ChannelDocument> {
+    const channel = await this.channelModel.findById(id).exec();
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const userObjectId = new Types.ObjectId(userId);
+    const isSubscribed = channel.subscribers.some(subId => subId.toString() === userId);
+
+    if (isSubscribed) {
+      return channel;
+    }
+
+    const updated = await this.channelModel.findByIdAndUpdate(
+      id,
+      {
+        $addToSet: { subscribers: userObjectId },
+        $inc: { subscriberCount: 1 }
+      },
+      { new: true }
+    ).exec();
+
+    if (!updated) {
+      throw new NotFoundException(`Channel with ID ${id} not found`);
+    }
+
+    // Notify owner
+    await this.notificationService.createForUser({
+      userId: updated.ownerId.toString(),
+      title: 'Nouvel abonné !',
+      message: `Un utilisateur s'est abonné à votre chaîne ${updated.name}.`,
+      type: NotificationType.SYSTEM,
+      category: NotificationCategory.SOCIAL,
+      link: `/player/channel/${id}/detail`,
+    });
+
+    return updated;
+  }
+
+  async unsubscribe(id: string, userId: string): Promise<ChannelDocument> {
+    const channel = await this.channelModel.findById(id).exec();
+    if (!channel) throw new NotFoundException('Channel not found');
+
+    const userObjectId = new Types.ObjectId(userId);
+    const isSubscribed = channel.subscribers.some(subId => subId.toString() === userId);
+
+    if (!isSubscribed) {
+      return channel;
+    }
+
+    const updated = await this.channelModel.findByIdAndUpdate(
+      id,
+      {
+        $pull: { subscribers: userObjectId },
+        $inc: { subscriberCount: -1 }
+      },
+      { new: true }
+    ).exec();
+
+    if (!updated) {
+      throw new NotFoundException(`Channel with ID ${id} not found`);
+    }
+
+    return updated;
+  }
+
+  async findFollowing(userId: string): Promise<ChannelDocument[]> {
+    return this.channelModel.find({
+      subscribers: new Types.ObjectId(userId)
+    }).populate('ownerId', 'email nickname').exec();
+  }
+
+  async updateStatus(id: string, isActive: boolean, viewerCount: number): Promise<void> {
+    await this.channelModel.findByIdAndUpdate(id, { isActive, viewerCount }).exec();
   }
 }

@@ -1,4 +1,4 @@
-import { IsBoolean, IsOptional, IsObject } from 'class-validator';
+import { IsBoolean, IsNumber, IsString, IsOptional, IsObject } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdatePlayerDto {
@@ -11,6 +11,16 @@ export class UpdatePlayerDto {
     @IsOptional()
     @IsBoolean()
     isVerified?: boolean;
+
+    @ApiProperty({ required: false, description: 'Player ELO rating' })
+    @IsOptional()
+    @IsNumber()
+    elo?: number;
+
+    @ApiProperty({ required: false, description: 'Player rank' })
+    @IsOptional()
+    @IsString()
+    rank?: string;
 
     @ApiProperty({ required: false, description: 'Player stats object' })
     @IsOptional()

@@ -61,6 +61,12 @@ export class User {
     @Prop({ default: false })
     isReported: boolean;
 
+    @Prop({ default: 0 })
+    walletBalance: number;
+
+    @Prop({ unique: true, sparse: true })
+    walletAddress?: string;
+
     @Prop({ type: [{ reportedBy: String, reason: String, createdAt: Date }], default: [] })
     reports: { reportedBy: string; reason: string; createdAt: Date }[];
 }

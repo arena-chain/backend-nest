@@ -18,6 +18,14 @@ export class ChannelController {
     return this.channelService.findMine(req.user.userId);
   }
 
+  @Get('following')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get channels followed by current user' })
+  findFollowing(@Req() req) {
+    return this.channelService.findFollowing(req.user.userId);
+  }
+
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -67,5 +75,21 @@ export class ChannelController {
   @ApiResponse({ status: 404, description: 'Channel not found' })
   remove(@Req() req, @Param('id') id: string) {
     return this.channelService.remove(id, req.user.userId);
+  }
+
+  @Post(':id/subscribe')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Subscribe to a channel' })
+  subscribe(@Req() req, @Param('id') id: string) {
+    return this.channelService.subscribe(id, req.user.userId);
+  }
+
+  @Post(':id/unsubscribe')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unsubscribe from a channel' })
+  unsubscribe(@Req() req, @Param('id') id: string) {
+    return this.channelService.unsubscribe(id, req.user.userId);
   }
 }

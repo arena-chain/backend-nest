@@ -9,6 +9,10 @@ export type XpEventType =
   | 'MISSION_COMPLETED'
   | 'ACHIEVEMENT_UNLOCKED'
   | 'LOGIN_DAILY'
+  | 'TOURNAMENT_WIN'
+  | 'TOURNAMENT_PLACE_2'
+  | 'TOURNAMENT_PLACE_3'
+  | 'WIN_STREAK'
   | 'MANUAL';
 
 export interface PlayerLevelView {
@@ -60,8 +64,7 @@ export interface XpEventBase {
 
 @Injectable()
 export class LevelService {
-  private readonly base = 100;
-  private readonly factor = 25;
+  private readonly base = 1000;
   private readonly growth = 1.5;
 
   private readonly PERFORMANCE_BONUS_ENABLED = false;
@@ -77,7 +80,8 @@ export class LevelService {
     if (!Number.isFinite(level) || level < 1) {
       level = 1;
     }
-    return Math.floor(this.base + Math.pow(level, this.growth) * this.factor);
+    // New formula: 1000 * (level ^ 1.5)
+    return Math.floor(this.base * Math.pow(level, this.growth));
   }
 
   async getPlayerLevel(userId: string): Promise<PlayerLevelView> {
@@ -213,16 +217,23 @@ export class LevelService {
 
     if (event.type === 'MATCH_COMPLETED') {
       const payload = event.payload as MatchCompletedPayload;
-      const xpBase = payload.mode === 'RANKED' ? 50 : 30;
-      const winBonus = payload.won ? 20 : 0;
+      // New rewards per requirements:
+      // Participation (Check-in) = 50 XP (usually handled by a specific event, but we'll adapt here)
+      // Match Win = 100 XP
+      const winBonus = payload.won ? 100 : 0;
+      const participationXp = 50;
 
-      let performanceBonus = 0;
-      if (this.PERFORMANCE_BONUS_ENABLED && payload.stats) {
-        const raw = payload.stats.score / 10;
-        performanceBonus = Math.min(raw, 30);
-      }
-
-      amount = xpBase + winBonus + performanceBonus;
+      amount = participationXp + winBonus;
+    } else if (event.type === 'TOURNAMENT_WIN') {
+      amount = 500;
+    } else if (event.type === 'TOURNAMENT_PLACE_2') {
+      amount = 300;
+    } else if (event.type === 'TOURNAMENT_PLACE_3') {
+      amount = 200;
+    } else if (event.type === 'WIN_STREAK') {
+      // +50 XP per stack, max 3 stacks handled by caller or we can check payload
+      const stacks = (event.payload as any)?.stacks || 1;
+      amount = Math.min(stacks, 3) * 50;
     } else if (event.type === 'MISSION_COMPLETED') {
       const payload = event.payload as MissionCompletedPayload;
       amount = Math.max(payload.reward ?? 0, 0);

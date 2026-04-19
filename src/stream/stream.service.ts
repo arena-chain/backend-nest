@@ -5,6 +5,8 @@ import { CreateStreamDto } from './dto/create-stream.dto';
 import { UpdateStreamDto } from './dto/update-stream.dto';
 import { Stream, StreamDocument } from './entities/stream.entity';
 import { ChannelService } from '../channel/channel.service';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationCategory } from '../notification/entities/notification.entity';
 
 @Injectable()
 export class StreamService {
@@ -13,6 +15,7 @@ export class StreamService {
   constructor(
     @InjectModel(Stream.name) private streamModel: Model<StreamDocument>,
     private readonly channelService: ChannelService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   private buildMeteredCredentialsUrl() {
@@ -121,6 +124,28 @@ export class StreamService {
     });
     const saved = await stream.save();
     this.logger.log(`Stream created: stream=${saved._id.toString()} channel=${createStreamDto.channelId} user=${streamerId}`);
+
+    // Notify subscribers if scheduled
+    if (saved.scheduledStartTime) {
+      const populated = await saved.populate([
+        { path: 'streamerId', select: 'nickname' },
+        { path: 'channelId', select: 'name subscribers' },
+      ]);
+      const streamerNickname = (populated.streamerId as any).nickname || 'A streamer';
+      const subscribers = (populated.channelId as any).subscribers || [];
+
+      if (subscribers.length > 0) {
+        await this.notificationService.notifyChannelSubscribers(
+          subscribers,
+          streamerNickname,
+          'New Stream Scheduled',
+          `has scheduled a new stream: "${saved.title}"`,
+          NotificationCategory.STREAMS,
+          `/watch/${saved.channelId}`,
+        );
+      }
+    }
+
     return saved.populate([
       { path: 'streamerId', select: 'email nickname' },
       { path: 'channelId', select: 'name ownerId avatarUrl' },
@@ -184,10 +209,27 @@ export class StreamService {
         playbackUrl: updateStreamDto.playbackUrl || updateStreamDto.streamUrl || existing.playbackUrl,
       },
       { new: true },
-    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').exec();
+    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl subscribers').exec();
 
     if (!stream) {
       throw new NotFoundException(`Stream with ID ${id} not found`);
+    }
+
+    // Notify subscribers if scheduled and it's a new or changed schedule
+    if (stream.scheduledStartTime && stream.scheduledStartTime !== existing.scheduledStartTime) {
+      const streamerNickname = (stream.streamerId as any).nickname || 'A streamer';
+      const subscribers = (stream.channelId as any).subscribers || [];
+
+      if (subscribers.length > 0) {
+        await this.notificationService.notifyChannelSubscribers(
+          subscribers,
+          streamerNickname,
+          'Stream Schedule Updated',
+          `has scheduled/updated a stream: "${stream.title}"`,
+          NotificationCategory.STREAMS,
+          `/watch/${stream.channelId._id}`,
+        );
+      }
     }
 
     return stream;
@@ -208,13 +250,33 @@ export class StreamService {
         endedAt: undefined,
       },
       { new: true },
-    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').exec();
+    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl subscribers').exec();
 
     if (!stream) {
       throw new NotFoundException(`Stream with ID ${id} not found`);
     }
 
     this.logger.log(`Stream started: stream=${id} user=${streamerId}`);
+
+    // Update channel status
+    const channelId = (stream.channelId as any)._id?.toString() || stream.channelId.toString();
+    await this.channelService.updateStatus(channelId, true, stream.viewerCount || 0);
+
+    // Notify subscribers that we are LIVE
+    const subscribers = (stream.channelId as any).subscribers || [];
+    const streamerNickname = (stream.streamerId as any).nickname || 'A streamer';
+
+    if (subscribers.length > 0) {
+      await this.notificationService.notifyChannelSubscribers(
+        subscribers,
+        streamerNickname,
+        '🔴 LIVE NOW',
+        `is now live: "${stream.title}"`,
+        NotificationCategory.STREAMS,
+        `/watch/${stream.channelId._id}`,
+      );
+    }
+
     return stream;
   }
 
@@ -239,6 +301,11 @@ export class StreamService {
     }
 
     this.logger.log(`Stream ended: stream=${id} user=${streamerId}`);
+
+    // Update channel status
+    const channelId = (stream.channelId as any)._id?.toString() || stream.channelId.toString();
+    await this.channelService.updateStatus(channelId, false, 0);
+
     return stream;
   }
 

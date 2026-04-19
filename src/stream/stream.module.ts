@@ -7,8 +7,9 @@ import { StreamController } from './stream.controller';
 import { Stream, StreamSchema } from './entities/stream.entity';
 import { ChannelModule } from '../channel/channel.module';
 import { StreamGateway } from './stream.gateway';
-import { ChatModule } from '../chat/chat.module.js';
+import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../user/user.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { UsersModule } from '../user/user.module';
     ChannelModule,
     ChatModule,
     UsersModule,
+    NotificationModule,
     MongooseModule.forFeature([
       { name: Stream.name, schema: StreamSchema },
     ]),

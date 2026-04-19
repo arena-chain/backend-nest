@@ -116,8 +116,8 @@ export class Tournament {
     phases: TournamentPhase[];
 
     // Status
-    @Prop({ default: 'DRAFT' })
-    status: string; // DRAFT, OPEN_REGISTRATION, ONGOING, COMPLETED, CANCELLED
+    @Prop({ default: 'PENDING_APPROVAL' })
+    status: string; // DRAFT, PENDING_APPROVAL, OPEN_REGISTRATION, ONGOING, COMPLETED, CANCELLED, REJECTED, BLOCKED
 
     // Tournament Type and Invitations
     @Prop({ required: true, enum: ['OFFICIAL'], default: 'OFFICIAL' })

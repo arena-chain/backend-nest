@@ -27,16 +27,12 @@ import { AirdropNftDto } from './dto/airdrop-nft.dto';
 import { TransferNftItemDto } from './dto/transfer-nft-item.dto';
 import { CreateNftCollectionDto } from './dto/create-nft-collection.dto';
 import { UpdateNftCollectionDto } from './dto/update-nft-collection.dto';
-import { SaveConfiguredNftItemDto } from './dto/save-configured-nft-item.dto';
-import { ListNftItemDto } from './dto/list-nft-item.dto';
-import { UnlistNftItemDto } from './dto/unlist-nft-item.dto';
-import { PurchaseListingDto } from './dto/purchase-listing.dto';
 import { imageUploadOptions } from 'src/common/utils/file-upload.utils';
 
 @ApiTags('nft')
 @Controller('nft')
 export class NftController {
-    constructor(private readonly nftService: NftService) {}
+    constructor(private readonly nftService: NftService) { }
 
     // ───────────────── Admin: NFT CRUD ─────────────────
 
@@ -83,76 +79,14 @@ export class NftController {
     @ApiQuery({ name: 'rarity', required: false, enum: ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'MYTHIC'] })
     @ApiQuery({ name: 'status', required: false, enum: ['DRAFT', 'MINTED', 'LISTED', 'BURNED'] })
     @ApiQuery({ name: 'collectionId', required: false, description: 'Filter by collection ID' })
-    @ApiQuery({ name: 'gameId', required: false, description: 'Catalog game id — NFT.compatibleGames contains this id' })
-    @ApiQuery({ name: 'tag', required: false, description: 'Match a tag on the NFT (exact)' })
     @ApiResponse({ status: 200, description: 'List of NFTs' })
     findAll(
         @Query('category') category?: string,
         @Query('rarity') rarity?: string,
         @Query('status') status?: string,
         @Query('collectionId') collectionId?: string,
-        @Query('gameId') gameId?: string,
-        @Query('tag') tag?: string,
     ) {
-        return this.nftService.findAll({ category, rarity, status, collectionId, gameId, tag });
-    }
-
-    @Get('marketplace/listings')
-    @ApiOperation({ summary: 'Browse listed NFT items (marketplace)' })
-    @ApiQuery({ name: 'gameId', required: false })
-    @ApiQuery({ name: 'category', required: false })
-    @ApiQuery({ name: 'skip', required: false })
-    @ApiQuery({ name: 'limit', required: false })
-    getMarketplaceListings(
-        @Query('gameId') gameId?: string,
-        @Query('category') category?: string,
-        @Query('skip') skip?: string,
-        @Query('limit') limit?: string,
-    ) {
-        return this.nftService.getMarketplaceListings({
-            gameId,
-            category,
-            skip: skip !== undefined ? parseInt(skip, 10) : undefined,
-            limit: limit !== undefined ? parseInt(limit, 10) : undefined,
-        });
-    }
-
-    @Post('marketplace/list')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({ summary: 'List one of my NFT items for sale' })
-    listForSale(@Req() req, @Body() dto: ListNftItemDto) {
-        return this.nftService.listNftItemForSale(req.user.userId, dto);
-    }
-
-    @Post('marketplace/unlist')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({ summary: 'Remove my item from the marketplace' })
-    unlist(@Req() req, @Body() dto: UnlistNftItemDto) {
-        return this.nftService.unlistNftItem(req.user.userId, dto.nftItemId);
-    }
-
-    @Post('marketplace/purchase')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({
-        summary: 'Buy a listed item (ownership transfer only)',
-        description: 'Does not process payment — call after your checkout succeeds.',
-    })
-    purchase(@Req() req, @Body() dto: PurchaseListingDto) {
-        return this.nftService.purchaseListing(req.user.userId, dto.nftItemId);
-    }
-
-    @Post('items/save-configured')
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({
-        summary: 'Save current configuration as an owned NFT item',
-        description: 'Mints a new inventory item from a base NFT template; stores config in item.metadata.',
-    })
-    saveConfigured(@Req() req, @Body() dto: SaveConfiguredNftItemDto) {
-        return this.nftService.saveConfiguredNftItem(req.user.userId, dto);
+        return this.nftService.findAll({ category, rarity, status, collectionId });
     }
 
     @Get('stats')
@@ -341,5 +275,105 @@ export class NftController {
     @ApiResponse({ status: 200, description: 'NFT deleted' })
     remove(@Param('id') id: string) {
         return this.nftService.remove(id);
+    }
+
+    // ───────────────── Marketplace Endpoints ─────────────────
+
+    @Get('marketplace')
+    @ApiOperation({ summary: 'Get all NFT items listed for sale' })
+    @ApiQuery({ name: 'search', required: false })
+    @ApiQuery({ name: 'rarity', required: false })
+    @ApiQuery({ name: 'isFeatured', required: false, type: Boolean })
+    @ApiResponse({ status: 200, description: 'List of NFT items for sale' })
+    getMarketplace(@Query('search') search?: string, @Query('rarity') rarity?: string, @Query('isFeatured') isFeatured?: string) {
+        return this.nftService.getMarketplace({ search, rarity, isFeatured: isFeatured === 'true' });
+    }
+
+    @Get('admin/marketplace')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Get all active listings for admin moderation' })
+    @ApiResponse({ status: 200, description: 'All listed items' })
+    getAdminMarketplace() {
+        return this.nftService.getAdminMarketplace();
+    }
+
+    @Get('admin/marketplace/stats')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Get marketplace statistics' })
+    @ApiResponse({ status: 200, description: 'Stats data' })
+    getMarketplaceStats() {
+        return this.nftService.getMarketplaceStats();
+    }
+
+    @Post(':id/feature')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Toggle featured status of an item' })
+    @ApiResponse({ status: 200, description: 'Status toggled' })
+    toggleFeature(@Param('id') id: string) {
+        return this.nftService.toggleFeatured(id);
+    }
+
+    @Post(':id/force-unlist')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(UserRole.ADMIN)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Force unlist an item (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Item unlisted' })
+    forceUnlist(@Param('id') id: string) {
+        return this.nftService.forceUnlist(id);
+    }
+
+    @Get('my')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Get my NFT items (short endpoint)' })
+    @ApiResponse({ status: 200, description: 'List of NFT items owned by the current user' })
+    getMyNfts(@Req() req) {
+        return this.nftService.getItemsByOwner(req.user.userId);
+    }
+
+    @Post(':id/list')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'List an NFT item for sale' })
+    @ApiParam({ name: 'id', description: 'NFT Item ID' })
+    @ApiBody({ schema: { type: 'object', properties: { listPrice: { type: 'number' } } } })
+    @ApiResponse({ status: 200, description: 'Item listed for sale' })
+    list(@Req() req, @Param('id') id: string, @Body('listPrice') listPrice: number) {
+        return this.nftService.listForSale(req.user.userId, id, listPrice);
+    }
+
+    @Post(':id/unlist')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Remove an NFT item from sale' })
+    @ApiParam({ name: 'id', description: 'NFT Item ID' })
+    @ApiResponse({ status: 200, description: 'Item removed from sale' })
+    unlist(@Req() req, @Param('id') id: string) {
+        return this.nftService.unlist(req.user.userId, id);
+    }
+
+    @Post(':id/buy')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Buy a listed NFT item' })
+    @ApiParam({ name: 'id', description: 'NFT Item ID' })
+    @ApiResponse({ status: 200, description: 'Item purchased successfully' })
+    buy(@Req() req, @Param('id') id: string) {
+        return this.nftService.buy(req.user.userId, id);
+    }
+
+    @Get('transactions/history')
+    @ApiOperation({ summary: 'Get recent marketplace transactions' })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiResponse({ status: 200, description: 'List of recent transactions' })
+    getHistory(@Query('limit') limit?: number) {
+        return this.nftService.getTransactionHistory(limit);
     }
 }

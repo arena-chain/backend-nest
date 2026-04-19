@@ -10,8 +10,8 @@ import {
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
-import { ChatService } from '../chat/chat.service.js';
-import { UsersService } from '../user/user.service.js';
+import { ChatService } from '../chat/chat.service';
+import { UsersService } from '../user/user.service';
 
 type JoinPayload = {
   channelId: string;
@@ -55,13 +55,13 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly chatService: ChatService,
-  ) {}
+  ) { }
 
   private readonly logger = new Logger(StreamGateway.name);
   private readonly broadcasterByChannel = new Map<string, string>();
   private readonly socketChannel = new Map<string, string>();
   private readonly socketRole = new Map<string, 'broadcaster' | 'viewer'>();
-  private readonly reactionCountsByChannel = new Map<string, Map<string, number>>();
+  private readonly reactionsByChannel = new Map<string, Map<string, Set<string>>>();
 
   private async authenticateSocket(socket: Socket) {
     const token = socket.handshake.auth?.token;
@@ -91,14 +91,35 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   private getReactionSummary(channelId: string) {
-    const counts = this.reactionCountsByChannel.get(channelId) || new Map<string, number>();
-    return Object.fromEntries(counts.entries());
+    const channelReactions = this.reactionsByChannel.get(channelId);
+    if (!channelReactions) return {};
+
+    const summary: Record<string, number> = {};
+    for (const [emoji, userSet] of channelReactions.entries()) {
+      summary[emoji] = userSet.size;
+    }
+    return summary;
   }
 
-  private incrementReaction(channelId: string, emoji: string) {
-    const counts = this.reactionCountsByChannel.get(channelId) || new Map<string, number>();
-    counts.set(emoji, (counts.get(emoji) || 0) + 1);
-    this.reactionCountsByChannel.set(channelId, counts);
+  private toggleReaction(channelId: string, emoji: string, userId: string) {
+    let channelReactions = this.reactionsByChannel.get(channelId);
+    if (!channelReactions) {
+      channelReactions = new Map();
+      this.reactionsByChannel.set(channelId, channelReactions);
+    }
+
+    let userSet = channelReactions.get(emoji);
+    if (!userSet) {
+      userSet = new Set();
+      channelReactions.set(emoji, userSet);
+    }
+
+    if (userSet.has(userId)) {
+      userSet.delete(userId);
+    } else {
+      userSet.add(userId);
+    }
+
     return this.getReactionSummary(channelId);
   }
 
@@ -222,16 +243,16 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const created = user?.userId
       ? await this.chatService.createForUser(user.userId, {
+        channelId: payload.channelId,
+        message,
+      })
+      : await this.chatService.createAnonymous(
+        {
           channelId: payload.channelId,
           message,
-        })
-      : await this.chatService.createAnonymous(
-          {
-            channelId: payload.channelId,
-            message,
-          },
-          user?.nickname || `Guest-${socket.id.slice(0, 4)}`,
-        );
+        },
+        user?.nickname || `Guest-${socket.id.slice(0, 4)}`,
+      );
 
     this.server.to(payload.channelId).emit('chat-message', created);
     return { ok: true };
@@ -244,7 +265,11 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { ok: false };
     }
 
-    const counts = this.incrementReaction(payload.channelId, payload.emoji);
+    const counts = this.toggleReaction(
+      payload.channelId,
+      payload.emoji,
+      user?.userId || socket.id
+    );
 
     this.server.to(payload.channelId).emit('reaction-event', {
       channelId: payload.channelId,

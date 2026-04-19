@@ -50,6 +50,7 @@ export class TournementsController {
   @ApiResponse({ status: 200, description: 'Tournament updated successfully' })
   @ApiResponse({ status: 404, description: 'Tournament not found' })
   update(@Param('id') id: string, @Body() updateTournementDto: UpdateTournementDto) {
+    console.log(`[TournamentsController] Incoming PATCH for ${id}:`, updateTournementDto);
     return this.tournementsService.update(id, updateTournementDto);
   }
 

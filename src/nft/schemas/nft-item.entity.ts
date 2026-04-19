@@ -33,13 +33,19 @@ export class NftItem {
     acquiredAt?: Date;
 
     @Prop({
-        enum: ['MINTED', 'PURCHASED', 'REWARD', 'TRANSFER', 'AIRDROP', 'CRAFTED'],
+        enum: ['MINTED', 'PURCHASED', 'REWARD', 'TRANSFER', 'AIRDROP'],
         default: 'MINTED',
     })
     acquiredVia: string;
 
     @Prop({ type: Object, default: {} })
     metadata: Record<string, any>;
+
+    @Prop({ default: 0 })
+    listPrice: number;
+
+    @Prop({ default: false })
+    isFeatured: boolean;
 }
 
 export const NftItemSchema = SchemaFactory.createForClass(NftItem);

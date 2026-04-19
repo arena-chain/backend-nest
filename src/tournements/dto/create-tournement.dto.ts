@@ -11,10 +11,13 @@ export enum TournamentFormat {
 
 export enum TournamentStatus {
     DRAFT = 'DRAFT',
+    PENDING_APPROVAL = 'PENDING_APPROVAL',
     OPEN_REGISTRATION = 'OPEN_REGISTRATION',
     ONGOING = 'ONGOING',
     COMPLETED = 'COMPLETED',
     CANCELLED = 'CANCELLED',
+    REJECTED = 'REJECTED',
+    BLOCKED = 'BLOCKED',
 }
 
 export enum PhaseName {

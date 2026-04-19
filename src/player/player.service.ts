@@ -18,6 +18,8 @@ export class PlayerService {
             userId,
             isPro: profileData.isPro || false,
             isVerified: profileData.isVerified || false,
+            elo: 1000,
+            rank: 'Unranked',
             stats: {},
         });
 
@@ -65,6 +67,8 @@ export class PlayerService {
                 userId: objectId,
                 isPro: false,
                 isVerified: false,
+                elo: 1000,
+                rank: 'Unranked',
                 stats: {},
             });
             return await profile.save();

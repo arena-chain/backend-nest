@@ -20,8 +20,11 @@ export class Channel {
     @Prop({ default: 0 })
     subscriberCount: number;
 
-    @Prop({ default: true })
+    @Prop({ default: false })
     isActive: boolean;
+
+    @Prop({ default: 0 })
+    viewerCount: number;
 
     @Prop()
     bannerUrl?: string;

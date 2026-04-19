@@ -17,4 +17,6 @@ export class AdminProfile {
 }
 
 export const AdminProfileSchema = SchemaFactory.createForClass(AdminProfile);
-// userId index: already created by @Prop({ unique: true })
+
+// Create indexes
+AdminProfileSchema.index({ userId: 1 });

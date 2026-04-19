@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
 import { StreamService } from './stream.service';
 import { CreateStreamDto } from './dto/create-stream.dto';
 import { UpdateStreamDto } from './dto/update-stream.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { imageUploadOptions } from '../common/utils/file-upload.utils';
 
 @ApiTags('stream')
 @Controller('stream')
@@ -102,5 +104,17 @@ export class StreamController {
   @ApiResponse({ status: 404, description: 'Stream not found' })
   remove(@Req() req, @Param('id') id: string) {
     return this.streamService.remove(id, req.user.userId);
+  }
+
+  @Post('upload/thumbnail')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload stream thumbnail' })
+  @UseInterceptors(FileInterceptor('file', imageUploadOptions))
+  uploadThumbnail(@UploadedFile() file: Express.Multer.File) {
+    return {
+      url: `/uploads/${file.filename}`,
+    };
   }
 }
