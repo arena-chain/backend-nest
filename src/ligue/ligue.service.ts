@@ -7,7 +7,9 @@ import { Ligue, LigueDocument } from './entities/ligue.entity';
 
 @Injectable()
 export class LigueService {
-  constructor(@InjectModel(Ligue.name) private ligueModel: Model<LigueDocument>) { }
+  constructor(
+    @InjectModel(Ligue.name) private ligueModel: Model<LigueDocument>,
+  ) {}
 
   async create(createLigueDto: CreateLigueDto): Promise<Ligue> {
     const createdLigue = new this.ligueModel(createLigueDto);

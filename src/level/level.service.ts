@@ -1,8 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { PlayerLevel, PlayerLevelDocument } from './schemas/player-level.schema';
-import { ProcessedXpEvent, ProcessedXpEventDocument } from './schemas/processed-xp-event.schema';
+import {
+  PlayerLevel,
+  PlayerLevelDocument,
+} from './schemas/player-level.schema';
+import {
+  ProcessedXpEvent,
+  ProcessedXpEventDocument,
+} from './schemas/processed-xp-event.schema';
 
 export type XpEventType =
   | 'MATCH_COMPLETED'
@@ -59,7 +65,12 @@ export interface XpEventBase {
   userId: string;
   type: XpEventType;
   createdAt?: Date;
-  payload: MatchCompletedPayload | MissionCompletedPayload | AchievementUnlockedPayload | DailyLoginPayload | any;
+  payload:
+    | MatchCompletedPayload
+    | MissionCompletedPayload
+    | AchievementUnlockedPayload
+    | DailyLoginPayload
+    | any;
 }
 
 @Injectable()
@@ -74,7 +85,7 @@ export class LevelService {
     private readonly playerLevelModel: Model<PlayerLevelDocument>,
     @InjectModel(ProcessedXpEvent.name)
     private readonly processedXpEventModel: Model<ProcessedXpEventDocument>,
-  ) { }
+  ) {}
 
   computeXpToNext(level: number): number {
     if (!Number.isFinite(level) || level < 1) {
@@ -87,7 +98,9 @@ export class LevelService {
   async getPlayerLevel(userId: string): Promise<PlayerLevelView> {
     const userObjectId = new Types.ObjectId(userId);
 
-    let player = await this.playerLevelModel.findOne({ user: userObjectId }).exec();
+    let player = await this.playerLevelModel
+      .findOne({ user: userObjectId })
+      .exec();
     if (!player) {
       player = await this.playerLevelModel.create({
         user: userObjectId,
@@ -140,7 +153,12 @@ export class LevelService {
     }
 
     try {
-      return await this.applyXpToPlayerDocument(userId, userObjectId, amount, source);
+      return await this.applyXpToPlayerDocument(
+        userId,
+        userObjectId,
+        amount,
+        source,
+      );
     } catch (err) {
       await this.processedXpEventModel.deleteOne({ eventId }).exec();
       throw err;
@@ -153,7 +171,9 @@ export class LevelService {
     amount: number,
     source: XpEventType,
   ): Promise<AddXpResult> {
-    let player = await this.playerLevelModel.findOne({ user: userObjectId }).exec();
+    let player = await this.playerLevelModel
+      .findOne({ user: userObjectId })
+      .exec();
 
     if (!player) {
       player = new this.playerLevelModel({
@@ -232,7 +252,7 @@ export class LevelService {
       amount = 200;
     } else if (event.type === 'WIN_STREAK') {
       // +50 XP per stack, max 3 stacks handled by caller or we can check payload
-      const stacks = (event.payload as any)?.stacks || 1;
+      const stacks = event.payload?.stacks || 1;
       amount = Math.min(stacks, 3) * 50;
     } else if (event.type === 'MISSION_COMPLETED') {
       const payload = event.payload as MissionCompletedPayload;
@@ -258,13 +278,8 @@ export class LevelService {
       return null;
     }
 
-    return this.addXP(
-      event.userId,
-      amount,
-      event.type,
-      event.id,
-      { payloadHash: undefined },
-    );
+    return this.addXP(event.userId, amount, event.type, event.id, {
+      payloadHash: undefined,
+    });
   }
 }
-

@@ -1,11 +1,22 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Req,
-  UseGuards, Query,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Req,
+  UseGuards,
+  Query,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { NotificationPreferencesDto, RegisterDeviceTokenDto } from './dto/notification-preferences.dto';
+import {
+  NotificationPreferencesDto,
+  RegisterDeviceTokenDto,
+} from './dto/notification-preferences.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -14,7 +25,7 @@ export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly gateway: NotificationsGateway,
-  ) { }
+  ) {}
 
   // ─── Internal: create a notification (called by other services/admin) ──
   @Post()
@@ -89,10 +100,7 @@ export class NotificationController {
   }
 
   @Delete(':id')
-  deleteOne(
-    @Param('id') id: string,
-    @Req() req: { user: { userId: string } },
-  ) {
+  deleteOne(@Param('id') id: string, @Req() req: { user: { userId: string } }) {
     return this.notificationService.deleteOne(id, req.user.userId);
   }
 }

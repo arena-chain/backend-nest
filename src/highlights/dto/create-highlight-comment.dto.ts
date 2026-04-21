@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, MaxLength, MinLength, IsOptional, IsMongoId } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  MaxLength,
+  MinLength,
+  IsOptional,
+  IsMongoId,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateHighlightCommentDto {
@@ -10,7 +17,8 @@ export class CreateHighlightCommentDto {
   body: string;
 
   @ApiPropertyOptional({
-    description: 'Reply to a top-level comment on this highlight (not to another reply)',
+    description:
+      'Reply to a top-level comment on this highlight (not to another reply)',
   })
   @IsOptional()
   @IsMongoId()

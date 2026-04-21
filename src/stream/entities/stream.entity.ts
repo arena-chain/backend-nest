@@ -5,52 +5,50 @@ export type StreamDocument = Stream & Document;
 
 @Schema({ timestamps: true })
 export class Stream {
-    @Prop({ required: true })
-    title: string;
+  @Prop({ required: true })
+  title: string;
 
-    @Prop()
-    description?: string;
+  @Prop()
+  description?: string;
 
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    streamerId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  streamerId: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, ref: 'Channel', required: true })
-    channelId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Channel', required: true })
+  channelId: Types.ObjectId;
 
-    @Prop()
-    streamUrl?: string;
+  @Prop()
+  streamUrl?: string;
 
-    @Prop()
-    playbackUrl?: string;
+  @Prop()
+  playbackUrl?: string;
 
-    @Prop({ default: false })
-    isLive: boolean;
+  @Prop({ default: false })
+  isLive: boolean;
 
-    @Prop({ default: 0 })
-    viewerCount: number;
+  @Prop({ default: 0 })
+  viewerCount: number;
 
-    @Prop({ type: [String], default: [] })
-    tags: string[];
+  @Prop({ type: [String], default: [] })
+  tags: string[];
 
-    @Prop()
-    thumbnailUrl?: string;
+  @Prop()
+  thumbnailUrl?: string;
 
-    @Prop()
-    startedAt?: Date;
+  @Prop()
+  startedAt?: Date;
 
-    @Prop()
-    endedAt?: Date;
+  @Prop()
+  endedAt?: Date;
 
+  @Prop()
+  scheduledStartTime?: Date;
 
-    @Prop()
-    scheduledStartTime?: Date;
-
-    @Prop()
-    scheduledEndTime?: Date;
+  @Prop()
+  scheduledEndTime?: Date;
 }
 
 export const StreamSchema = SchemaFactory.createForClass(Stream);
 
 // Create indexes
 StreamSchema.index({ streamerId: 1 });
-

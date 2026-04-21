@@ -9,17 +9,17 @@ import { LeagueRegistrationModule } from '../league-registration/league-registra
 import { StandingsModule } from '../standings/standings.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: Round.name, schema: RoundSchema },
-            { name: Season.name, schema: SeasonSchema },
-        ]),
-        MatchModule,
-        LeagueRegistrationModule,
-        StandingsModule,
-    ],
-    controllers: [RoundController],
-    providers: [RoundService],
-    exports: [RoundService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Round.name, schema: RoundSchema },
+      { name: Season.name, schema: SeasonSchema },
+    ]),
+    MatchModule,
+    LeagueRegistrationModule,
+    StandingsModule,
+  ],
+  controllers: [RoundController],
+  providers: [RoundService],
+  exports: [RoundService],
 })
-export class RoundModule { }
+export class RoundModule {}

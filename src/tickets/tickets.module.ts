@@ -3,8 +3,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { TicketsService } from './tickets.service';
 import { TicketsController } from './tickets.controller';
 import { Ticket, TicketSchema } from './schemas/ticket.schema';
-import { Tournament, TournamentSchema } from '../tournements/schemas/tournament.schema';
-import { TicketTypeDefinition, TicketTypeDefinitionSchema } from './schemas/ticket-type.schema';
+import {
+  Tournament,
+  TournamentSchema,
+} from '../tournements/schemas/tournament.schema';
+import {
+  TicketTypeDefinition,
+  TicketTypeDefinitionSchema,
+} from './schemas/ticket-type.schema';
 
 @Module({
   imports: [
@@ -18,4 +24,4 @@ import { TicketTypeDefinition, TicketTypeDefinitionSchema } from './schemas/tick
   providers: [TicketsService],
   exports: [TicketsService],
 })
-export class TicketsModule { }
+export class TicketsModule {}

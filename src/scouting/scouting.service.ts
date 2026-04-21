@@ -1,9 +1,25 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ScoutingReport, ScoutingReportDocument } from './schemas/scouting-report.schema';
-import { PlayerProspectStatus, PlayerProspectStatusDocument, ProspectLevel, ProspectPriority } from './schemas/player-prospect-status.schema';
-import { PlayerRecommendation, PlayerRecommendationDocument, RecommendationStatus } from './schemas/player-recommendation.schema';
+import {
+  ScoutingReport,
+  ScoutingReportDocument,
+} from './schemas/scouting-report.schema';
+import {
+  PlayerProspectStatus,
+  PlayerProspectStatusDocument,
+  ProspectLevel,
+  ProspectPriority,
+} from './schemas/player-prospect-status.schema';
+import {
+  PlayerRecommendation,
+  PlayerRecommendationDocument,
+  RecommendationStatus,
+} from './schemas/player-recommendation.schema';
 import { Watchlist, WatchlistDocument } from './schemas/watchlist.schema';
 import { CreateScoutingReportDto } from './dto/create-scouting-report.dto';
 import { CreatePlayerProspectStatusDto } from './dto/create-player-prospect-status.dto';
@@ -20,10 +36,14 @@ import { SeasonRoster } from '../season-roster/schemas/season-roster.schema';
 @Injectable()
 export class ScoutingService {
   constructor(
-    @InjectModel(ScoutingReport.name) private reportModel: Model<ScoutingReportDocument>,
-    @InjectModel(PlayerProspectStatus.name) private prospectModel: Model<PlayerProspectStatusDocument>,
-    @InjectModel(PlayerRecommendation.name) private recommendationModel: Model<PlayerRecommendationDocument>,
-    @InjectModel(Watchlist.name) private watchlistModel: Model<WatchlistDocument>,
+    @InjectModel(ScoutingReport.name)
+    private reportModel: Model<ScoutingReportDocument>,
+    @InjectModel(PlayerProspectStatus.name)
+    private prospectModel: Model<PlayerProspectStatusDocument>,
+    @InjectModel(PlayerRecommendation.name)
+    private recommendationModel: Model<PlayerRecommendationDocument>,
+    @InjectModel(Watchlist.name)
+    private watchlistModel: Model<WatchlistDocument>,
     @InjectModel(SeasonRoster.name) private rosterModel: Model<any>,
     private readonly playerService: PlayerService,
     private readonly rankService: RankService,
@@ -31,7 +51,10 @@ export class ScoutingService {
 
   // ─── ScoutingReport ────────────────────────────────────────────────────────
 
-  async createReport(dto: CreateScoutingReportDto, scouterId: string): Promise<ScoutingReport> {
+  async createReport(
+    dto: CreateScoutingReportDto,
+    scouterId: string,
+  ): Promise<ScoutingReport> {
     const report = new this.reportModel({
       scouterId: new Types.ObjectId(scouterId),
       playerId: new Types.ObjectId(dto.playerId),
@@ -45,7 +68,10 @@ export class ScoutingService {
     return report.save();
   }
 
-  async findReportsByScouter(scouterId: string, playerId?: string): Promise<ScoutingReport[]> {
+  async findReportsByScouter(
+    scouterId: string,
+    playerId?: string,
+  ): Promise<ScoutingReport[]> {
     const filter: any = { scouterId: new Types.ObjectId(scouterId) };
     if (playerId) filter.playerId = new Types.ObjectId(playerId);
     return this.reportModel
@@ -76,21 +102,32 @@ export class ScoutingService {
     return r;
   }
 
-  async updateReport(id: string, dto: UpdateScoutingReportDto): Promise<ScoutingReport> {
-    const updated = await this.reportModel.findByIdAndUpdate(id, dto, { new: true }).exec();
-    if (!updated) throw new NotFoundException(`Scouting report ${id} not found`);
+  async updateReport(
+    id: string,
+    dto: UpdateScoutingReportDto,
+  ): Promise<ScoutingReport> {
+    const updated = await this.reportModel
+      .findByIdAndUpdate(id, dto, { new: true })
+      .exec();
+    if (!updated)
+      throw new NotFoundException(`Scouting report ${id} not found`);
     return updated;
   }
 
   async deleteReport(id: string): Promise<void> {
     const deleted = await this.reportModel.findByIdAndDelete(id).exec();
-    if (!deleted) throw new NotFoundException(`Scouting report ${id} not found`);
+    if (!deleted)
+      throw new NotFoundException(`Scouting report ${id} not found`);
   }
 
   // ─── PlayerProspectStatus ────────────────────────────────────────────────────
 
-  async createOrUpdateProspectStatus(dto: CreatePlayerProspectStatusDto): Promise<PlayerProspectStatus> {
-    const existing = await this.prospectModel.findOne({ playerId: new Types.ObjectId(dto.playerId) }).exec();
+  async createOrUpdateProspectStatus(
+    dto: CreatePlayerProspectStatusDto,
+  ): Promise<PlayerProspectStatus> {
+    const existing = await this.prospectModel
+      .findOne({ playerId: new Types.ObjectId(dto.playerId) })
+      .exec();
     if (existing) {
       existing.prospectLevel = dto.prospectLevel ?? existing.prospectLevel;
       existing.priority = dto.priority ?? existing.priority;
@@ -106,11 +143,18 @@ export class ScoutingService {
     return status.save();
   }
 
-  async findProspectStatusByPlayer(playerId: string): Promise<PlayerProspectStatus | null> {
-    return this.prospectModel.findOne({ playerId: new Types.ObjectId(playerId) }).exec();
+  async findProspectStatusByPlayer(
+    playerId: string,
+  ): Promise<PlayerProspectStatus | null> {
+    return this.prospectModel
+      .findOne({ playerId: new Types.ObjectId(playerId) })
+      .exec();
   }
 
-  async findProspectsByLevel(prospectLevel?: ProspectLevel, priority?: ProspectPriority): Promise<PlayerProspectStatus[]> {
+  async findProspectsByLevel(
+    prospectLevel?: ProspectLevel,
+    priority?: ProspectPriority,
+  ): Promise<PlayerProspectStatus[]> {
     const filter: any = {};
     if (prospectLevel) filter.prospectLevel = prospectLevel;
     if (priority) filter.priority = priority;
@@ -121,7 +165,10 @@ export class ScoutingService {
       .exec();
   }
 
-  async updateProspectStatus(playerId: string, dto: UpdatePlayerProspectStatusDto): Promise<PlayerProspectStatus> {
+  async updateProspectStatus(
+    playerId: string,
+    dto: UpdatePlayerProspectStatusDto,
+  ): Promise<PlayerProspectStatus> {
     const updated = await this.prospectModel
       .findOneAndUpdate(
         { playerId: new Types.ObjectId(playerId) },
@@ -129,13 +176,19 @@ export class ScoutingService {
         { new: true },
       )
       .exec();
-    if (!updated) throw new NotFoundException(`Prospect status for player ${playerId} not found`);
+    if (!updated)
+      throw new NotFoundException(
+        `Prospect status for player ${playerId} not found`,
+      );
     return updated;
   }
 
   // ─── PlayerRecommendation ───────────────────────────────────────────────────
 
-  async createRecommendation(dto: CreatePlayerRecommendationDto, scouterId: string): Promise<PlayerRecommendation> {
+  async createRecommendation(
+    dto: CreatePlayerRecommendationDto,
+    scouterId: string,
+  ): Promise<PlayerRecommendation> {
     const rec = new this.recommendationModel({
       scouterId: new Types.ObjectId(scouterId),
       playerId: new Types.ObjectId(dto.playerId),
@@ -147,7 +200,9 @@ export class ScoutingService {
     return rec.save();
   }
 
-  async findRecommendationsByScouter(scouterId: string): Promise<PlayerRecommendation[]> {
+  async findRecommendationsByScouter(
+    scouterId: string,
+  ): Promise<PlayerRecommendation[]> {
     return this.recommendationModel
       .find({ scouterId: new Types.ObjectId(scouterId) })
       .populate('playerId', 'nickname email country')
@@ -156,7 +211,9 @@ export class ScoutingService {
       .exec();
   }
 
-  async findRecommendationsByPlayer(playerId: string): Promise<PlayerRecommendation[]> {
+  async findRecommendationsByPlayer(
+    playerId: string,
+  ): Promise<PlayerRecommendation[]> {
     return this.recommendationModel
       .find({ playerId: new Types.ObjectId(playerId) })
       .populate('scouterId', 'nickname email')
@@ -165,7 +222,10 @@ export class ScoutingService {
       .exec();
   }
 
-  async findRecommendationsByOrganization(organizationId: string, status?: RecommendationStatus): Promise<PlayerRecommendation[]> {
+  async findRecommendationsByOrganization(
+    organizationId: string,
+    status?: RecommendationStatus,
+  ): Promise<PlayerRecommendation[]> {
     const filter: any = { organizationId: new Types.ObjectId(organizationId) };
     if (status) filter.status = status;
     return this.recommendationModel
@@ -176,7 +236,10 @@ export class ScoutingService {
       .exec();
   }
 
-  async updateRecommendationStatus(id: string, status: RecommendationStatus): Promise<PlayerRecommendation> {
+  async updateRecommendationStatus(
+    id: string,
+    status: RecommendationStatus,
+  ): Promise<PlayerRecommendation> {
     const updated = await this.recommendationModel
       .findByIdAndUpdate(id, { status }, { new: true })
       .populate('playerId', 'nickname email country')
@@ -188,7 +251,10 @@ export class ScoutingService {
 
   // ─── Watchlist ─────────────────────────────────────────────────────────────
 
-  async addToWatchlist(scouterId: string, dto: CreateWatchlistDto): Promise<Watchlist> {
+  async addToWatchlist(
+    scouterId: string,
+    dto: CreateWatchlistDto,
+  ): Promise<Watchlist> {
     const existing = await this.watchlistModel
       .findOne({
         scouterId: new Types.ObjectId(scouterId),
@@ -212,7 +278,10 @@ export class ScoutingService {
     return populated ?? saved;
   }
 
-  async removeFromWatchlist(scouterId: string, playerId: string): Promise<void> {
+  async removeFromWatchlist(
+    scouterId: string,
+    playerId: string,
+  ): Promise<void> {
     const deleted = await this.watchlistModel
       .findOneAndDelete({
         scouterId: new Types.ObjectId(scouterId),
@@ -240,7 +309,10 @@ export class ScoutingService {
       .exec();
   }
 
-  async isPlayerInWatchlist(scouterId: string, playerId: string): Promise<boolean> {
+  async isPlayerInWatchlist(
+    scouterId: string,
+    playerId: string,
+  ): Promise<boolean> {
     const entry = await this.watchlistModel
       .findOne({
         scouterId: new Types.ObjectId(scouterId),
@@ -250,10 +322,17 @@ export class ScoutingService {
     return !!entry;
   }
 
-  async updateWatchlistEntry(id: string, scouterId: string, dto: UpdateWatchlistDto): Promise<Watchlist> {
+  async updateWatchlistEntry(
+    id: string,
+    scouterId: string,
+    dto: UpdateWatchlistDto,
+  ): Promise<Watchlist> {
     const updated = await this.watchlistModel
       .findOneAndUpdate(
-        { _id: new Types.ObjectId(id), scouterId: new Types.ObjectId(scouterId) },
+        {
+          _id: new Types.ObjectId(id),
+          scouterId: new Types.ObjectId(scouterId),
+        },
         dto,
         { new: true },
       )
@@ -278,11 +357,20 @@ export class ScoutingService {
     let playerIds: string[] | null = null;
 
     if (gameId) {
-      const leaderboard = await this.rankService.getLeaderboard(gameId, undefined, 500);
-      let ids = leaderboard.map((e: any) => (e.user?._id ?? e.user)?.toString()).filter(Boolean);
+      const leaderboard = await this.rankService.getLeaderboard(
+        gameId,
+        undefined,
+        500,
+      );
+      let ids = leaderboard
+        .map((e: any) => (e.user?._id ?? e.user)?.toString())
+        .filter(Boolean);
       if (tier) {
         ids = leaderboard
-          .filter((e: any) => e.tier && String(e.tier).toUpperCase() === tier.toUpperCase())
+          .filter(
+            (e: any) =>
+              e.tier && String(e.tier).toUpperCase() === tier.toUpperCase(),
+          )
           .map((e: any) => (e.user?._id ?? e.user)?.toString())
           .filter(Boolean);
       }
@@ -310,7 +398,7 @@ export class ScoutingService {
 
     if (country) {
       results = results.filter((p: any) => {
-        const c = (p.userId as any)?.country ?? '';
+        const c = p.userId?.country ?? '';
         return c.toLowerCase().includes(country.toLowerCase());
       });
     }

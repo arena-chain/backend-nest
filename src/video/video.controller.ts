@@ -19,7 +19,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { videoUploadOptions } from '../common/utils/file-upload.utils';
@@ -42,7 +49,10 @@ export class VideoController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new video' })
-  @ApiResponse({ status: 201, description: 'The video has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The video has been successfully created.',
+  })
   create(@Body() createVideoDto: CreateVideoDto) {
     return this.videoService.create(createVideoDto);
   }
@@ -74,7 +84,10 @@ export class VideoController {
         file: { type: 'string', format: 'binary' },
         title: { type: 'string' },
         description: { type: 'string' },
-        uploader: { type: 'string', description: 'Optional; defaults to authenticated user id' },
+        uploader: {
+          type: 'string',
+          description: 'Optional; defaults to authenticated user id',
+        },
         game: { type: 'string' },
         thumbnailUrl: { type: 'string' },
         duration: { type: 'number' },
@@ -86,7 +99,8 @@ export class VideoController {
         channelVisibility: {
           type: 'string',
           enum: ['public', 'private'],
-          description: 'Show this video on your channel page when public (default: private)',
+          description:
+            'Show this video on your channel page when public (default: private)',
         },
       },
     },
@@ -117,17 +131,18 @@ export class VideoController {
       uploader,
       game: body.game,
       duration: body.duration ? Number(body.duration) : undefined,
-      channelVisibility:
-        channelVisRaw === 'public' ? 'public' : 'private',
+      channelVisibility: channelVisRaw === 'public' ? 'public' : 'private',
     };
-    const video = (await this.videoService.create(createVideoDto)) as VideoDocument;
+    const video = (await this.videoService.create(
+      createVideoDto,
+    )) as VideoDocument;
     const videoId = video._id.toString();
 
     const visibility = parseHighlightVisibility(
       (body as { highlightsVisibility?: string }).highlightsVisibility,
     );
 
-    const videoJson = (video as VideoDocument).toObject();
+    const videoJson = video.toObject();
 
     try {
       const { jobId } = await this.highlightBullmq.enqueueProcessHighlights({

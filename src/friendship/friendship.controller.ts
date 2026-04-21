@@ -1,5 +1,14 @@
 // src/friendship/friendship.controller.ts
-import { Controller, Get, Post, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { FriendshipService } from './friendship.service';
 import { SendFriendRequestDto } from './dto/send-friend-request.dto';
@@ -9,15 +18,24 @@ import { RespondFriendRequestDto } from './dto/respond-friend-request.dto';
 @Controller('friendship')
 // @UseGuards(JwtAuthGuard) // Uncomment when auth is fully implemented
 export class FriendshipController {
-  constructor(private readonly friendshipService: FriendshipService) { }
+  constructor(private readonly friendshipService: FriendshipService) {}
 
   @Post('send-request')
   @ApiOperation({ summary: 'Send a friend request' })
   @ApiResponse({ status: 201, description: 'Friend request sent successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request - Invalid data or already friends' })
-  @ApiResponse({ status: 409, description: 'Conflict - Friend request already exists' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid data or already friends',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - Friend request already exists',
+  })
   async sendFriendRequest(@Body() dto: SendFriendRequestDto) {
-    return this.friendshipService.sendFriendRequest(dto.requesterId, dto.recipientId);
+    return this.friendshipService.sendFriendRequest(
+      dto.requesterId,
+      dto.recipientId,
+    );
   }
 
   @Post('accept/:friendshipId')
@@ -83,7 +101,10 @@ export class FriendshipController {
   @Get('friends/:userId')
   @ApiOperation({ summary: 'Get all friends of a user' })
   @ApiParam({ name: 'userId', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Returns list of friends with populated user data' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of friends with populated user data',
+  })
   async getFriends(@Param('userId') userId: string) {
     return this.friendshipService.getFriends(userId);
   }
@@ -121,7 +142,10 @@ export class FriendshipController {
     @Param('userId1') userId1: string,
     @Param('userId2') userId2: string,
   ) {
-    const areFriends = await this.friendshipService.areFriends(userId1, userId2);
+    const areFriends = await this.friendshipService.areFriends(
+      userId1,
+      userId2,
+    );
     return { areFriends };
   }
 
@@ -131,13 +155,16 @@ export class FriendshipController {
   @ApiParam({ name: 'userId2', description: 'Second User ID' })
   @ApiResponse({
     status: 200,
-    description: 'Returns status: NONE, PENDING, ACCEPTED, REJECTED, BLOCKED'
+    description: 'Returns status: NONE, PENDING, ACCEPTED, REJECTED, BLOCKED',
   })
   async getFriendshipStatus(
     @Param('userId1') userId1: string,
     @Param('userId2') userId2: string,
   ) {
-    const status = await this.friendshipService.getFriendshipStatus(userId1, userId2);
+    const status = await this.friendshipService.getFriendshipStatus(
+      userId1,
+      userId2,
+    );
     return { status };
   }
 }

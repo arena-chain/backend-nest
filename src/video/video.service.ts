@@ -16,13 +16,15 @@ import { Video, VideoDocument } from './schema/video.schema';
 export class VideoService {
   constructor(
     @InjectModel(Video.name) private videoModel: Model<VideoDocument>,
-  ) { }
+  ) {}
 
   async create(createVideoDto: CreateVideoDto): Promise<Video> {
     const videoData = {
       ...createVideoDto,
       uploader: new Types.ObjectId(createVideoDto.uploader),
-      game: createVideoDto.game ? new Types.ObjectId(createVideoDto.game) : undefined,
+      game: createVideoDto.game
+        ? new Types.ObjectId(createVideoDto.game)
+        : undefined,
       channelVisibility: createVideoDto.channelVisibility ?? 'private',
     };
     const createdVideo = new this.videoModel(videoData);

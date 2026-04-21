@@ -6,10 +6,12 @@ import { Standings, StandingsSchema } from './schemas/standings.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Standings.name, schema: StandingsSchema }]),
+    MongooseModule.forFeature([
+      { name: Standings.name, schema: StandingsSchema },
+    ]),
   ],
   controllers: [StandingsController],
   providers: [StandingsService],
   exports: [StandingsService], // exported so MatchModule can inject it
 })
-export class StandingsModule { }
+export class StandingsModule {}

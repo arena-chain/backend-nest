@@ -5,21 +5,20 @@ export type PartnershipDocument = Partnership & Document;
 
 @Schema({ timestamps: true })
 export class Partnership {
-    @Prop({ required: true })
-    name: string;
+  @Prop({ required: true })
+  name: string;
 
-    @Prop()
-    logo: string;
+  @Prop()
+  logo: string;
 
-    @Prop({ enum: ['Event Sponsor', 'Platform Sponsor'], required: true })
-    type: string;
+  @Prop({ enum: ['Event Sponsor', 'Platform Sponsor'], required: true })
+  type: string;
 
+  @Prop()
+  description: string;
 
-    @Prop()
-    description: string;
-
-    @Prop()
-    website: string;
+  @Prop()
+  website: string;
 }
 
 export const PartnershipSchema = SchemaFactory.createForClass(Partnership);

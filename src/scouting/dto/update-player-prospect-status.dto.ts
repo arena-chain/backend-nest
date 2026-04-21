@@ -1,5 +1,8 @@
 import { IsEnum, IsOptional } from 'class-validator';
-import { ProspectLevel, ProspectPriority } from '../schemas/player-prospect-status.schema';
+import {
+  ProspectLevel,
+  ProspectPriority,
+} from '../schemas/player-prospect-status.schema';
 
 export class UpdatePlayerProspectStatusDto {
   @IsEnum(ProspectLevel)

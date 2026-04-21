@@ -8,10 +8,13 @@ import { Achievement, AchievementDocument } from './schemas/achievement.schema';
 @Injectable()
 export class AchievementsService {
   constructor(
-    @InjectModel(Achievement.name) private achievementModel: Model<AchievementDocument>,
-  ) { }
+    @InjectModel(Achievement.name)
+    private achievementModel: Model<AchievementDocument>,
+  ) {}
 
-  async create(createAchievementDto: CreateAchievementDto): Promise<Achievement> {
+  async create(
+    createAchievementDto: CreateAchievementDto,
+  ): Promise<Achievement> {
     const createdAchievement = new this.achievementModel(createAchievementDto);
     return createdAchievement.save();
   }
@@ -28,7 +31,10 @@ export class AchievementsService {
     return achievement;
   }
 
-  async update(id: string, updateAchievementDto: UpdateAchievementDto): Promise<Achievement> {
+  async update(
+    id: string,
+    updateAchievementDto: UpdateAchievementDto,
+  ): Promise<Achievement> {
     const updatedAchievement = await this.achievementModel
       .findByIdAndUpdate(id, updateAchievementDto, { new: true })
       .exec();
@@ -39,7 +45,9 @@ export class AchievementsService {
   }
 
   async remove(id: string): Promise<Achievement> {
-    const deletedAchievement = await this.achievementModel.findByIdAndDelete(id).exec();
+    const deletedAchievement = await this.achievementModel
+      .findByIdAndDelete(id)
+      .exec();
     if (!deletedAchievement) {
       throw new NotFoundException(`Achievement with ID ${id} not found`);
     }

@@ -4,9 +4,9 @@ import { GameAssetsService } from './game-assets.service';
 import { GameAssetsController } from './game-assets.controller';
 
 @Module({
-    imports: [ConfigModule],
-    controllers: [GameAssetsController],
-    providers: [GameAssetsService],
-    exports: [GameAssetsService],
+  imports: [ConfigModule],
+  controllers: [GameAssetsController],
+  providers: [GameAssetsService],
+  exports: [GameAssetsService],
 })
 export class GameAssetsModule {}

@@ -5,7 +5,10 @@ import { RankController } from './rank.controller';
 import { PlayerRank, PlayerRankSchema } from './schemas/rank.schema';
 import { RankHistory, RankHistorySchema } from './schemas/rank-history.schema';
 import { Penalty, PenaltySchema } from './schemas/penalty.schema';
-import { RankTierConfig, RankTierConfigSchema } from './schemas/rank-tier-config.schema';
+import {
+  RankTierConfig,
+  RankTierConfigSchema,
+} from './schemas/rank-tier-config.schema';
 
 @Module({
   imports: [
@@ -20,4 +23,4 @@ import { RankTierConfig, RankTierConfigSchema } from './schemas/rank-tier-config
   providers: [RankService],
   exports: [RankService], // Export service for use in other modules
 })
-export class RankModule { }
+export class RankModule {}

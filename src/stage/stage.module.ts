@@ -5,11 +5,11 @@ import { StageService } from './stage.service';
 import { StageController } from './stage.controller';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: Stage.name, schema: StageSchema }]),
-    ],
-    controllers: [StageController],
-    providers: [StageService],
-    exports: [StageService],
+  imports: [
+    MongooseModule.forFeature([{ name: Stage.name, schema: StageSchema }]),
+  ],
+  controllers: [StageController],
+  providers: [StageService],
+  exports: [StageService],
 })
 export class StageModule {}

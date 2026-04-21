@@ -5,6 +5,7 @@ import { PresenceGateway } from './presence.gateway';
 import { PresenceService } from './presence.service';
 import { FriendshipModule } from '../friendship/friendship.module';
 import { UsersModule } from '../user/user.module';
+import { PresenceController } from './presence.controller';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from '../user/user.module';
     FriendshipModule,
     UsersModule,
   ],
+  controllers: [PresenceController],
   providers: [PresenceGateway, PresenceService],
   exports: [PresenceService],
 })

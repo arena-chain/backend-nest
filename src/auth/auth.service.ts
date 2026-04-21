@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Registration, RegistrationDocument } from './schemas/registration.schema';
+import {
+  Registration,
+  RegistrationDocument,
+} from './schemas/registration.schema';
 import { UsersService } from '../user/user.service';
 import { PlayerService } from '../player/player.service';
 import { TeamManagerService } from '../team-manager/team-manager.service';
@@ -35,7 +38,8 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    @InjectModel(Registration.name) private registrationModel: Model<RegistrationDocument>,
+    @InjectModel(Registration.name)
+    private registrationModel: Model<RegistrationDocument>,
     private usersService: UsersService,
     private playerService: PlayerService,
     private teamManagerService: TeamManagerService,
@@ -44,7 +48,7 @@ export class AuthService {
     private adminService: AdminService,
     private jwtService: JwtService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   /** Find a pending signup in `registrations` by email or nickname. */
   private async findPendingRegistration(identifier: string) {
@@ -65,7 +69,9 @@ export class AuthService {
   ): Promise<boolean> {
     const hash = user.passwordHash;
     if (!hash || typeof hash !== 'string') {
-      this.logger.warn(`Login failed: user ${user._id} has empty or missing passwordHash`);
+      this.logger.warn(
+        `Login failed: user ${user._id} has empty or missing passwordHash`,
+      );
       return false;
     }
     try {
@@ -74,13 +80,19 @@ export class AuthService {
       }
       if (hash === plainPassword) {
         const newHash = await bcrypt.hash(plainPassword, 10);
-        await this.usersService.update(user._id.toString(), { passwordHash: newHash });
-        this.logger.log(`Upgraded plaintext password to bcrypt for user ${user._id}`);
+        await this.usersService.update(user._id.toString(), {
+          passwordHash: newHash,
+        });
+        this.logger.log(
+          `Upgraded plaintext password to bcrypt for user ${user._id}`,
+        );
         return true;
       }
       return false;
     } catch (e) {
-      this.logger.warn(`Login password check failed for user ${user._id}: ${e}`);
+      this.logger.warn(
+        `Login password check failed for user ${user._id}: ${e}`,
+      );
       return false;
     }
   }
@@ -157,7 +169,7 @@ export class AuthService {
         otp,
         otpExpires,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     await this.mailService.sendVerificationEmail(dto.email, otp);
@@ -196,7 +208,7 @@ export class AuthService {
         otp,
         otpExpires,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     await this.mailService.sendVerificationEmail(dto.email, otp);
@@ -225,7 +237,7 @@ export class AuthService {
         otp,
         otpExpires,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     await this.mailService.sendVerificationEmail(dto.email, otp);
@@ -283,7 +295,7 @@ export class AuthService {
         otp,
         otpExpires,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     await this.mailService.sendVerificationEmail(dto.email, otp);
@@ -306,7 +318,9 @@ export class AuthService {
       if (pending) {
         user = await this.usersService.findByEmail(pending.email);
         if (user) {
-          await this.registrationModel.deleteOne({ _id: pending._id }).catch(() => undefined);
+          await this.registrationModel
+            .deleteOne({ _id: pending._id })
+            .catch(() => undefined);
           this.logger.warn(
             `Removed stale registration for ${pending.email}; user already exists.`,
           );
@@ -331,10 +345,13 @@ export class AuthService {
       );
     }
 
-    const valid = await this.verifyPasswordAndUpgradeIfNeeded(dto.password, user);
+    const valid = await this.verifyPasswordAndUpgradeIfNeeded(
+      dto.password,
+      user,
+    );
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    const roleKey = ((user.role as string) || UserRole.PLAYER).toLowerCase();
+    const roleKey = (user.role || UserRole.PLAYER).toLowerCase();
     let role: UserRole;
     let profile: any;
 
@@ -373,7 +390,11 @@ export class AuthService {
       throw e;
     }
 
-    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      role,
+    );
 
     return {
       ...tokens,
@@ -394,7 +415,8 @@ export class AuthService {
 
     if (pending) {
       if (pending.otp !== dto.otp) throw new BadRequestException('Invalid OTP');
-      if (pending.otpExpires < new Date()) throw new BadRequestException('OTP expired');
+      if (pending.otpExpires < new Date())
+        throw new BadRequestException('OTP expired');
 
       // Create user
       const user = await this.usersService.create({
@@ -409,29 +431,44 @@ export class AuthService {
       let profile;
       switch (pending.role) {
         case UserRole.PLAYER:
-          profile = await this.playerService.create(user._id as Types.ObjectId, pending.roleData);
+          profile = await this.playerService.create(user._id, pending.roleData);
           break;
         case UserRole.TEAM_MANAGER:
-          profile = await this.teamManagerService.create(user._id as Types.ObjectId, pending.roleData);
+          profile = await this.teamManagerService.create(
+            user._id,
+            pending.roleData,
+          );
           break;
         case UserRole.REFEREE:
-          profile = await this.refereeService.create(user._id as Types.ObjectId, pending.roleData);
+          profile = await this.refereeService.create(
+            user._id,
+            pending.roleData,
+          );
           break;
         case UserRole.SCOUTER:
-          profile = await this.scouterService.create(user._id as Types.ObjectId, pending.roleData);
+          profile = await this.scouterService.create(
+            user._id,
+            pending.roleData,
+          );
           break;
         case UserRole.ADMIN:
-          profile = await this.adminService.create(user._id as Types.ObjectId, pending.roleData);
+          profile = await this.adminService.create(user._id, pending.roleData);
           break;
       }
 
       // Mark verified
-      await this.usersService.update(user._id.toString(), { isEmailVerified: true });
+      await this.usersService.update(user._id.toString(), {
+        isEmailVerified: true,
+      });
 
       // Clean up
       await this.registrationModel.deleteOne({ _id: pending._id });
 
-      const tokens = await this.generateTokens(user._id.toString(), user.email, pending.role as UserRole);
+      const tokens = await this.generateTokens(
+        user._id.toString(),
+        user.email,
+        pending.role as UserRole,
+      );
 
       return {
         message: 'Registration complete',
@@ -443,7 +480,7 @@ export class AuthService {
           role: pending.role,
           profile,
           isEmailVerified: true,
-        }
+        },
       };
     }
 
@@ -451,8 +488,13 @@ export class AuthService {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) throw new NotFoundException('Registration or user not found');
 
-    if (user.emailVerificationOtp !== dto.otp) throw new BadRequestException('Invalid OTP');
-    if (!user.emailVerificationOtpExpires || user.emailVerificationOtpExpires < new Date()) throw new BadRequestException('OTP expired');
+    if (user.emailVerificationOtp !== dto.otp)
+      throw new BadRequestException('Invalid OTP');
+    if (
+      !user.emailVerificationOtpExpires ||
+      user.emailVerificationOtpExpires < new Date()
+    )
+      throw new BadRequestException('OTP expired');
 
     await this.usersService.update(user._id.toString(), {
       isEmailVerified: true,
@@ -471,7 +513,10 @@ export class AuthService {
     // Check pending first
     const pending = await this.registrationModel.findOne({ email });
     if (pending) {
-      await this.registrationModel.updateOne({ _id: pending._id }, { otp, otpExpires });
+      await this.registrationModel.updateOne(
+        { _id: pending._id },
+        { otp, otpExpires },
+      );
       await this.mailService.sendVerificationEmail(email, otp);
       return { message: 'OTP resent' };
     }
@@ -514,7 +559,10 @@ export class AuthService {
       throw new BadRequestException('Invalid OTP');
     }
 
-    if (!user.resetPasswordOtpExpires || user.resetPasswordOtpExpires < new Date()) {
+    if (
+      !user.resetPasswordOtpExpires ||
+      user.resetPasswordOtpExpires < new Date()
+    ) {
       throw new BadRequestException('OTP expired');
     }
 
@@ -529,7 +577,10 @@ export class AuthService {
       throw new BadRequestException('Invalid OTP');
     }
 
-    if (!user.resetPasswordOtpExpires || user.resetPasswordOtpExpires < new Date()) {
+    if (
+      !user.resetPasswordOtpExpires ||
+      user.resetPasswordOtpExpires < new Date()
+    ) {
       throw new BadRequestException('OTP expired');
     }
 
@@ -557,7 +608,9 @@ export class AuthService {
       user = await this.usersService.findByEmail(email);
       if (user) {
         // Link google account
-        user = await this.usersService.update(user._id.toString(), { googleId: id });
+        user = await this.usersService.update(user._id.toString(), {
+          googleId: id,
+        });
       } else {
         // Create new user (default to PLAYER role for google login?)
         user = await this.usersService.createWithGoogle({
@@ -568,7 +621,7 @@ export class AuthService {
         });
 
         // Create player profile by default
-        await this.playerService.create(user._id as Types.ObjectId, {
+        await this.playerService.create(user._id, {
           isPro: false,
           isVerified: false,
         });
@@ -584,7 +637,11 @@ export class AuthService {
       // stay player
     }
 
-    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      role,
+    );
     return tokens;
   }
 
@@ -605,7 +662,7 @@ export class AuthService {
       });
 
       // Create player profile by default
-      await this.playerService.create(user._id as Types.ObjectId, {
+      await this.playerService.create(user._id, {
         isPro: false,
         isVerified: false,
       });
@@ -620,7 +677,11 @@ export class AuthService {
       // stay player
     }
 
-    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      role,
+    );
     return tokens;
   }
 
@@ -640,8 +701,8 @@ export class AuthService {
         // On accepte les jetons venant du Web OU de l'Android
         audience: [
           process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_ANDROID_CLIENT_ID
-        ].filter(id => !!id), // On enlève les valeurs vides
+          process.env.GOOGLE_ANDROID_CLIENT_ID,
+        ].filter((id) => !!id), // On enlève les valeurs vides
       });
       const payload = ticket.getPayload();
       if (!payload) throw new Error('No payload');
@@ -664,7 +725,11 @@ export class AuthService {
         googleId = data.sub;
         picture = data.picture;
       } catch (innerError) {
-        console.error('Google token verification failed:', error.message, innerError.message);
+        console.error(
+          'Google token verification failed:',
+          error.message,
+          innerError.message,
+        );
         throw new UnauthorizedException('Invalid Google token');
       }
     }
@@ -692,7 +757,7 @@ export class AuthService {
         });
 
         // Create player profile by default
-        await this.playerService.create(user._id as Types.ObjectId, {
+        await this.playerService.create(user._id, {
           isPro: false,
           isVerified: false,
         });
@@ -731,7 +796,11 @@ export class AuthService {
       }
     }
 
-    const tokens = await this.generateTokens(user._id.toString(), user.email, role);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      role,
+    );
 
     return {
       ...tokens,
@@ -791,11 +860,17 @@ export class AuthService {
     };
   }
 
-  async updateProfile(email: string, updateData: { nickname?: string; country?: string; avatar?: string }) {
+  async updateProfile(
+    email: string,
+    updateData: { nickname?: string; country?: string; avatar?: string },
+  ) {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new NotFoundException('User not found');
 
-    const updatedUser = await this.usersService.update(user._id.toString(), updateData);
+    const updatedUser = await this.usersService.update(
+      user._id.toString(),
+      updateData,
+    );
 
     return {
       message: 'Profile updated successfully',

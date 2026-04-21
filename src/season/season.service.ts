@@ -7,53 +7,55 @@ import { UpdateSeasonDto } from './dto/update-season.dto';
 
 @Injectable()
 export class SeasonService {
-    constructor(
-        @InjectModel(Season.name) private seasonModel: Model<SeasonDocument>,
-    ) { }
+  constructor(
+    @InjectModel(Season.name) private seasonModel: Model<SeasonDocument>,
+  ) {}
 
-    async create(dto: CreateSeasonDto): Promise<Season> {
-        return new this.seasonModel(dto).save();
-    }
+  async create(dto: CreateSeasonDto): Promise<Season> {
+    return new this.seasonModel(dto).save();
+  }
 
-    async findAll(): Promise<Season[]> {
-        return this.seasonModel.find().sort({ createdAt: -1 }).exec();
-    }
+  async findAll(): Promise<Season[]> {
+    return this.seasonModel.find().sort({ createdAt: -1 }).exec();
+  }
 
-    async findByLeague(leagueId: string): Promise<Season[]> {
-        return this.seasonModel.find({ leagueId }).sort({ startDate: -1 }).exec();
-    }
+  async findByLeague(leagueId: string): Promise<Season[]> {
+    return this.seasonModel.find({ leagueId }).sort({ startDate: -1 }).exec();
+  }
 
-    async findOne(id: string): Promise<Season> {
-        const season = await this.seasonModel.findById(id).exec();
-        if (!season) throw new NotFoundException(`Season ${id} not found`);
-        return season;
-    }
+  async findOne(id: string): Promise<Season> {
+    const season = await this.seasonModel.findById(id).exec();
+    if (!season) throw new NotFoundException(`Season ${id} not found`);
+    return season;
+  }
 
-    async update(id: string, dto: UpdateSeasonDto): Promise<Season> {
-        const updated = await this.seasonModel.findByIdAndUpdate(id, dto, { new: true }).exec();
-        if (!updated) throw new NotFoundException(`Season ${id} not found`);
-        return updated;
-    }
+  async update(id: string, dto: UpdateSeasonDto): Promise<Season> {
+    const updated = await this.seasonModel
+      .findByIdAndUpdate(id, dto, { new: true })
+      .exec();
+    if (!updated) throw new NotFoundException(`Season ${id} not found`);
+    return updated;
+  }
 
-    async activate(id: string): Promise<Season> {
-        const updated = await this.seasonModel
-            .findByIdAndUpdate(id, { status: SeasonStatus.ONGOING }, { new: true })
-            .exec();
-        if (!updated) throw new NotFoundException(`Season ${id} not found`);
-        return updated;
-    }
+  async activate(id: string): Promise<Season> {
+    const updated = await this.seasonModel
+      .findByIdAndUpdate(id, { status: SeasonStatus.ONGOING }, { new: true })
+      .exec();
+    if (!updated) throw new NotFoundException(`Season ${id} not found`);
+    return updated;
+  }
 
-    async close(id: string): Promise<Season> {
-        const updated = await this.seasonModel
-            .findByIdAndUpdate(id, { status: SeasonStatus.FINISHED }, { new: true })
-            .exec();
-        if (!updated) throw new NotFoundException(`Season ${id} not found`);
-        return updated;
-    }
+  async close(id: string): Promise<Season> {
+    const updated = await this.seasonModel
+      .findByIdAndUpdate(id, { status: SeasonStatus.FINISHED }, { new: true })
+      .exec();
+    if (!updated) throw new NotFoundException(`Season ${id} not found`);
+    return updated;
+  }
 
-    async remove(id: string): Promise<Season> {
-        const deleted = await this.seasonModel.findByIdAndDelete(id).exec();
-        if (!deleted) throw new NotFoundException(`Season ${id} not found`);
-        return deleted;
-    }
+  async remove(id: string): Promise<Season> {
+    const deleted = await this.seasonModel.findByIdAndDelete(id).exec();
+    if (!deleted) throw new NotFoundException(`Season ${id} not found`);
+    return deleted;
+  }
 }

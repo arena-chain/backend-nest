@@ -1,5 +1,14 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body, Get, UseGuards, Req, Res, Patch } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  UseGuards,
+  Req,
+  Res,
+  Patch,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -20,8 +29,8 @@ import { ConfigService } from '@nestjs/config';
 export class AuthController {
   constructor(
     private authService: AuthService,
-    private configService: ConfigService
-  ) { }
+    private configService: ConfigService,
+  ) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user (generic - requires role)' })
@@ -31,11 +40,14 @@ export class AuthController {
     schema: {
       example: {
         accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-      }
-    }
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      },
+    },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - validation failed or role missing' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - validation failed or role missing',
+  })
   @ApiResponse({ status: 409, description: 'User already exists' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
@@ -51,7 +63,10 @@ export class AuthController {
 
   @Post('register/team-manager')
   @ApiOperation({ summary: 'Register a new team manager' })
-  @ApiResponse({ status: 201, description: 'Team manager successfully registered' })
+  @ApiResponse({
+    status: 201,
+    description: 'Team manager successfully registered',
+  })
   @ApiResponse({ status: 409, description: 'User already exists' })
   registerTeamManager(@Body() dto: RegisterTeamManagerDto) {
     return this.authService.registerTeamManager(dto);
@@ -87,7 +102,10 @@ export class AuthController {
     status: 200,
     description: 'User successfully logged in with profile data',
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - invalid credentials' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid credentials',
+  })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
@@ -132,14 +150,15 @@ export class AuthController {
   @Get('google')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Login with Google' })
-  async googleAuth(@Req() req) { }
+  async googleAuth(@Req() req) {}
 
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google Auth callback' })
   async googleAuthRedirect(@Req() req, @Res() res) {
     const tokens = await this.authService.googleLogin(req);
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+    const frontendUrl =
+      this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
 
     return res.send(`
       <html>
@@ -166,14 +185,15 @@ export class AuthController {
   @Get('steam')
   @UseGuards(AuthGuard('steam'))
   @ApiOperation({ summary: 'Login with Steam' })
-  async steamAuth(@Req() req) { }
+  async steamAuth(@Req() req) {}
 
   @Get('steam/return')
   @UseGuards(AuthGuard('steam'))
   @ApiOperation({ summary: 'Steam Auth callback' })
   async steamAuthRedirect(@Req() req, @Res() res) {
     const tokens = await this.authService.steamLogin(req);
-    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
+    const frontendUrl =
+      this.configService.get('FRONTEND_URL') || 'http://localhost:5173';
 
     return res.send(`
       <html>
@@ -208,7 +228,11 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
-  async updateProfile(@Req() req, @Body() updateData: { nickname?: string; country?: string; avatar?: string }) {
+  async updateProfile(
+    @Req() req,
+    @Body()
+    updateData: { nickname?: string; country?: string; avatar?: string },
+  ) {
     return this.authService.updateProfile(req.user.email, updateData);
   }
 
@@ -226,10 +250,10 @@ export class AuthController {
           email: 'user@gmail.com',
           nickname: 'John Doe',
           role: 'player',
-          isEmailVerified: true
-        }
-      }
-    }
+          isEmailVerified: true,
+        },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: 'Invalid Google token' })
   googleMobileAuth(@Body() body: { idToken: string }) {

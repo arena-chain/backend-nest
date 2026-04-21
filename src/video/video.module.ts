@@ -3,7 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { VideoService } from './video.service';
 import { VideoController } from './video.controller';
 import { Video, VideoSchema } from './schema/video.schema';
-import { VideoComment, VideoCommentSchema } from './schema/video-comment.schema';
+import {
+  VideoComment,
+  VideoCommentSchema,
+} from './schema/video-comment.schema';
 import { VideoLike, VideoLikeSchema } from './schema/video-like.schema';
 import {
   VideoCommentLike,
@@ -26,4 +29,4 @@ import { HighlightsModule } from '../highlights/highlights.module';
   providers: [VideoService, VideoEngagementService],
   exports: [VideoService],
 })
-export class VideoModule { }
+export class VideoModule {}

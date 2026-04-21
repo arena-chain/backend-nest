@@ -10,47 +10,47 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateVideoDto {
-    @ApiProperty({ description: 'Video title' })
-    @IsString()
-    @IsNotEmpty()
-    title: string;
+  @ApiProperty({ description: 'Video title' })
+  @IsString()
+  @IsNotEmpty()
+  title: string;
 
-    @ApiPropertyOptional({ description: 'Video description' })
-    @IsString()
-    @IsOptional()
-    description?: string;
+  @ApiPropertyOptional({ description: 'Video description' })
+  @IsString()
+  @IsOptional()
+  description?: string;
 
-    @ApiProperty({ description: 'Video URL' })
-    @IsString()
-    @IsNotEmpty()
-    url: string;
+  @ApiProperty({ description: 'Video URL' })
+  @IsString()
+  @IsNotEmpty()
+  url: string;
 
-    @ApiPropertyOptional({ description: 'Thumbnail URL' })
-    @IsString()
-    @IsOptional()
-    thumbnailUrl?: string;
+  @ApiPropertyOptional({ description: 'Thumbnail URL' })
+  @IsString()
+  @IsOptional()
+  thumbnailUrl?: string;
 
-    @ApiProperty({ description: 'Uploader User ID' })
-    @IsMongoId()
-    @IsNotEmpty()
-    uploader: string;
+  @ApiProperty({ description: 'Uploader User ID' })
+  @IsMongoId()
+  @IsNotEmpty()
+  uploader: string;
 
-    @ApiPropertyOptional({ description: 'Game/Catalog ID' })
-    @IsMongoId()
-    @IsOptional()
-    game?: string;
+  @ApiPropertyOptional({ description: 'Game/Catalog ID' })
+  @IsMongoId()
+  @IsOptional()
+  game?: string;
 
-    @ApiPropertyOptional({ description: 'Video duration in seconds' })
-    @IsNumber()
-    @Min(0)
-    @IsOptional()
-    duration?: number;
+  @ApiPropertyOptional({ description: 'Video duration in seconds' })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  duration?: number;
 
-    @ApiPropertyOptional({
-      enum: ['public', 'private'],
-      description: 'Show this upload on the channel page when public',
-    })
-    @IsOptional()
-    @IsIn(['public', 'private'])
-    channelVisibility?: 'public' | 'private';
+  @ApiPropertyOptional({
+    enum: ['public', 'private'],
+    description: 'Show this upload on the channel page when public',
+  })
+  @IsOptional()
+  @IsIn(['public', 'private'])
+  channelVisibility?: 'public' | 'private';
 }

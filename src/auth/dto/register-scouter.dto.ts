@@ -9,7 +9,9 @@ export class RegisterScouterDto extends RegisterDto {
   @IsEnum(ScouterLevel)
   level?: ScouterLevel;
 
-  @ApiPropertyOptional({ description: 'Internal notes about scouting activity' })
+  @ApiPropertyOptional({
+    description: 'Internal notes about scouting activity',
+  })
   @IsOptional()
   @IsString()
   notes?: string;

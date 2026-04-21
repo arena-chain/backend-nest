@@ -6,14 +6,14 @@ export type AdminProfileDocument = AdminProfile & Document;
 
 @Schema({ timestamps: true })
 export class AdminProfile {
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
-    userId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
+  userId: Types.ObjectId;
 
-    @Prop({ default: 1 })
-    adminLevel: number;
+  @Prop({ default: 1 })
+  adminLevel: number;
 
-    @Prop({ type: [String], default: [] })
-    permissions: string[];
+  @Prop({ type: [String], default: [] })
+  permissions: string[];
 }
 
 export const AdminProfileSchema = SchemaFactory.createForClass(AdminProfile);

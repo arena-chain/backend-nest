@@ -5,9 +5,11 @@ import { SeasonService } from './season.service';
 import { SeasonController } from './season.controller';
 
 @Module({
-    imports: [MongooseModule.forFeature([{ name: Season.name, schema: SeasonSchema }])],
-    controllers: [SeasonController],
-    providers: [SeasonService],
-    exports: [SeasonService, MongooseModule],
+  imports: [
+    MongooseModule.forFeature([{ name: Season.name, schema: SeasonSchema }]),
+  ],
+  controllers: [SeasonController],
+  providers: [SeasonService],
+  exports: [SeasonService, MongooseModule],
 })
-export class SeasonModule { }
+export class SeasonModule {}

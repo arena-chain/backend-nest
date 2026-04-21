@@ -25,22 +25,26 @@ describe('LevelService XP logic', () => {
       providers: [
         LevelService,
         { provide: 'PlayerLevelModel', useValue: playerLevelModelMock },
-        { provide: 'ProcessedXpEventModel', useValue: processedXpEventModelMock },
+        {
+          provide: 'ProcessedXpEventModel',
+          useValue: processedXpEventModelMock,
+        },
       ],
     })
       .overrideProvider(LevelService)
       .useValue(
-        new LevelService(
-          playerLevelModelMock as any,
-          processedXpEventModelMock as any,
-        ),
+        new LevelService(playerLevelModelMock, processedXpEventModelMock),
       )
       .compile();
 
     service = module.get<LevelService>(LevelService);
   });
 
-  function createPlayerDoc(initial: { level: number; currentXP: number; totalXP: number }) {
+  function createPlayerDoc(initial: {
+    level: number;
+    currentXP: number;
+    totalXP: number;
+  }) {
     const doc: any = {
       user: new Types.ObjectId(),
       level: initial.level,
@@ -124,7 +128,9 @@ describe('LevelService XP logic', () => {
     mockFindOnePlayer(playerDoc);
     processedXpEventModelMock.create
       .mockResolvedValueOnce({})
-      .mockRejectedValueOnce(Object.assign(new Error('duplicate'), { code: 11000 }));
+      .mockRejectedValueOnce(
+        Object.assign(new Error('duplicate'), { code: 11000 }),
+      );
 
     const r1 = await service.addXP(userId, 100, 'MANUAL', 'duplicate-event');
     const r2 = await service.addXP(userId, 100, 'MANUAL', 'duplicate-event');

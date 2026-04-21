@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateAbonnementDto } from './dto/create-abonnement.dto';
@@ -8,8 +12,9 @@ import { Abonnement, AbonnementDocument } from './schemas/abonnement.schema';
 @Injectable()
 export class AbonnementService {
   constructor(
-    @InjectModel(Abonnement.name) private abonnementModel: Model<AbonnementDocument>,
-  ) { }
+    @InjectModel(Abonnement.name)
+    private abonnementModel: Model<AbonnementDocument>,
+  ) {}
 
   async create(createAbonnementDto: CreateAbonnementDto): Promise<Abonnement> {
     try {
@@ -17,7 +22,9 @@ export class AbonnementService {
       return await createdAbonnement.save();
     } catch (error) {
       if (error.code === 11000) {
-        throw new BadRequestException('Subscription plan with this name already exists');
+        throw new BadRequestException(
+          'Subscription plan with this name already exists',
+        );
       }
       throw error;
     }
@@ -38,7 +45,10 @@ export class AbonnementService {
     return abonnement;
   }
 
-  async update(id: string, updateAbonnementDto: UpdateAbonnementDto): Promise<Abonnement> {
+  async update(
+    id: string,
+    updateAbonnementDto: UpdateAbonnementDto,
+  ): Promise<Abonnement> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid subscription ID');
     }

@@ -55,8 +55,7 @@ export class PresenceGateway
     socket.data.userId = userId;
     this.presenceService.addUser(userId, socket.id);
 
-    const friendSockets =
-      await this.presenceService.getFriendSocketIds(userId);
+    const friendSockets = await this.presenceService.getFriendSocketIds(userId);
     for (const sid of friendSockets) {
       this.server.to(sid).emit('friend-online', {
         userId,
@@ -84,8 +83,7 @@ export class PresenceGateway
     const userId = this.presenceService.removeBySocket(socket.id);
     if (!userId) return;
 
-    const friendSockets =
-      await this.presenceService.getFriendSocketIds(userId);
+    const friendSockets = await this.presenceService.getFriendSocketIds(userId);
     for (const sid of friendSockets) {
       this.server.to(sid).emit('friend-offline', { userId });
     }
@@ -110,8 +108,7 @@ export class PresenceGateway
     );
     if (!entry) return { ok: false };
 
-    const friendSockets =
-      await this.presenceService.getFriendSocketIds(userId);
+    const friendSockets = await this.presenceService.getFriendSocketIds(userId);
     for (const sid of friendSockets) {
       this.server.to(sid).emit('friend-status', {
         userId,

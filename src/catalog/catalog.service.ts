@@ -7,7 +7,9 @@ import { Model } from 'mongoose';
 
 @Injectable()
 export class CatalogService {
-  constructor(@InjectModel(Catalog.name) private catalogModel: Model<CatalogDocument>) { }
+  constructor(
+    @InjectModel(Catalog.name) private catalogModel: Model<CatalogDocument>,
+  ) {}
 
   create(createCatalogDto: CreateCatalogDto) {
     return this.catalogModel.create(createCatalogDto);
@@ -22,7 +24,9 @@ export class CatalogService {
   }
 
   update(id: string, updateCatalogDto: UpdateCatalogDto) {
-    return this.catalogModel.findByIdAndUpdate(id, updateCatalogDto, { new: true }).exec();
+    return this.catalogModel
+      .findByIdAndUpdate(id, updateCatalogDto, { new: true })
+      .exec();
   }
 
   remove(id: string) {

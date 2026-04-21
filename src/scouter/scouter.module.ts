@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ScouterProfile, ScouterProfileSchema } from './schemas/scouter-profile.schema';
-import { SeasonRoster, SeasonRosterSchema } from '../season-roster/schemas/season-roster.schema';
+import {
+  ScouterProfile,
+  ScouterProfileSchema,
+} from './schemas/scouter-profile.schema';
+import {
+  SeasonRoster,
+  SeasonRosterSchema,
+} from '../season-roster/schemas/season-roster.schema';
 import { ScouterService } from './scouter.service';
 import { ScouterController } from './scouter.controller';
 import { PlayerModule } from '../player/player.module';

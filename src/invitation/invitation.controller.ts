@@ -9,7 +9,13 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { InvitationService } from './invitation.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { InvitationStatus } from './schemas/invitation.schema';
@@ -27,10 +33,7 @@ export class InvitationController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Send an invitation to a team (organiser/admin)' })
   @ApiResponse({ status: 201, description: 'Invitation created' })
-  create(
-    @Body() dto: CreateInvitationDto,
-    @Request() req,
-  ) {
+  create(@Body() dto: CreateInvitationDto, @Request() req) {
     return this.invitationService.create(dto, req.user.userId);
   }
 
@@ -58,10 +61,7 @@ export class InvitationController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all invitations for my team (team manager)' })
   @ApiQuery({ name: 'status', required: false, enum: InvitationStatus })
-  findMy(
-    @Request() req,
-    @Query('status') status?: InvitationStatus,
-  ) {
+  findMy(@Request() req, @Query('status') status?: InvitationStatus) {
     return this.invitationService.findByTeamManager(req.user.userId, status);
   }
 
@@ -74,14 +74,19 @@ export class InvitationController {
   @Post(':id/accept')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Accept an invitation (team manager — joins tournament or league)' })
-  @ApiResponse({ status: 201, description: 'Invitation accepted, team registered' })
+  @ApiOperation({
+    summary: 'Accept an invitation (team manager — joins tournament or league)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Invitation accepted, team registered',
+  })
   @ApiResponse({ status: 403, description: 'You do not manage this team' })
-  @ApiResponse({ status: 400, description: 'Invitation expired or already responded' })
-  accept(
-    @Param('id') id: string,
-    @Request() req,
-  ) {
+  @ApiResponse({
+    status: 400,
+    description: 'Invitation expired or already responded',
+  })
+  accept(@Param('id') id: string, @Request() req) {
     return this.invitationService.accept(id, req.user.userId);
   }
 
@@ -91,10 +96,7 @@ export class InvitationController {
   @ApiOperation({ summary: 'Decline an invitation (team manager)' })
   @ApiResponse({ status: 201, description: 'Invitation declined' })
   @ApiResponse({ status: 403, description: 'You do not manage this team' })
-  decline(
-    @Param('id') id: string,
-    @Request() req,
-  ) {
+  decline(@Param('id') id: string, @Request() req) {
     return this.invitationService.decline(id, req.user.userId);
   }
 

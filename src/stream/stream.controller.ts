@@ -1,6 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiConsumes,
+} from '@nestjs/swagger';
 import { StreamService } from './stream.service';
 import { CreateStreamDto } from './dto/create-stream.dto';
 import { UpdateStreamDto } from './dto/update-stream.dto';
@@ -10,7 +28,7 @@ import { imageUploadOptions } from '../common/utils/file-upload.utils';
 @ApiTags('stream')
 @Controller('stream')
 export class StreamController {
-  constructor(private readonly streamService: StreamService) { }
+  constructor(private readonly streamService: StreamService) {}
 
   @Get('my')
   @UseGuards(JwtAuthGuard)
@@ -76,7 +94,11 @@ export class StreamController {
   @ApiOperation({ summary: 'Update stream' })
   @ApiResponse({ status: 200, description: 'Stream updated successfully' })
   @ApiResponse({ status: 404, description: 'Stream not found' })
-  update(@Req() req, @Param('id') id: string, @Body() updateStreamDto: UpdateStreamDto) {
+  update(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() updateStreamDto: UpdateStreamDto,
+  ) {
     return this.streamService.update(id, req.user.userId, updateStreamDto);
   }
 

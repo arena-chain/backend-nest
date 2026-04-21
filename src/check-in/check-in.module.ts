@@ -5,11 +5,11 @@ import { CheckInService } from './check-in.service';
 import { CheckInController } from './check-in.controller';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: CheckIn.name, schema: CheckInSchema }]),
-    ],
-    controllers: [CheckInController],
-    providers: [CheckInService],
-    exports: [CheckInService],
+  imports: [
+    MongooseModule.forFeature([{ name: CheckIn.name, schema: CheckInSchema }]),
+  ],
+  controllers: [CheckInController],
+  providers: [CheckInService],
+  exports: [CheckInService],
 })
 export class CheckInModule {}

@@ -84,15 +84,18 @@ export class HighlightsService {
     existingRanges: { start: number; end: number }[] = [],
   ) {
     const durationSec = Math.max(30, Math.floor(video.duration || 120));
-    const clipDuration = Math.min(20, Math.max(8, Math.floor(durationSec / 12)));
+    const clipDuration = Math.min(
+      20,
+      Math.max(8, Math.floor(durationSec / 12)),
+    );
     const maxStart = Math.max(0, durationSec - clipDuration);
     const step = Math.max(3, Math.floor(clipDuration / 2));
 
     const candidates: { start: number; duration: number }[] = [];
     for (let s = 0; s <= maxStart; s += step) {
       const e = s + clipDuration;
-      const overlapsOld = existingRanges.some((r) =>
-        this.overlapRatio(s, e, r.start, r.end) > 0.35,
+      const overlapsOld = existingRanges.some(
+        (r) => this.overlapRatio(s, e, r.start, r.end) > 0.35,
       );
       if (!overlapsOld) {
         candidates.push({ start: s, duration: clipDuration });
@@ -129,9 +132,7 @@ export class HighlightsService {
       picked.push(...pool.slice(0, 3 - picked.length));
     }
 
-    return picked
-      .slice(0, 3)
-      .sort((a, b) => a.start - b.start);
+    return picked.slice(0, 3).sort((a, b) => a.start - b.start);
   }
 
   // Process video: detect + generate + save highlights
@@ -140,9 +141,8 @@ export class HighlightsService {
     uploaderId: string,
     options?: { visibility?: HighlightVisibility },
   ) {
-    const videoId = video._id as Types.ObjectId;
-    const visibility =
-      options?.visibility ?? HighlightVisibility.PRIVATE;
+    const videoId = video._id;
+    const visibility = options?.visibility ?? HighlightVisibility.PRIVATE;
     const existing = await this.highlightModel
       .find({ video: videoId })
       .select('startTime endTime')
@@ -211,7 +211,9 @@ export class HighlightsService {
       throw new BadRequestException('video and creator are required');
     }
     if (!data.clipUrl) {
-      throw new BadRequestException('clipUrl is required for manual highlight creation');
+      throw new BadRequestException(
+        'clipUrl is required for manual highlight creation',
+      );
     }
     const highlight = new this.highlightModel({
       ...data,
@@ -311,7 +313,9 @@ export class HighlightsService {
     const doc = await this.highlightModel.findById(id).exec();
     if (!doc) throw new NotFoundException('Highlight not found');
     if (doc.creator.toString() !== userId) {
-      throw new ForbiddenException('Only the creator can delete this highlight');
+      throw new ForbiddenException(
+        'Only the creator can delete this highlight',
+      );
     }
     return this.remove(id);
   }

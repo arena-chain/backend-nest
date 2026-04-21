@@ -21,5 +21,5 @@ export class ProcessedXpEvent {
   createdAt: Date;
 }
 
-export const ProcessedXpEventSchema = SchemaFactory.createForClass(ProcessedXpEvent);
-
+export const ProcessedXpEventSchema =
+  SchemaFactory.createForClass(ProcessedXpEvent);

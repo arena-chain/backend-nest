@@ -11,16 +11,16 @@ import { LeagueRegistrationModule } from '../league-registration/league-registra
 import { BracketModule } from '../bracket/bracket.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: Match.name, schema: MatchSchema }]),
-        StandingsModule,
-        LeagueRuleModule,
-        SeasonModule,
-        LeagueRegistrationModule,
-        BracketModule,
-    ],
-    controllers: [MatchController],
-    providers: [MatchService, EloService],
-    exports: [MatchService],
+  imports: [
+    MongooseModule.forFeature([{ name: Match.name, schema: MatchSchema }]),
+    StandingsModule,
+    LeagueRuleModule,
+    SeasonModule,
+    LeagueRegistrationModule,
+    BracketModule,
+  ],
+  controllers: [MatchController],
+  providers: [MatchService, EloService],
+  exports: [MatchService],
 })
 export class MatchModule {}

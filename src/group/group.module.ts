@@ -6,12 +6,12 @@ import { GroupController } from './group.controller';
 import { StandingsModule } from '../standings/standings.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: Group.name, schema: GroupSchema }]),
-        StandingsModule,
-    ],
-    controllers: [GroupController],
-    providers: [GroupService],
-    exports: [GroupService, MongooseModule],
+  imports: [
+    MongooseModule.forFeature([{ name: Group.name, schema: GroupSchema }]),
+    StandingsModule,
+  ],
+  controllers: [GroupController],
+  providers: [GroupService],
+  exports: [GroupService, MongooseModule],
 })
 export class GroupModule {}

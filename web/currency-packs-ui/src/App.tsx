@@ -147,6 +147,9 @@ export function App() {
     const [walletMe, setWalletMe] = useState<WalletMe | null>(null);
     const [walletErr, setWalletErr] = useState<string | null>(null);
     const [walletLinkBusy, setWalletLinkBusy] = useState(false);
+    const [giftRecipientUserId, setGiftRecipientUserId] = useState('');
+    const [giftWholeAmount, setGiftWholeAmount] = useState<number>(10);
+    const [giftNote, setGiftNote] = useState('');
 
     const isAdmin = user?.role === 'admin';
     const chainSymbol = tokenMeta?.displaySymbol || tokenMeta?.symbol || 'GTK';
@@ -361,6 +364,41 @@ export function App() {
         }
     };
 
+    const giftSimulated = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage(null);
+        if (!giftRecipientUserId.trim()) {
+            setMessage({ type: 'err', text: 'Recipient user id is required.' });
+            return;
+        }
+        if (!(giftWholeAmount > 0)) {
+            setMessage({ type: 'err', text: 'Gift amount must be greater than 0.' });
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = (await apiJson('currency/game-token/gift-simulated', {
+                method: 'POST',
+                body: JSON.stringify({
+                    recipientUserId: giftRecipientUserId.trim(),
+                    wholeAmount: giftWholeAmount,
+                    note: giftNote.trim() || undefined,
+                }),
+            })) as { amountFormatted?: string; displaySymbol?: string; toUserId?: string };
+            setMessage({
+                type: 'ok',
+                text: `Gift sent: ${res.amountFormatted ?? giftWholeAmount} ${res.displaySymbol ?? chainSymbol} to ${res.toUserId ?? giftRecipientUserId.trim()}.`,
+            });
+            setGiftNote('');
+            await loadWalletMe();
+            await loadPurchases();
+        } catch (err) {
+            setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Gift failed' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="layout-root">
             <aside className="sidebar">
@@ -543,6 +581,50 @@ export function App() {
                                 </tbody>
                             </table>
                         )}
+                    </div>
+
+                    <div className="card">
+                        <div className="card-head">
+                            <h2>Gift {chainSymbol} (simulated)</h2>
+                        </div>
+                        <form className="offer-form" onSubmit={giftSimulated}>
+                            <div className="field-dark">
+                                <label>Recipient user id</label>
+                                <input
+                                    value={giftRecipientUserId}
+                                    onChange={(e) => setGiftRecipientUserId(e.target.value)}
+                                    placeholder="665f1a7a30ad5d41e32e11b1"
+                                    required
+                                />
+                            </div>
+                            <div className="field-dark">
+                                <label>Amount ({chainSymbol})</label>
+                                <input
+                                    type="number"
+                                    min={0.000001}
+                                    step="0.000001"
+                                    value={giftWholeAmount}
+                                    onChange={(e) => setGiftWholeAmount(Number(e.target.value))}
+                                    required
+                                />
+                            </div>
+                            <div className="field-dark">
+                                <label>Note (optional)</label>
+                                <input
+                                    value={giftNote}
+                                    onChange={(e) => setGiftNote(e.target.value)}
+                                    maxLength={120}
+                                    placeholder="GG for yesterday match"
+                                />
+                            </div>
+                            <button type="submit" className="btn-add" disabled={loading}>
+                                Send gift
+                            </button>
+                        </form>
+                        <p className="muted" style={{ marginBottom: 0 }}>
+                            Uses <span className="mono">/api/currency/game-token/gift-simulated</span>. This is fake-money ledger
+                            transfer for testing (requires <span className="mono">GTK_ALLOW_ECONOMY_SIMULATION=true</span>).
+                        </p>
                     </div>
                 </>
             )}

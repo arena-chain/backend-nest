@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, PipelineStage } from 'mongoose';
-import { TrainingResult, TrainingResultDocument } from './schemas/training-result.schema';
+import {
+  TrainingResult,
+  TrainingResultDocument,
+} from './schemas/training-result.schema';
 import { MissionService } from '../mission/mission.service';
 
 @Injectable()
@@ -28,7 +31,10 @@ export class TrainingService {
       badHits: data.badHits || 0,
     });
     const savedResult = await result.save();
-    await this.missionService.onTrainingCompleted(userId, { game: 'all', amount: 1 });
+    await this.missionService.onTrainingCompleted(userId, {
+      game: 'all',
+      amount: 1,
+    });
     return savedResult;
   }
 

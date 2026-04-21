@@ -15,5 +15,9 @@ export class MissionEventLog {
   dedupeKey: string;
 }
 
-export const MissionEventLogSchema = SchemaFactory.createForClass(MissionEventLog);
-MissionEventLogSchema.index({ userId: 1, criteriaType: 1, dedupeKey: 1 }, { unique: true });
+export const MissionEventLogSchema =
+  SchemaFactory.createForClass(MissionEventLog);
+MissionEventLogSchema.index(
+  { userId: 1, criteriaType: 1, dedupeKey: 1 },
+  { unique: true },
+);

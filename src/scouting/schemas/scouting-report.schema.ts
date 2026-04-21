@@ -30,7 +30,8 @@ export class ScoutingReport {
   recommendedRole: string; // Duelist, Support, Controller, etc.
 }
 
-export const ScoutingReportSchema = SchemaFactory.createForClass(ScoutingReport);
+export const ScoutingReportSchema =
+  SchemaFactory.createForClass(ScoutingReport);
 ScoutingReportSchema.index({ scouterId: 1, playerId: 1 });
 ScoutingReportSchema.index({ playerId: 1 });
 ScoutingReportSchema.index({ matchId: 1 });

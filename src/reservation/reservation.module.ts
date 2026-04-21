@@ -4,7 +4,10 @@ import { ReservationService } from './reservation.service';
 import { ReservationController } from './reservation.controller';
 import { Reservation, ReservationSchema } from './schemas/reservation.schema';
 import { Ticket, TicketSchema } from '../tickets/schemas/ticket.schema';
-import { Tournament, TournamentSchema } from '../tournements/schemas/tournament.schema';
+import {
+  Tournament,
+  TournamentSchema,
+} from '../tournements/schemas/tournament.schema';
 
 @Module({
   imports: [
@@ -17,4 +20,4 @@ import { Tournament, TournamentSchema } from '../tournements/schemas/tournament.
   controllers: [ReservationController],
   providers: [ReservationService],
 })
-export class ReservationModule { }
+export class ReservationModule {}

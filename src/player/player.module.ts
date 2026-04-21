@@ -5,7 +5,10 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PlayerService } from './player.service';
 import { PlayerController } from './player.controller';
-import { PlayerProfile, PlayerProfileSchema } from './schemas/player-profile.schema';
+import {
+  PlayerProfile,
+  PlayerProfileSchema,
+} from './schemas/player-profile.schema';
 
 @Module({
   imports: [
@@ -21,8 +24,8 @@ import { PlayerProfile, PlayerProfileSchema } from './schemas/player-profile.sch
       { name: PlayerProfile.name, schema: PlayerProfileSchema },
     ]),
   ],
-    controllers: [PlayerController],
-    providers: [PlayerService],
-    exports: [PlayerService],
+  controllers: [PlayerController],
+  providers: [PlayerService],
+  exports: [PlayerService],
 })
-export class PlayerModule { }
+export class PlayerModule {}

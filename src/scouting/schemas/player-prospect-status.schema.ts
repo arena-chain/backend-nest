@@ -25,14 +25,19 @@ export class PlayerProspectStatus {
   @Prop({ required: true, enum: ProspectLevel, default: ProspectLevel.UNKNOWN })
   prospectLevel: ProspectLevel;
 
-  @Prop({ required: true, enum: ProspectPriority, default: ProspectPriority.LOW })
+  @Prop({
+    required: true,
+    enum: ProspectPriority,
+    default: ProspectPriority.LOW,
+  })
   priority: ProspectPriority;
 
   @Prop({ default: Date.now })
   lastUpdated: Date;
 }
 
-export const PlayerProspectStatusSchema = SchemaFactory.createForClass(PlayerProspectStatus);
+export const PlayerProspectStatusSchema =
+  SchemaFactory.createForClass(PlayerProspectStatus);
 // playerId index: already created by @Prop({ unique: true })
 PlayerProspectStatusSchema.index({ prospectLevel: 1 });
 PlayerProspectStatusSchema.index({ priority: 1 });

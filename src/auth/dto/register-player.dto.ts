@@ -4,19 +4,19 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { RegisterDto } from './register.dto';
 
 export class RegisterPlayerDto extends RegisterDto {
-    @ApiPropertyOptional({
-        example: false,
-        description: 'Whether the player is a professional player',
-    })
-    @IsBoolean()
-    @IsOptional()
-    isPro?: boolean;
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Whether the player is a professional player',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isPro?: boolean;
 
-    @ApiPropertyOptional({
-        example: false,
-        description: 'Whether the player is verified',
-    })
-    @IsBoolean()
-    @IsOptional()
-    isVerified?: boolean;
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Whether the player is verified',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isVerified?: boolean;
 }

@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { AbonnementService } from './abonnement.service';
 import { CreateAbonnementDto } from './dto/create-abonnement.dto';
@@ -7,11 +15,14 @@ import { UpdateAbonnementDto } from './dto/update-abonnement.dto';
 @ApiTags('Subscription Plans')
 @Controller('abonnements')
 export class AbonnementController {
-  constructor(private readonly abonnementService: AbonnementService) { }
+  constructor(private readonly abonnementService: AbonnementService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new subscription plan' })
-  @ApiResponse({ status: 201, description: 'The subscription plan has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The subscription plan has been successfully created.',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   create(@Body() createAbonnementDto: CreateAbonnementDto) {
     return this.abonnementService.create(createAbonnementDto);
@@ -33,7 +44,10 @@ export class AbonnementController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a subscription plan' })
   @ApiParam({ name: 'id', description: 'Subscription ID' })
-  update(@Param('id') id: string, @Body() updateAbonnementDto: UpdateAbonnementDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateAbonnementDto: UpdateAbonnementDto,
+  ) {
     return this.abonnementService.update(id, updateAbonnementDto);
   }
 

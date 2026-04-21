@@ -8,10 +8,13 @@ import { Partnership, PartnershipDocument } from './schemas/partnership.schema';
 @Injectable()
 export class PartnershipsService {
   constructor(
-    @InjectModel(Partnership.name) private partnershipModel: Model<PartnershipDocument>,
-  ) { }
+    @InjectModel(Partnership.name)
+    private partnershipModel: Model<PartnershipDocument>,
+  ) {}
 
-  async create(createPartnershipDto: CreatePartnershipDto): Promise<Partnership> {
+  async create(
+    createPartnershipDto: CreatePartnershipDto,
+  ): Promise<Partnership> {
     const createdPartnership = new this.partnershipModel(createPartnershipDto);
     return createdPartnership.save();
   }
@@ -28,7 +31,10 @@ export class PartnershipsService {
     return partnership;
   }
 
-  async update(id: string, updatePartnershipDto: UpdatePartnershipDto): Promise<Partnership> {
+  async update(
+    id: string,
+    updatePartnershipDto: UpdatePartnershipDto,
+  ): Promise<Partnership> {
     const updatedPartnership = await this.partnershipModel
       .findByIdAndUpdate(id, updatePartnershipDto, { new: true })
       .exec();
@@ -39,7 +45,9 @@ export class PartnershipsService {
   }
 
   async remove(id: string): Promise<Partnership> {
-    const deletedPartnership = await this.partnershipModel.findByIdAndDelete(id).exec();
+    const deletedPartnership = await this.partnershipModel
+      .findByIdAndDelete(id)
+      .exec();
     if (!deletedPartnership) {
       throw new NotFoundException(`Partnership with ID ${id} not found`);
     }

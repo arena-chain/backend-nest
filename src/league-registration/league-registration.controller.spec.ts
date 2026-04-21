@@ -11,7 +11,9 @@ describe('LeagueRegistrationController', () => {
       providers: [LeagueRegistrationService],
     }).compile();
 
-    controller = module.get<LeagueRegistrationController>(LeagueRegistrationController);
+    controller = module.get<LeagueRegistrationController>(
+      LeagueRegistrationController,
+    );
   });
 
   it('should be defined', () => {

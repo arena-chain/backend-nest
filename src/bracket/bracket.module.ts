@@ -6,12 +6,12 @@ import { BracketController } from './bracket.controller';
 import { StandingsModule } from '../standings/standings.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: Bracket.name, schema: BracketSchema }]),
-        StandingsModule,
-    ],
-    controllers: [BracketController],
-    providers: [BracketService],
-    exports: [BracketService],
+  imports: [
+    MongooseModule.forFeature([{ name: Bracket.name, schema: BracketSchema }]),
+    StandingsModule,
+  ],
+  controllers: [BracketController],
+  providers: [BracketService],
+  exports: [BracketService],
 })
 export class BracketModule {}

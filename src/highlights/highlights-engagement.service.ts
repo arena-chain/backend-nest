@@ -90,8 +90,7 @@ export class HighlightsEngagementService {
     const savedBy = highlight.savedBy ?? [];
     const saveCount = savedBy.length;
     const savedByMe = Boolean(
-      viewerUserId &&
-        savedBy.some((id) => id.toString() === viewerUserId),
+      viewerUserId && savedBy.some((id) => id.toString() === viewerUserId),
     );
 
     return {
@@ -158,7 +157,10 @@ export class HighlightsEngagementService {
     const ids = rows.map((r) => r._id);
     const [agg, mineRows] = await Promise.all([
       this.commentLikeModel
-        .aggregate<{ _id: Types.ObjectId; likeCount: number }>([
+        .aggregate<{
+          _id: Types.ObjectId;
+          likeCount: number;
+        }>([
           { $match: { comment: { $in: ids } } },
           { $group: { _id: '$comment', likeCount: { $sum: 1 } } },
         ])
@@ -175,11 +177,11 @@ export class HighlightsEngagementService {
         : Promise.resolve([]),
     ]);
 
-    const countMap = new Map(
-      agg.map((a) => [a._id.toString(), a.likeCount]),
-    );
+    const countMap = new Map(agg.map((a) => [a._id.toString(), a.likeCount]));
     const mySet = new Set(
-      mineRows.map((m) => (m as { comment: Types.ObjectId }).comment.toString()),
+      mineRows.map((m) =>
+        (m as { comment: Types.ObjectId }).comment.toString(),
+      ),
     );
 
     const enriched = rows.map((c) => ({
@@ -233,14 +235,16 @@ export class HighlightsEngagementService {
       const parent = await this.commentModel.findById(parentCommentId).exec();
       if (!parent) throw new NotFoundException('Parent comment not found');
       if (parent.highlight.toString() !== highlightId) {
-        throw new BadRequestException('Parent comment belongs to another highlight');
+        throw new BadRequestException(
+          'Parent comment belongs to another highlight',
+        );
       }
       if (parent.parentComment) {
         throw new BadRequestException(
           'You can only reply to a top-level comment',
         );
       }
-      parentComment = parent._id as Types.ObjectId;
+      parentComment = parent._id;
     }
 
     const created = await this.commentModel.create({
@@ -278,7 +282,9 @@ export class HighlightsEngagementService {
       const code = (e as { code?: number })?.code;
       if (code !== 11000) throw e;
     }
-    const likeCount = await this.likeModel.countDocuments({ highlight: hid }).exec();
+    const likeCount = await this.likeModel
+      .countDocuments({ highlight: hid })
+      .exec();
     return { liked: true, likeCount };
   }
 
@@ -289,7 +295,9 @@ export class HighlightsEngagementService {
     const hid = new Types.ObjectId(highlightId);
     const uid = new Types.ObjectId(userId);
     await this.likeModel.deleteOne({ highlight: hid, user: uid }).exec();
-    const likeCount = await this.likeModel.countDocuments({ highlight: hid }).exec();
+    const likeCount = await this.likeModel
+      .countDocuments({ highlight: hid })
+      .exec();
     return { liked: false, likeCount };
   }
 

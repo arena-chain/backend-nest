@@ -1,18 +1,39 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreatePlayerRankDto } from './dto/create-rank.dto';
 import { ApplyPenaltyDto } from './dto/apply-penalty.dto';
 import { PlayerRank, PlayerRankDocument } from './schemas/rank.schema';
-import { RankHistory, RankHistoryDocument, EloChangeReason } from './schemas/rank-history.schema';
-import { Penalty, PenaltyDocument, PenaltyStatus } from './schemas/penalty.schema';
-import { RankTierConfig, RankTierConfigDocument, TierName } from './schemas/rank-tier-config.schema';
+import {
+  RankHistory,
+  RankHistoryDocument,
+  EloChangeReason,
+} from './schemas/rank-history.schema';
+import {
+  Penalty,
+  PenaltyDocument,
+  PenaltyStatus,
+} from './schemas/penalty.schema';
+import {
+  RankTierConfig,
+  RankTierConfigDocument,
+  TierName,
+} from './schemas/rank-tier-config.schema';
 
 const STARTING_ELO = 1000;
 const K_FACTOR = 32;
 
-const TIER_THRESHOLDS: { tier: TierName; minElo: number; maxElo: number; divisions: number }[] = [
+const TIER_THRESHOLDS: {
+  tier: TierName;
+  minElo: number;
+  maxElo: number;
+  divisions: number;
+}[] = [
   { tier: TierName.IRON, minElo: 0, maxElo: 499, divisions: 3 },
   { tier: TierName.BRONZE, minElo: 500, maxElo: 999, divisions: 3 },
   { tier: TierName.GOLD, minElo: 1000, maxElo: 1499, divisions: 3 },
@@ -40,10 +61,13 @@ export interface EloUpdateResult {
 @Injectable()
 export class RankService {
   constructor(
-    @InjectModel(PlayerRank.name) private playerRankModel: Model<PlayerRankDocument>,
-    @InjectModel(RankHistory.name) private rankHistoryModel: Model<RankHistoryDocument>,
+    @InjectModel(PlayerRank.name)
+    private playerRankModel: Model<PlayerRankDocument>,
+    @InjectModel(RankHistory.name)
+    private rankHistoryModel: Model<RankHistoryDocument>,
     @InjectModel(Penalty.name) private penaltyModel: Model<PenaltyDocument>,
-    @InjectModel(RankTierConfig.name) private rankTierConfigModel: Model<RankTierConfigDocument>,
+    @InjectModel(RankTierConfig.name)
+    private rankTierConfigModel: Model<RankTierConfigDocument>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -51,7 +75,11 @@ export class RankService {
   // ELO FORMULA (K=32, standard Elo)
   // ──────────────────────────────────────────────────────────
 
-  calculateNewElo(playerElo: number, opponentAvgElo: number, didWin: boolean): number {
+  calculateNewElo(
+    playerElo: number,
+    opponentAvgElo: number,
+    didWin: boolean,
+  ): number {
     const expected = 1 / (1 + Math.pow(10, (opponentAvgElo - playerElo) / 400));
     const score = didWin ? 1 : 0;
     return Math.max(0, Math.round(playerElo + K_FACTOR * (score - expected)));
@@ -67,26 +95,32 @@ export class RankService {
     winningTeam: 'BLUE' | 'RED',
     gameId: string,
   ): Promise<EloUpdateResult[]> {
-    const blueTeam = participants.filter(p => p.team === 'BLUE');
-    const redTeam = participants.filter(p => p.team === 'RED');
+    const blueTeam = participants.filter((p) => p.team === 'BLUE');
+    const redTeam = participants.filter((p) => p.team === 'RED');
 
     if (blueTeam.length === 0 || redTeam.length === 0) {
       throw new BadRequestException('Both teams must have at least one player');
     }
 
-    const blueAvgElo = blueTeam.reduce((sum, p) => sum + p.elo, 0) / blueTeam.length;
-    const redAvgElo = redTeam.reduce((sum, p) => sum + p.elo, 0) / redTeam.length;
+    const blueAvgElo =
+      blueTeam.reduce((sum, p) => sum + p.elo, 0) / blueTeam.length;
+    const redAvgElo =
+      redTeam.reduce((sum, p) => sum + p.elo, 0) / redTeam.length;
 
     const results: EloUpdateResult[] = [];
 
     for (const participant of participants) {
       const didWin = participant.team === winningTeam;
-      const opponentAvgElo = participant.team === 'BLUE' ? redAvgElo : blueAvgElo;
+      const opponentAvgElo =
+        participant.team === 'BLUE' ? redAvgElo : blueAvgElo;
       const previousElo = participant.elo;
       const newElo = this.calculateNewElo(previousElo, opponentAvgElo, didWin);
       const eloChange = newElo - previousElo;
 
-      const rank = await this.getOrCreateRank(participant.userId.toString(), catalogId.toString());
+      const rank = await this.getOrCreateRank(
+        participant.userId.toString(),
+        catalogId.toString(),
+      );
 
       const previousTier = rank.tier;
       const previousLevel = rank.level;
@@ -98,7 +132,10 @@ export class RankService {
       if (didWin) {
         rank.wins += 1;
         rank.currentStreak = Math.max(0, rank.currentStreak) + 1;
-        rank.longestWinStreak = Math.max(rank.longestWinStreak, rank.currentStreak);
+        rank.longestWinStreak = Math.max(
+          rank.longestWinStreak,
+          rank.currentStreak,
+        );
       } else {
         rank.losses += 1;
         rank.currentStreak = Math.min(0, rank.currentStreak) - 1;
@@ -133,7 +170,9 @@ export class RankService {
         eloChange,
         reason: didWin ? EloChangeReason.WIN : EloChangeReason.LOSS,
         reasonDetails: `Matchmaking ${didWin ? 'win' : 'loss'}`,
-        match: Types.ObjectId.isValid(gameId) ? new Types.ObjectId(gameId) : undefined,
+        match: Types.ObjectId.isValid(gameId)
+          ? new Types.ObjectId(gameId)
+          : undefined,
         previousTier,
         newTier: tier,
         previousLevel,
@@ -149,7 +188,13 @@ export class RankService {
         won: didWin,
       });
 
-      results.push({ userId: participant.userId, previousElo, newElo, eloChange, didWin });
+      results.push({
+        userId: participant.userId,
+        previousElo,
+        newElo,
+        eloChange,
+        didWin,
+      });
     }
 
     return results;
@@ -159,14 +204,18 @@ export class RankService {
   // GET OR CREATE — ensures every player has a rank record
   // ──────────────────────────────────────────────────────────
 
-  async getOrCreateRank(userId: string, gameId: string): Promise<PlayerRankDocument> {
+  async getOrCreateRank(
+    userId: string,
+    gameId: string,
+  ): Promise<PlayerRankDocument> {
     let rank = await this.playerRankModel.findOne({
       user: new Types.ObjectId(userId),
       game: new Types.ObjectId(gameId),
     });
 
     if (!rank) {
-      const { tier, division, level } = this.calculateTierAndLevel(STARTING_ELO);
+      const { tier, division, level } =
+        this.calculateTierAndLevel(STARTING_ELO);
       rank = await this.playerRankModel.create({
         user: new Types.ObjectId(userId),
         game: new Types.ObjectId(gameId),
@@ -297,7 +346,19 @@ export class RankService {
   // ──────────────────────────────────────────────────────────
 
   async applyPenalty(applyPenaltyDto: ApplyPenaltyDto, issuedBy: string) {
-    const { userId, gameId, type, severity, eloDeduction, notes, evidence, matchId, tournamentId, expiresAt, includesRankReset } = applyPenaltyDto;
+    const {
+      userId,
+      gameId,
+      type,
+      severity,
+      eloDeduction,
+      notes,
+      evidence,
+      matchId,
+      tournamentId,
+      expiresAt,
+      includesRankReset,
+    } = applyPenaltyDto;
 
     const playerRank = await this.playerRankModel.findOne({
       user: new Types.ObjectId(userId),
@@ -384,7 +445,10 @@ export class RankService {
 
     for (const rank of ranks) {
       const previousElo = rank.elo;
-      const resetElo = Math.max(STARTING_ELO, Math.floor(rank.elo * 0.5 + STARTING_ELO * 0.5));
+      const resetElo = Math.max(
+        STARTING_ELO,
+        Math.floor(rank.elo * 0.5 + STARTING_ELO * 0.5),
+      );
       const { tier, division, level } = this.calculateTierAndLevel(resetElo);
 
       const previousTier = rank.tier;
@@ -444,12 +508,19 @@ export class RankService {
   // TIER CALCULATION
   // ──────────────────────────────────────────────────────────
 
-  calculateTierAndLevel(elo: number): { tier: TierName; division: number; level: number } {
+  calculateTierAndLevel(elo: number): {
+    tier: TierName;
+    division: number;
+    level: number;
+  } {
     let cumulativeLevel = 1;
 
     for (const threshold of TIER_THRESHOLDS) {
       if (elo >= threshold.minElo && elo <= threshold.maxElo) {
-        const eloRange = threshold.maxElo === Infinity ? 500 : threshold.maxElo - threshold.minElo;
+        const eloRange =
+          threshold.maxElo === Infinity
+            ? 500
+            : threshold.maxElo - threshold.minElo;
         const eloInTier = elo - threshold.minElo;
         const divisionSize = eloRange / threshold.divisions;
 
@@ -473,11 +544,17 @@ export class RankService {
 
   private isTierHigher(tierA: string, tierB: string): boolean {
     const tierOrder = Object.values(TierName);
-    return tierOrder.indexOf(tierA as TierName) > tierOrder.indexOf(tierB as TierName);
+    return (
+      tierOrder.indexOf(tierA as TierName) >
+      tierOrder.indexOf(tierB as TierName)
+    );
   }
 
   private isTierLower(tierA: string, tierB: string): boolean {
     const tierOrder = Object.values(TierName);
-    return tierOrder.indexOf(tierA as TierName) < tierOrder.indexOf(tierB as TierName);
+    return (
+      tierOrder.indexOf(tierA as TierName) <
+      tierOrder.indexOf(tierB as TierName)
+    );
   }
 }

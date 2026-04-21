@@ -4,7 +4,10 @@ import { LevelService } from './level.service';
 import { LevelController } from './level.controller';
 import { LevelListener } from './level.listener';
 import { PlayerLevel, PlayerLevelSchema } from './schemas/player-level.schema';
-import { ProcessedXpEvent, ProcessedXpEventSchema } from './schemas/processed-xp-event.schema';
+import {
+  ProcessedXpEvent,
+  ProcessedXpEventSchema,
+} from './schemas/processed-xp-event.schema';
 
 @Module({
   imports: [
@@ -17,5 +20,4 @@ import { ProcessedXpEvent, ProcessedXpEventSchema } from './schemas/processed-xp
   providers: [LevelService, LevelListener],
   exports: [LevelService],
 })
-export class LevelModule { }
-
+export class LevelModule {}

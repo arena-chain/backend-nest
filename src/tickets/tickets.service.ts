@@ -1,24 +1,39 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as QRCode from 'qrcode';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket, TicketDocument, TicketStatus } from './schemas/ticket.schema';
-import { Tournament, TournamentDocument } from '../tournements/schemas/tournament.schema';
+import {
+  Tournament,
+  TournamentDocument,
+} from '../tournements/schemas/tournament.schema';
 
-import { TicketTypeDefinition, TicketTypeDefinitionDocument } from './schemas/ticket-type.schema';
+import {
+  TicketTypeDefinition,
+  TicketTypeDefinitionDocument,
+} from './schemas/ticket-type.schema';
 import { CreateTicketTypeDefinitionDto } from './dto/create-ticket-type.dto';
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
-    @InjectModel(Tournament.name) private tournamentModel: Model<TournamentDocument>,
-    @InjectModel(TicketTypeDefinition.name) private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
-  ) { }
+    @InjectModel(Tournament.name)
+    private tournamentModel: Model<TournamentDocument>,
+    @InjectModel(TicketTypeDefinition.name)
+    private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
+  ) {}
 
-  async createTicketTypeDefinition(createDto: CreateTicketTypeDefinitionDto): Promise<TicketTypeDefinition> {
+  async createTicketTypeDefinition(
+    createDto: CreateTicketTypeDefinitionDto,
+  ): Promise<TicketTypeDefinition> {
     const newDefinition = new this.ticketTypeDefinitionModel(createDto);
     return await newDefinition.save();
   }
@@ -37,36 +52,49 @@ export class TicketsService {
   }
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket[]> {
-    const { tournament: tournamentId, type: ticketType, quantity } = createTicketDto;
+    const {
+      tournament: tournamentId,
+      type: ticketType,
+      quantity,
+    } = createTicketDto;
 
     // 1. Fetch Tournament with ticket types populated
-    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
+    const tournament = await this.tournamentModel
+      .findById(tournamentId)
+      .populate('ticketTypes')
+      .exec();
     if (!tournament) {
       throw new NotFoundException('Tournament not found');
     }
 
     // 2. Validate Ticket Type & Capacity
     // With populated field, ticketTypes is array of documents
-    const typeConfig = (tournament.ticketTypes as any[]).find((t: any) => t.name === ticketType);
+    const typeConfig = (tournament.ticketTypes as any[]).find(
+      (t: any) => t.name === ticketType,
+    );
 
     if (!typeConfig) {
-      throw new BadRequestException(`Ticket type '${ticketType}' not found for this tournament`);
+      throw new BadRequestException(
+        `Ticket type '${ticketType}' not found for this tournament`,
+      );
     }
 
     // Check capacity
     const currentSold = await this.ticketModel.countDocuments({
       tournament: new Types.ObjectId(tournamentId),
       type: ticketType,
-      status: { $ne: TicketStatus.CANCELLED }
+      status: { $ne: TicketStatus.CANCELLED },
     });
 
     if (currentSold + quantity > typeConfig.capacity) {
-      throw new BadRequestException(`Not enough '${ticketType}' tickets available. Remaining: ${typeConfig.capacity - currentSold}`);
+      throw new BadRequestException(
+        `Not enough '${ticketType}' tickets available. Remaining: ${typeConfig.capacity - currentSold}`,
+      );
     }
 
     // 3. Calculate Price (Dynamic Bundles)
     let totalPrice = 0;
-    const bundle = typeConfig.bundles?.find(b => b.quantity === quantity);
+    const bundle = typeConfig.bundles?.find((b) => b.quantity === quantity);
 
     if (bundle) {
       totalPrice = bundle.price;
@@ -89,7 +117,7 @@ export class TicketsService {
         ticketNumber,
         tournament: tournamentId,
         user: createTicketDto.user,
-        type: ticketType
+        type: ticketType,
       });
 
       let qrCodeUrl: string;
@@ -107,7 +135,7 @@ export class TicketsService {
         user: new Types.ObjectId(createTicketDto.user),
         type: ticketType,
         status: TicketStatus.VALID,
-        price: pricePerTicket
+        price: pricePerTicket,
       });
     }
 
@@ -162,7 +190,9 @@ export class TicketsService {
       .exec();
 
     if (!ticket) {
-      throw new NotFoundException(`Ticket with number ${ticketNumber} not found`);
+      throw new NotFoundException(
+        `Ticket with number ${ticketNumber} not found`,
+      );
     }
     return ticket;
   }
@@ -173,7 +203,8 @@ export class TicketsService {
     }
 
     const updateData: any = { ...updateTicketDto };
-    if (updateData.tournament) updateData.tournament = new Types.ObjectId(updateData.tournament);
+    if (updateData.tournament)
+      updateData.tournament = new Types.ObjectId(updateData.tournament);
     if (updateData.user) updateData.user = new Types.ObjectId(updateData.user);
 
     const updatedTicket = await this.ticketModel
@@ -205,7 +236,7 @@ export class TicketsService {
   async validateTicket(ticketNumber: string): Promise<{
     success: boolean;
     message: string;
-    ticket?: Ticket
+    ticket?: Ticket;
   }> {
     const ticket = await this.ticketModel
       .findOne({ ticketNumber })
@@ -216,7 +247,7 @@ export class TicketsService {
     if (!ticket) {
       return {
         success: false,
-        message: 'Ticket not found'
+        message: 'Ticket not found',
       };
     }
 
@@ -225,7 +256,7 @@ export class TicketsService {
       return {
         success: false,
         message: `Ticket already used on ${ticket.usedAt?.toISOString()}`,
-        ticket
+        ticket,
       };
     }
 
@@ -234,17 +265,19 @@ export class TicketsService {
       return {
         success: false,
         message: 'Ticket has been cancelled',
-        ticket
+        ticket,
       };
     }
 
     // Check if expired
     if (ticket.expiresAt && ticket.expiresAt < new Date()) {
-      await this.ticketModel.findByIdAndUpdate(ticket._id, { status: TicketStatus.EXPIRED });
+      await this.ticketModel.findByIdAndUpdate(ticket._id, {
+        status: TicketStatus.EXPIRED,
+      });
       return {
         success: false,
         message: 'Ticket has expired',
-        ticket
+        ticket,
       };
     }
 
@@ -256,7 +289,7 @@ export class TicketsService {
     return {
       success: true,
       message: 'Ticket validated successfully',
-      ticket
+      ticket,
     };
   }
 
@@ -294,7 +327,10 @@ export class TicketsService {
       throw new BadRequestException('Invalid tournament ID');
     }
 
-    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
+    const tournament = await this.tournamentModel
+      .findById(tournamentId)
+      .populate('ticketTypes')
+      .exec();
     if (!tournament) {
       throw new NotFoundException('Tournament not found');
     }
@@ -307,28 +343,33 @@ export class TicketsService {
     const totalRevenue = tickets.reduce((sum, ticket) => sum + ticket.price, 0);
 
     // Statistics by type
-    const byType = (tournament.ticketTypes as any[] || []).map((typeConfig: any) => {
-      const typeTickets = tickets.filter(t => t.type === typeConfig.name && t.status !== TicketStatus.CANCELLED);
-      return {
-        type: typeConfig.name,
-        sold: typeTickets.length,
-        revenue: typeTickets.reduce((sum, t) => sum + t.price, 0),
-        capacity: typeConfig.capacity,
-        available: typeConfig.capacity - typeTickets.length
-      };
-    });
+    const byType = ((tournament.ticketTypes as any[]) || []).map(
+      (typeConfig: any) => {
+        const typeTickets = tickets.filter(
+          (t) =>
+            t.type === typeConfig.name && t.status !== TicketStatus.CANCELLED,
+        );
+        return {
+          type: typeConfig.name,
+          sold: typeTickets.length,
+          revenue: typeTickets.reduce((sum, t) => sum + t.price, 0),
+          capacity: typeConfig.capacity,
+          available: typeConfig.capacity - typeTickets.length,
+        };
+      },
+    );
 
     // Statistics by status
     const byStatus: Record<string, number> = {};
-    Object.values(TicketStatus).forEach(status => {
-      byStatus[status] = tickets.filter(t => t.status === status).length;
+    Object.values(TicketStatus).forEach((status) => {
+      byStatus[status] = tickets.filter((t) => t.status === status).length;
     });
 
     return {
       totalSold,
       totalRevenue,
       byType,
-      byStatus
+      byStatus,
     };
   }
 }

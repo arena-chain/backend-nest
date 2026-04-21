@@ -7,7 +7,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Video, VideoDocument } from './schema/video.schema';
-import { VideoComment, VideoCommentDocument } from './schema/video-comment.schema';
+import {
+  VideoComment,
+  VideoCommentDocument,
+} from './schema/video-comment.schema';
 import { VideoLike, VideoLikeDocument } from './schema/video-like.schema';
 import {
   VideoCommentLike,
@@ -114,7 +117,10 @@ export class VideoEngagementService {
     const ids = rows.map((r) => r._id);
     const [agg, mineRows] = await Promise.all([
       this.commentLikeModel
-        .aggregate<{ _id: Types.ObjectId; likeCount: number }>([
+        .aggregate<{
+          _id: Types.ObjectId;
+          likeCount: number;
+        }>([
           { $match: { comment: { $in: ids } } },
           { $group: { _id: '$comment', likeCount: { $sum: 1 } } },
         ])
@@ -131,11 +137,11 @@ export class VideoEngagementService {
         : Promise.resolve([]),
     ]);
 
-    const countMap = new Map(
-      agg.map((a) => [a._id.toString(), a.likeCount]),
-    );
+    const countMap = new Map(agg.map((a) => [a._id.toString(), a.likeCount]));
     const mySet = new Set(
-      mineRows.map((m) => (m as { comment: Types.ObjectId }).comment.toString()),
+      mineRows.map((m) =>
+        (m as { comment: Types.ObjectId }).comment.toString(),
+      ),
     );
 
     const enriched = rows.map((c) => ({
@@ -189,14 +195,16 @@ export class VideoEngagementService {
       const parent = await this.commentModel.findById(parentCommentId).exec();
       if (!parent) throw new NotFoundException('Parent comment not found');
       if (parent.video.toString() !== videoId) {
-        throw new BadRequestException('Parent comment belongs to another video');
+        throw new BadRequestException(
+          'Parent comment belongs to another video',
+        );
       }
       if (parent.parentComment) {
         throw new BadRequestException(
           'You can only reply to a top-level comment',
         );
       }
-      parentComment = parent._id as Types.ObjectId;
+      parentComment = parent._id;
     }
 
     const created = await this.commentModel.create({
@@ -234,7 +242,9 @@ export class VideoEngagementService {
       const code = (e as { code?: number })?.code;
       if (code !== 11000) throw e;
     }
-    const likeCount = await this.likeModel.countDocuments({ video: vid }).exec();
+    const likeCount = await this.likeModel
+      .countDocuments({ video: vid })
+      .exec();
     return { liked: true, likeCount };
   }
 
@@ -245,7 +255,9 @@ export class VideoEngagementService {
     const vid = new Types.ObjectId(videoId);
     const uid = new Types.ObjectId(userId);
     await this.likeModel.deleteOne({ video: vid, user: uid }).exec();
-    const likeCount = await this.likeModel.countDocuments({ video: vid }).exec();
+    const likeCount = await this.likeModel
+      .countDocuments({ video: vid })
+      .exec();
     return { liked: false, likeCount };
   }
 

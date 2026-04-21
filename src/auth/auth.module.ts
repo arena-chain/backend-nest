@@ -13,11 +13,16 @@ import { GoogleStrategy } from './google.strategy';
 import { SteamStrategy } from './steam.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Registration, RegistrationSchema } from './schemas/registration.schema';
+import {
+  Registration,
+  RegistrationSchema,
+} from './schemas/registration.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Registration.name, schema: RegistrationSchema }]),
+    MongooseModule.forFeature([
+      { name: Registration.name, schema: RegistrationSchema },
+    ]),
     UsersModule,
     PlayerModule,
     TeamManagerModule,
@@ -37,4 +42,4 @@ import { Registration, RegistrationSchema } from './schemas/registration.schema'
   providers: [AuthService, JwtStrategy, GoogleStrategy, SteamStrategy],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

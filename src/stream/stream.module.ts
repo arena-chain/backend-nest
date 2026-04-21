@@ -25,12 +25,10 @@ import { NotificationModule } from '../notification/notification.module';
     ChatModule,
     UsersModule,
     NotificationModule,
-    MongooseModule.forFeature([
-      { name: Stream.name, schema: StreamSchema },
-    ]),
+    MongooseModule.forFeature([{ name: Stream.name, schema: StreamSchema }]),
   ],
   controllers: [StreamController],
   providers: [StreamService, StreamGateway],
   exports: [StreamService],
 })
-export class StreamModule { }
+export class StreamModule {}

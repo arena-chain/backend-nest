@@ -4,38 +4,37 @@ import { Document } from 'mongoose';
 export type SeasonDocument = Season & Document;
 
 export enum SeasonStatus {
-    PLANNED = 'PLANNED',
-    ONGOING = 'ONGOING',
-    FINISHED = 'FINISHED',
+  PLANNED = 'PLANNED',
+  ONGOING = 'ONGOING',
+  FINISHED = 'FINISHED',
 }
 
 @Schema({ timestamps: true })
 export class Season {
-    @Prop({ required: true })
-    leagueId: string;
+  @Prop({ required: true })
+  leagueId: string;
 
-    /** Primary ruleset for this season. Set after creating SeasonRules with this season's id. */
-    @Prop()
-    rulesId?: string;
+  /** Primary ruleset for this season. Set after creating SeasonRules with this season's id. */
+  @Prop()
+  rulesId?: string;
 
-    @Prop({ required: true })
-    name: string;
+  @Prop({ required: true })
+  name: string;
 
-    @Prop({ required: true })
-    startDate: Date;
+  @Prop({ required: true })
+  startDate: Date;
 
-    @Prop({ required: true })
-    endDate: Date;
+  @Prop({ required: true })
+  endDate: Date;
 
-    @Prop({ required: true })
-    registrationDeadline: Date;
+  @Prop({ required: true })
+  registrationDeadline: Date;
 
-    @Prop({ required: true, enum: SeasonStatus, default: SeasonStatus.PLANNED })
-    status: SeasonStatus;
+  @Prop({ required: true, enum: SeasonStatus, default: SeasonStatus.PLANNED })
+  status: SeasonStatus;
 
-    @Prop()
-    description?: string;
+  @Prop()
+  description?: string;
 }
 
 export const SeasonSchema = SchemaFactory.createForClass(Season);
-

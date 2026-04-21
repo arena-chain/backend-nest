@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LigueService } from './ligue.service';
 import { CreateLigueDto } from './dto/create-ligue.dto';
@@ -7,11 +15,14 @@ import { UpdateLigueDto } from './dto/update-ligue.dto';
 @ApiTags('ligues')
 @Controller('ligues')
 export class LigueController {
-  constructor(private readonly ligueService: LigueService) { }
+  constructor(private readonly ligueService: LigueService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new ligue' })
-  @ApiResponse({ status: 201, description: 'The ligue has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The ligue has been successfully created.',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   create(@Body() createLigueDto: CreateLigueDto) {
     return this.ligueService.create(createLigueDto);
@@ -36,7 +47,10 @@ export class LigueController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a ligue' })
   @ApiParam({ name: 'id', description: 'Ligue ID' })
-  @ApiResponse({ status: 200, description: 'The ligue has been successfully updated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The ligue has been successfully updated.',
+  })
   @ApiResponse({ status: 404, description: 'Ligue not found.' })
   update(@Param('id') id: string, @Body() updateLigueDto: UpdateLigueDto) {
     return this.ligueService.update(id, updateLigueDto);
@@ -45,7 +59,10 @@ export class LigueController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a ligue' })
   @ApiParam({ name: 'id', description: 'Ligue ID' })
-  @ApiResponse({ status: 200, description: 'The ligue has been successfully deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The ligue has been successfully deleted.',
+  })
   @ApiResponse({ status: 404, description: 'Ligue not found.' })
   remove(@Param('id') id: string) {
     return this.ligueService.remove(id);

@@ -22,4 +22,3 @@ export class PlayerLevel {
 }
 
 export const PlayerLevelSchema = SchemaFactory.createForClass(PlayerLevel);
-

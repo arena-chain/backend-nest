@@ -5,18 +5,18 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 export class UpdateGroupDto extends PartialType(CreateGroupDto) {}
 
 export class AddTeamToGroupDto {
-    @IsString()
-    teamId: string;
+  @IsString()
+  teamId: string;
 }
 
 export class RemoveTeamFromGroupDto {
-    @IsString()
-    teamId: string;
+  @IsString()
+  teamId: string;
 }
 
 export class BulkAssignTeamsDto {
-    @IsArray()
-    @IsString({ each: true })
-    @IsOptional()
-    teamIds: string[];
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  teamIds: string[];
 }

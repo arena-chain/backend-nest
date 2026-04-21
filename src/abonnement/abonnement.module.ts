@@ -6,10 +6,12 @@ import { Abonnement, AbonnementSchema } from './schemas/abonnement.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Abonnement.name, schema: AbonnementSchema }]),
+    MongooseModule.forFeature([
+      { name: Abonnement.name, schema: AbonnementSchema },
+    ]),
   ],
   controllers: [AbonnementController],
   providers: [AbonnementService],
   exports: [AbonnementService],
 })
-export class AbonnementModule { }
+export class AbonnementModule {}

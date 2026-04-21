@@ -5,7 +5,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
 import { NotificationsGateway } from './notifications.gateway';
-import { Notification, NotificationSchema } from './entities/notification.entity';
+import {
+  Notification,
+  NotificationSchema,
+} from './entities/notification.entity';
 import {
   NotificationPreferences,
   NotificationPreferencesSchema,
@@ -15,7 +18,10 @@ import {
   imports: [
     MongooseModule.forFeature([
       { name: Notification.name, schema: NotificationSchema },
-      { name: NotificationPreferences.name, schema: NotificationPreferencesSchema },
+      {
+        name: NotificationPreferences.name,
+        schema: NotificationPreferencesSchema,
+      },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -30,4 +36,4 @@ import {
   providers: [NotificationService, NotificationsGateway],
   exports: [NotificationService, NotificationsGateway],
 })
-export class NotificationModule { }
+export class NotificationModule {}

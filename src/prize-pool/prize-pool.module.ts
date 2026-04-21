@@ -5,11 +5,13 @@ import { PrizePoolService } from './prize-pool.service';
 import { PrizePoolController } from './prize-pool.controller';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: PrizePool.name, schema: PrizePoolSchema }]),
-    ],
-    controllers: [PrizePoolController],
-    providers: [PrizePoolService],
-    exports: [PrizePoolService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: PrizePool.name, schema: PrizePoolSchema },
+    ]),
+  ],
+  controllers: [PrizePoolController],
+  providers: [PrizePoolService],
+  exports: [PrizePoolService],
 })
 export class PrizePoolModule {}

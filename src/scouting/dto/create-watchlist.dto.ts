@@ -1,4 +1,10 @@
-import { IsMongoId, IsNotEmpty, IsOptional, IsEnum, IsString } from 'class-validator';
+import {
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsString,
+} from 'class-validator';
 import { ProspectPriority } from '../schemas/player-prospect-status.schema';
 
 export class CreateWatchlistDto {

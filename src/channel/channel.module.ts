@@ -7,13 +7,11 @@ import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Channel.name, schema: ChannelSchema },
-    ]),
+    MongooseModule.forFeature([{ name: Channel.name, schema: ChannelSchema }]),
     NotificationModule,
   ],
   controllers: [ChannelController],
   providers: [ChannelService],
   exports: [ChannelService],
 })
-export class ChannelModule { }
+export class ChannelModule {}

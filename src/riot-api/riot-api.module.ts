@@ -7,17 +7,17 @@ import { PlayerModule } from '../player/player.module';
 import { MissionModule } from '../mission/mission.module';
 
 @Module({
-    imports: [
-        HttpModule.register({
-            timeout: 5000,
-            maxRedirects: 5,
-        }),
-        ConfigModule,
-        PlayerModule,
-        MissionModule,
-    ],
-    controllers: [RiotApiController],
-    providers: [RiotApiService],
-    exports: [RiotApiService],
+  imports: [
+    HttpModule.register({
+      timeout: 5000,
+      maxRedirects: 5,
+    }),
+    ConfigModule,
+    PlayerModule,
+    MissionModule,
+  ],
+  controllers: [RiotApiController],
+  providers: [RiotApiService],
+  exports: [RiotApiService],
 })
-export class RiotApiModule { }
+export class RiotApiModule {}

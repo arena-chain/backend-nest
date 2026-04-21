@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateStreamDto } from './dto/create-stream.dto';
@@ -16,7 +21,7 @@ export class StreamService {
     @InjectModel(Stream.name) private streamModel: Model<StreamDocument>,
     private readonly channelService: ChannelService,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   private buildMeteredCredentialsUrl() {
     const directUrl = process.env.METERED_TURN_CREDENTIALS_URL?.trim();
@@ -46,9 +51,16 @@ export class StreamService {
         const response = await fetch(meteredTurnCredentialsUrl);
 
         if (response.ok) {
-          const meteredIceServers = await response.json() as Array<{ urls: string | string[]; username?: string; credential?: string }>;
+          const meteredIceServers = (await response.json()) as Array<{
+            urls: string | string[];
+            username?: string;
+            credential?: string;
+          }>;
 
-          if (Array.isArray(meteredIceServers) && meteredIceServers.length > 0) {
+          if (
+            Array.isArray(meteredIceServers) &&
+            meteredIceServers.length > 0
+          ) {
             return {
               iceServers: meteredIceServers,
               hasTurn: true,
@@ -56,10 +68,13 @@ export class StreamService {
             };
           }
         } else {
-          this.logger.warn(`Metered TURN credentials request failed: ${response.status}`);
+          this.logger.warn(
+            `Metered TURN credentials request failed: ${response.status}`,
+          );
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown Metered TURN error';
+        const message =
+          error instanceof Error ? error.message : 'Unknown Metered TURN error';
         this.logger.warn(`Metered TURN credentials fetch failed: ${message}`);
       }
     }
@@ -69,7 +84,11 @@ export class StreamService {
       .map((value) => value.trim())
       .filter(Boolean);
 
-    const iceServers: Array<{ urls: string | string[]; username?: string; credential?: string }> = [
+    const iceServers: Array<{
+      urls: string | string[];
+      username?: string;
+      credential?: string;
+    }> = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
     ];
@@ -105,11 +124,18 @@ export class StreamService {
     return value.toString();
   }
 
-  async create(streamerId: string, createStreamDto: CreateStreamDto): Promise<StreamDocument> {
-    const channel = await this.channelService.findOne(createStreamDto.channelId);
+  async create(
+    streamerId: string,
+    createStreamDto: CreateStreamDto,
+  ): Promise<StreamDocument> {
+    const channel = await this.channelService.findOne(
+      createStreamDto.channelId,
+    );
 
     if (this.extractId(channel.ownerId) !== streamerId) {
-      throw new ForbiddenException('You can only create streams for your own channel');
+      throw new ForbiddenException(
+        'You can only create streams for your own channel',
+      );
     }
 
     const stream = new this.streamModel({
@@ -123,7 +149,9 @@ export class StreamService {
       endedAt: createStreamDto.isLive ? undefined : new Date(),
     });
     const saved = await stream.save();
-    this.logger.log(`Stream created: stream=${saved._id.toString()} channel=${createStreamDto.channelId} user=${streamerId}`);
+    this.logger.log(
+      `Stream created: stream=${saved._id.toString()} channel=${createStreamDto.channelId} user=${streamerId}`,
+    );
 
     // Notify subscribers if scheduled
     if (saved.scheduledStartTime) {
@@ -131,7 +159,8 @@ export class StreamService {
         { path: 'streamerId', select: 'nickname' },
         { path: 'channelId', select: 'name subscribers' },
       ]);
-      const streamerNickname = (populated.streamerId as any).nickname || 'A streamer';
+      const streamerNickname =
+        (populated.streamerId as any).nickname || 'A streamer';
       const subscribers = (populated.channelId as any).subscribers || [];
 
       if (subscribers.length > 0) {
@@ -153,15 +182,29 @@ export class StreamService {
   }
 
   async findAll(): Promise<StreamDocument[]> {
-    return this.streamModel.find().populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').sort({ createdAt: -1 }).exec();
+    return this.streamModel
+      .find()
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
   async findMine(streamerId: string): Promise<StreamDocument[]> {
-    return this.streamModel.find({ streamerId: new Types.ObjectId(streamerId) }).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').sort({ createdAt: -1 }).exec();
+    return this.streamModel
+      .find({ streamerId: new Types.ObjectId(streamerId) })
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
   async findOne(id: string): Promise<StreamDocument> {
-    const stream = await this.streamModel.findById(id).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').exec();
+    const stream = await this.streamModel
+      .findById(id)
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl')
+      .exec();
 
     if (!stream) {
       throw new NotFoundException(`Stream with ID ${id} not found`);
@@ -171,11 +214,18 @@ export class StreamService {
   }
 
   async findByStreamer(streamerId: string): Promise<StreamDocument[]> {
-    return this.streamModel.find({ streamerId: new Types.ObjectId(streamerId) }).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').sort({ createdAt: -1 }).exec();
+    return this.streamModel
+      .find({ streamerId: new Types.ObjectId(streamerId) })
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl')
+      .sort({ createdAt: -1 })
+      .exec();
   }
 
   async findByChannel(channelId: string): Promise<StreamDocument[]> {
-    const objectId = Types.ObjectId.isValid(channelId) ? new Types.ObjectId(channelId) : null;
+    const objectId = Types.ObjectId.isValid(channelId)
+      ? new Types.ObjectId(channelId)
+      : null;
     const query = objectId
       ? { $or: [{ channelId: objectId }, { channelId }] }
       : { channelId };
@@ -186,38 +236,63 @@ export class StreamService {
       .populate('channelId', 'name ownerId avatarUrl')
       .sort({ createdAt: -1 })
       .exec();
-    this.logger.log(`findByChannel: channel=${channelId} results=${results.length}`);
+    this.logger.log(
+      `findByChannel: channel=${channelId} results=${results.length}`,
+    );
     return results;
   }
 
   async findLiveStreams(): Promise<StreamDocument[]> {
-    return this.streamModel.find({ isLive: true }).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').sort({ startedAt: -1 }).exec();
+    return this.streamModel
+      .find({ isLive: true })
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl')
+      .sort({ startedAt: -1 })
+      .exec();
   }
 
-  async update(id: string, streamerId: string, updateStreamDto: UpdateStreamDto): Promise<StreamDocument> {
+  async update(
+    id: string,
+    streamerId: string,
+    updateStreamDto: UpdateStreamDto,
+  ): Promise<StreamDocument> {
     const existing = await this.findOne(id);
 
     if (this.extractId(existing.streamerId) !== streamerId) {
       throw new ForbiddenException('You can only update your own stream');
     }
 
-    const stream = await this.streamModel.findByIdAndUpdate(
-      id,
-      {
-        ...updateStreamDto,
-        streamUrl: updateStreamDto.streamUrl || updateStreamDto.playbackUrl || existing.streamUrl,
-        playbackUrl: updateStreamDto.playbackUrl || updateStreamDto.streamUrl || existing.playbackUrl,
-      },
-      { new: true },
-    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl subscribers').exec();
+    const stream = await this.streamModel
+      .findByIdAndUpdate(
+        id,
+        {
+          ...updateStreamDto,
+          streamUrl:
+            updateStreamDto.streamUrl ||
+            updateStreamDto.playbackUrl ||
+            existing.streamUrl,
+          playbackUrl:
+            updateStreamDto.playbackUrl ||
+            updateStreamDto.streamUrl ||
+            existing.playbackUrl,
+        },
+        { new: true },
+      )
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl subscribers')
+      .exec();
 
     if (!stream) {
       throw new NotFoundException(`Stream with ID ${id} not found`);
     }
 
     // Notify subscribers if scheduled and it's a new or changed schedule
-    if (stream.scheduledStartTime && stream.scheduledStartTime !== existing.scheduledStartTime) {
-      const streamerNickname = (stream.streamerId as any).nickname || 'A streamer';
+    if (
+      stream.scheduledStartTime &&
+      stream.scheduledStartTime !== existing.scheduledStartTime
+    ) {
+      const streamerNickname =
+        (stream.streamerId as any).nickname || 'A streamer';
       const subscribers = (stream.channelId as any).subscribers || [];
 
       if (subscribers.length > 0) {
@@ -242,15 +317,19 @@ export class StreamService {
       throw new ForbiddenException('You can only start your own stream');
     }
 
-    const stream = await this.streamModel.findByIdAndUpdate(
-      id,
-      {
-        isLive: true,
-        startedAt: existing.startedAt || new Date(),
-        endedAt: undefined,
-      },
-      { new: true },
-    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl subscribers').exec();
+    const stream = await this.streamModel
+      .findByIdAndUpdate(
+        id,
+        {
+          isLive: true,
+          startedAt: existing.startedAt || new Date(),
+          endedAt: undefined,
+        },
+        { new: true },
+      )
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl subscribers')
+      .exec();
 
     if (!stream) {
       throw new NotFoundException(`Stream with ID ${id} not found`);
@@ -259,12 +338,18 @@ export class StreamService {
     this.logger.log(`Stream started: stream=${id} user=${streamerId}`);
 
     // Update channel status
-    const channelId = (stream.channelId as any)._id?.toString() || stream.channelId.toString();
-    await this.channelService.updateStatus(channelId, true, stream.viewerCount || 0);
+    const channelId =
+      (stream.channelId as any)._id?.toString() || stream.channelId.toString();
+    await this.channelService.updateStatus(
+      channelId,
+      true,
+      stream.viewerCount || 0,
+    );
 
     // Notify subscribers that we are LIVE
     const subscribers = (stream.channelId as any).subscribers || [];
-    const streamerNickname = (stream.streamerId as any).nickname || 'A streamer';
+    const streamerNickname =
+      (stream.streamerId as any).nickname || 'A streamer';
 
     if (subscribers.length > 0) {
       await this.notificationService.notifyChannelSubscribers(
@@ -287,14 +372,18 @@ export class StreamService {
       throw new ForbiddenException('You can only end your own stream');
     }
 
-    const stream = await this.streamModel.findByIdAndUpdate(
-      id,
-      {
-        isLive: false,
-        endedAt: new Date(),
-      },
-      { new: true },
-    ).populate('streamerId', 'email nickname').populate('channelId', 'name ownerId avatarUrl').exec();
+    const stream = await this.streamModel
+      .findByIdAndUpdate(
+        id,
+        {
+          isLive: false,
+          endedAt: new Date(),
+        },
+        { new: true },
+      )
+      .populate('streamerId', 'email nickname')
+      .populate('channelId', 'name ownerId avatarUrl')
+      .exec();
 
     if (!stream) {
       throw new NotFoundException(`Stream with ID ${id} not found`);
@@ -303,7 +392,8 @@ export class StreamService {
     this.logger.log(`Stream ended: stream=${id} user=${streamerId}`);
 
     // Update channel status
-    const channelId = (stream.channelId as any)._id?.toString() || stream.channelId.toString();
+    const channelId =
+      (stream.channelId as any)._id?.toString() || stream.channelId.toString();
     await this.channelService.updateStatus(channelId, false, 0);
 
     return stream;

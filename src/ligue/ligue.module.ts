@@ -5,8 +5,10 @@ import { LigueController } from './ligue.controller';
 import { Ligue, LigueSchema } from './entities/ligue.entity';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: Ligue.name, schema: LigueSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: Ligue.name, schema: LigueSchema }]),
+  ],
   controllers: [LigueController],
   providers: [LigueService],
 })
-export class LigueModule { }
+export class LigueModule {}

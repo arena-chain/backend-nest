@@ -42,6 +42,7 @@ export class TrainingResult {
   badHits: number;
 }
 
-export const TrainingResultSchema = SchemaFactory.createForClass(TrainingResult);
+export const TrainingResultSchema =
+  SchemaFactory.createForClass(TrainingResult);
 
 TrainingResultSchema.index({ difficulty: 1, score: -1 });

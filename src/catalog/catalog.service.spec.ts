@@ -16,4 +16,3 @@ describe('CatalogService', () => {
     expect(service).toBeDefined();
   });
 });
-

@@ -5,9 +5,13 @@ import { AssetPresetService } from './asset-preset.service';
 import { AssetPresetController } from './asset-preset.controller';
 
 @Module({
-    imports: [MongooseModule.forFeature([{ name: AssetPreset.name, schema: AssetPresetSchema }])],
-    controllers: [AssetPresetController],
-    providers: [AssetPresetService],
-    exports: [AssetPresetService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: AssetPreset.name, schema: AssetPresetSchema },
+    ]),
+  ],
+  controllers: [AssetPresetController],
+  providers: [AssetPresetService],
+  exports: [AssetPresetService],
 })
 export class AssetPresetModule {}

@@ -16,7 +16,10 @@ import { CreateWatchlistDto } from './dto/create-watchlist.dto';
 import { UpdateScoutingReportDto } from './dto/update-scouting-report.dto';
 import { UpdatePlayerProspectStatusDto } from './dto/update-player-prospect-status.dto';
 import { UpdateWatchlistDto } from './dto/update-watchlist.dto';
-import { ProspectLevel, ProspectPriority } from './schemas/player-prospect-status.schema';
+import {
+  ProspectLevel,
+  ProspectPriority,
+} from './schemas/player-prospect-status.schema';
 import { RecommendationStatus } from './schemas/player-recommendation.schema';
 
 @Controller('scouting')
@@ -108,7 +111,10 @@ export class ScoutingController {
     @Param('organizationId') organizationId: string,
     @Query('status') status?: RecommendationStatus,
   ) {
-    return this.scoutingService.findRecommendationsByOrganization(organizationId, status);
+    return this.scoutingService.findRecommendationsByOrganization(
+      organizationId,
+      status,
+    );
   }
 
   @Patch('recommendations/:id/status')
@@ -172,7 +178,8 @@ export class ScoutingController {
     @Query('prospectLevel') prospectLevel?: ProspectLevel,
     @Query('priority') priority?: ProspectPriority,
   ) {
-    const hasTeamBool = hasTeam === 'true' ? true : hasTeam === 'false' ? false : undefined;
+    const hasTeamBool =
+      hasTeam === 'true' ? true : hasTeam === 'false' ? false : undefined;
     return this.scoutingService.getFilteredPlayers({
       gameId,
       tier,

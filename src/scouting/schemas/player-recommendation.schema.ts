@@ -32,11 +32,16 @@ export class PlayerRecommendation {
   @Prop({ default: '' })
   message: string;
 
-  @Prop({ required: true, enum: RecommendationStatus, default: RecommendationStatus.PENDING })
+  @Prop({
+    required: true,
+    enum: RecommendationStatus,
+    default: RecommendationStatus.PENDING,
+  })
   status: RecommendationStatus;
 }
 
-export const PlayerRecommendationSchema = SchemaFactory.createForClass(PlayerRecommendation);
+export const PlayerRecommendationSchema =
+  SchemaFactory.createForClass(PlayerRecommendation);
 PlayerRecommendationSchema.index({ scouterId: 1 });
 PlayerRecommendationSchema.index({ playerId: 1 });
 PlayerRecommendationSchema.index({ organizationId: 1 });

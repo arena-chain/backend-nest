@@ -1,5 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -8,7 +23,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('channel')
 @Controller('channel')
 export class ChannelController {
-  constructor(private readonly channelService: ChannelService) { }
+  constructor(private readonly channelService: ChannelService) {}
 
   @Get('my')
   @UseGuards(JwtAuthGuard)
@@ -63,7 +78,11 @@ export class ChannelController {
   @ApiOperation({ summary: 'Update channel' })
   @ApiResponse({ status: 200, description: 'Channel updated successfully' })
   @ApiResponse({ status: 404, description: 'Channel not found' })
-  update(@Req() req, @Param('id') id: string, @Body() updateChannelDto: UpdateChannelDto) {
+  update(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() updateChannelDto: UpdateChannelDto,
+  ) {
     return this.channelService.update(id, req.user.userId, updateChannelDto);
   }
 

@@ -10,18 +10,18 @@ import { StandingsModule } from '../standings/standings.module';
 import { SeasonRosterModule } from '../season-roster/season-roster.module';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: SeasonTeam.name, schema: SeasonTeamSchema },
-            { name: Team.name, schema: TeamSchema },
-        ]),
-        SeasonModule,
-        LeagueRuleModule,
-        StandingsModule,
-        SeasonRosterModule,
-    ],
-    controllers: [LeagueRegistrationController],
-    providers: [LeagueRegistrationService],
-    exports: [LeagueRegistrationService],
+  imports: [
+    MongooseModule.forFeature([
+      { name: SeasonTeam.name, schema: SeasonTeamSchema },
+      { name: Team.name, schema: TeamSchema },
+    ]),
+    SeasonModule,
+    LeagueRuleModule,
+    StandingsModule,
+    SeasonRosterModule,
+  ],
+  controllers: [LeagueRegistrationController],
+  providers: [LeagueRegistrationService],
+  exports: [LeagueRegistrationService],
 })
 export class LeagueRegistrationModule {}

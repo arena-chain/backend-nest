@@ -8,13 +8,13 @@ import { News, NewsSchema } from './schemas/news.schema';
 import { NewsAgentService } from './news-agent.service';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([{ name: News.name, schema: NewsSchema }]),
-        HttpModule,
-        ScheduleModule.forRoot(),
-    ],
-    controllers: [NewsController],
-    providers: [NewsService, NewsAgentService],
-    exports: [NewsService],
+  imports: [
+    MongooseModule.forFeature([{ name: News.name, schema: NewsSchema }]),
+    HttpModule,
+    ScheduleModule.forRoot(),
+  ],
+  controllers: [NewsController],
+  providers: [NewsService, NewsAgentService],
+  exports: [NewsService],
 })
-export class NewsModule { }
+export class NewsModule {}

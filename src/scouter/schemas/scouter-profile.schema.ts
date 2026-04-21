@@ -4,8 +4,8 @@ import { Document, Types } from 'mongoose';
 export type ScouterProfileDocument = ScouterProfile & Document;
 
 export enum ScouterLevel {
-  REGIONAL = 'REGIONAL',       // Can scout within a specific region
-  NATIONAL = 'NATIONAL',       // Can scout nationwide
+  REGIONAL = 'REGIONAL', // Can scout within a specific region
+  NATIONAL = 'NATIONAL', // Can scout nationwide
   INTERNATIONAL = 'INTERNATIONAL', // Can scout globally
 }
 
@@ -33,7 +33,8 @@ export class ScouterProfile {
   isActive: boolean;
 }
 
-export const ScouterProfileSchema = SchemaFactory.createForClass(ScouterProfile);
+export const ScouterProfileSchema =
+  SchemaFactory.createForClass(ScouterProfile);
 // userId index: already created by @Prop({ unique: true })
 ScouterProfileSchema.index({ level: 1 });
 ScouterProfileSchema.index({ isActive: 1 });

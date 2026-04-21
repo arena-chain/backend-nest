@@ -4,7 +4,10 @@ import { GamesController } from './games.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Game, GameSchema } from './entities/game.entity';
 import { Catalog, CatalogSchema } from '../catalog/schemas/catalog.entity';
-import { Friendship, FriendshipSchema } from '../friendship/schemas/friendship.schema';
+import {
+  Friendship,
+  FriendshipSchema,
+} from '../friendship/schemas/friendship.schema';
 import { MissionModule } from '../mission/mission.module';
 
 @Module({
@@ -20,4 +23,4 @@ import { MissionModule } from '../mission/mission.module';
   providers: [GamesService],
   exports: [GamesService],
 })
-export class GamesModule { }
+export class GamesModule {}

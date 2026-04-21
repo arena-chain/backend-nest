@@ -50,7 +50,10 @@ export class ScouterController {
 
   @Get('players/:playerUserId/matches')
   @ApiOperation({ summary: 'Get player match history' })
-  @ApiResponse({ status: 200, description: 'List of matches the player participated in' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of matches the player participated in',
+  })
   getPlayerMatchHistory(@Param('playerUserId') playerUserId: string) {
     return this.scouterService.getPlayerMatchHistory(playerUserId);
   }

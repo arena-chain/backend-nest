@@ -6,49 +6,48 @@ export type TeamManagerProfileDocument = TeamManagerProfile & Document;
 
 @Schema({ timestamps: true })
 export class TeamManagerProfile {
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
-    userId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
+  userId: Types.ObjectId;
 
-    @Prop({ type: Types.ObjectId, ref: 'Team', required: true })
-    team: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Team', required: true })
+  team: Types.ObjectId;
 
+  @Prop()
+  organizationName?: string;
 
-    @Prop()
-    organizationName?: string;
+  @Prop()
+  firstName?: string;
 
-    @Prop()
-    firstName?: string;
+  @Prop()
+  lastName?: string;
 
-    @Prop()
-    lastName?: string;
+  @Prop()
+  cin?: string;
 
-    @Prop()
-    cin?: string;
+  @Prop()
+  age?: number;
 
-    @Prop()
-    age?: number;
+  @Prop()
+  gender?: string;
 
-    @Prop()
-    gender?: string;
+  @Prop()
+  description?: string;
 
-    @Prop()
-    description?: string;
+  @Prop()
+  phoneNumber?: string;
 
-    @Prop()
-    phoneNumber?: string;
+  @Prop()
+  photo?: string;
 
-    @Prop()
-    photo?: string;
+  @Prop({ enum: ['pending', 'approved', 'rejected'], default: 'pending' })
+  status: string;
 
-    @Prop({ enum: ['pending', 'approved', 'rejected'], default: 'pending' })
-    status: string;
+  @Prop({ default: false })
+  isVerified: boolean;
 
-    @Prop({ default: false })
-    isVerified: boolean;
-
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'Team' }], default: [] })
-    managedTeams: Types.ObjectId[];
-
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Team' }], default: [] })
+  managedTeams: Types.ObjectId[];
 }
 
-export const TeamManagerProfileSchema = SchemaFactory.createForClass(TeamManagerProfile);
+export const TeamManagerProfileSchema =
+  SchemaFactory.createForClass(TeamManagerProfile);

@@ -34,7 +34,11 @@ export class Invitation {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   senderId: Types.ObjectId;
 
-  @Prop({ required: true, enum: InvitationStatus, default: InvitationStatus.PENDING })
+  @Prop({
+    required: true,
+    enum: InvitationStatus,
+    default: InvitationStatus.PENDING,
+  })
   status: InvitationStatus;
 
   @Prop()

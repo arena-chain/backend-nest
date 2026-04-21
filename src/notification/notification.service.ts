@@ -1,13 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Notification, NotificationDocument, NotificationCategory } from './entities/notification.entity';
+import {
+  Notification,
+  NotificationDocument,
+  NotificationCategory,
+} from './entities/notification.entity';
 import {
   NotificationPreferences,
   NotificationPreferencesDocument,
 } from './entities/notification-preferences.entity';
-import { CreateNotificationDto, NotificationType } from './dto/create-notification.dto';
-import { NotificationPreferencesDto, RegisterDeviceTokenDto } from './dto/notification-preferences.dto';
+import {
+  CreateNotificationDto,
+  NotificationType,
+} from './dto/create-notification.dto';
+import {
+  NotificationPreferencesDto,
+  RegisterDeviceTokenDto,
+} from './dto/notification-preferences.dto';
 import { NotificationsGateway } from './notifications.gateway';
 import { forwardRef, Inject } from '@nestjs/common';
 
@@ -22,10 +32,12 @@ export class NotificationService {
     private readonly prefsModel: Model<NotificationPreferencesDocument>,
     @Inject(forwardRef(() => NotificationsGateway))
     private readonly gateway: NotificationsGateway,
-  ) { }
+  ) {}
 
   // ─── Create ─────────────────────────────────────────────────────────
-  async createForUser(dto: CreateNotificationDto): Promise<NotificationDocument | null> {
+  async createForUser(
+    dto: CreateNotificationDto,
+  ): Promise<NotificationDocument | null> {
     const userId = new Types.ObjectId(dto.userId);
 
     // Check preferences — skip if category is disabled
@@ -50,7 +62,10 @@ export class NotificationService {
     });
 
     // Auto-archive if more than ARCHIVE_THRESHOLD active notifications
-    const count = await this.notifModel.countDocuments({ userId, archived: false });
+    const count = await this.notifModel.countDocuments({
+      userId,
+      archived: false,
+    });
     if (count > ARCHIVE_THRESHOLD) {
       const oldest = await this.notifModel
         .find({ userId, archived: false })
@@ -60,7 +75,10 @@ export class NotificationService {
         .lean()
         .exec();
       const ids = oldest.map((n) => n._id);
-      await this.notifModel.updateMany({ _id: { $in: ids } }, { archived: true });
+      await this.notifModel.updateMany(
+        { _id: { $in: ids } },
+        { archived: true },
+      );
     }
 
     if (notif) {
@@ -72,7 +90,9 @@ export class NotificationService {
 
   // ─── List ────────────────────────────────────────────────────────────
   async findAllForUser(userId: string, includeArchived = false) {
-    const query: Record<string, unknown> = { userId: new Types.ObjectId(userId) };
+    const query: Record<string, unknown> = {
+      userId: new Types.ObjectId(userId),
+    };
     if (!includeArchived) query.archived = false;
     return this.notifModel
       .find(query)
@@ -108,7 +128,10 @@ export class NotificationService {
 
   // ─── Delete ───────────────────────────────────────────────────────────
   async deleteOne(id: string, userId: string) {
-    return this.notifModel.findOneAndDelete({ _id: id, userId: new Types.ObjectId(userId) });
+    return this.notifModel.findOneAndDelete({
+      _id: id,
+      userId: new Types.ObjectId(userId),
+    });
   }
 
   async clearAll(userId: string) {
@@ -124,10 +147,18 @@ export class NotificationService {
     if (!prefs) {
       // Return defaults
       return {
-        matches: true, leagues: true, social: true, achievements: true, streams: true,
+        matches: true,
+        leagues: true,
+        social: true,
+        achievements: true,
+        streams: true,
         security: true,
-        emailEnabled: true, emailMatches: true, emailLeagues: true,
-        emailSocial: false, emailAchievements: true, emailStreams: false,
+        emailEnabled: true,
+        emailMatches: true,
+        emailLeagues: true,
+        emailSocial: false,
+        emailAchievements: true,
+        emailStreams: false,
         pushEnabled: true,
       };
     }

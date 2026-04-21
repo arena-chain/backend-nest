@@ -6,9 +6,11 @@ import { Achievement, AchievementSchema } from './schemas/achievement.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Achievement.name, schema: AchievementSchema }]),
+    MongooseModule.forFeature([
+      { name: Achievement.name, schema: AchievementSchema },
+    ]),
   ],
   controllers: [AchievementsController],
   providers: [AchievementsService],
 })
-export class AchievementsModule { }
+export class AchievementsModule {}

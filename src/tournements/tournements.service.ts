@@ -1,7 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CreateTournementDto, TournamentStatus, TournamentType } from './dto/create-tournement.dto';
+import {
+  CreateTournementDto,
+  TournamentStatus,
+  TournamentType,
+} from './dto/create-tournement.dto';
 import { AddTicketTypesDto } from './dto/add-ticket-types.dto';
 import { UpdateTournementDto } from './dto/update-tournement.dto';
 import { Tournament, TournamentDocument } from './schemas/tournament.schema';
@@ -9,17 +18,22 @@ import { Team, TeamDocument } from '../team/schemas/team.schema';
 import { FriendshipService } from '../friendship/friendship.service';
 import { NotificationService } from '../notification/notification.service';
 
-import { TicketTypeDefinition, TicketTypeDefinitionDocument } from '../tickets/schemas/ticket-type.schema';
+import {
+  TicketTypeDefinition,
+  TicketTypeDefinitionDocument,
+} from '../tickets/schemas/ticket-type.schema';
 
 @Injectable()
 export class TournementsService {
   constructor(
-    @InjectModel(Tournament.name) private tournamentModel: Model<TournamentDocument>,
+    @InjectModel(Tournament.name)
+    private tournamentModel: Model<TournamentDocument>,
     @InjectModel(Team.name) private teamModel: Model<TeamDocument>,
-    @InjectModel(TicketTypeDefinition.name) private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
+    @InjectModel(TicketTypeDefinition.name)
+    private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
     private friendshipService: FriendshipService,
     private notificationService: NotificationService,
-  ) { }
+  ) {}
 
   async create(createTournementDto: CreateTournementDto): Promise<Tournament> {
     try {
@@ -38,17 +52,16 @@ export class TournementsService {
         invitations: [],
       };
 
-
-
       const createdTournament = new this.tournamentModel(tournamentData);
       const savedTournament = await createdTournament.save();
 
       // Send notifications with correct tournament ID
 
-
       return savedTournament;
     } catch (error) {
-      throw new BadRequestException(`Failed to create tournament: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to create tournament: ${error.message}`,
+      );
     }
   }
 
@@ -78,7 +91,10 @@ export class TournementsService {
     return tournament;
   }
 
-  async update(id: string, updateTournementDto: UpdateTournementDto): Promise<Tournament> {
+  async update(
+    id: string,
+    updateTournementDto: UpdateTournementDto,
+  ): Promise<Tournament> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid tournament ID');
     }
@@ -117,15 +133,23 @@ export class TournementsService {
   }
 
   // Team Management Methods
-  async registerTeam(tournamentId: string, teamId: string): Promise<Tournament> {
-    if (!Types.ObjectId.isValid(tournamentId) || !Types.ObjectId.isValid(teamId)) {
+  async registerTeam(
+    tournamentId: string,
+    teamId: string,
+  ): Promise<Tournament> {
+    if (
+      !Types.ObjectId.isValid(tournamentId) ||
+      !Types.ObjectId.isValid(teamId)
+    ) {
       throw new BadRequestException('Invalid tournament or team ID');
     }
 
     const tournament = await this.tournamentModel.findById(tournamentId);
 
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
     if (!tournament.registrationOpen) {
@@ -139,8 +163,10 @@ export class TournementsService {
     const teamObjectId = new Types.ObjectId(teamId);
 
     // Check if team is already registered
-    if (tournament.teams.some(t => t.toString() === teamId)) {
-      throw new BadRequestException('Team is already registered for this tournament');
+    if (tournament.teams.some((t) => t.toString() === teamId)) {
+      throw new BadRequestException(
+        'Team is already registered for this tournament',
+      );
     }
 
     tournament.teams.push(teamObjectId);
@@ -151,18 +177,28 @@ export class TournementsService {
     return await this.findOne(tournamentId);
   }
 
-  async unregisterTeam(tournamentId: string, teamId: string): Promise<Tournament> {
-    if (!Types.ObjectId.isValid(tournamentId) || !Types.ObjectId.isValid(teamId)) {
+  async unregisterTeam(
+    tournamentId: string,
+    teamId: string,
+  ): Promise<Tournament> {
+    if (
+      !Types.ObjectId.isValid(tournamentId) ||
+      !Types.ObjectId.isValid(teamId)
+    ) {
       throw new BadRequestException('Invalid tournament or team ID');
     }
 
     const tournament = await this.tournamentModel.findById(tournamentId);
 
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
-    const teamIndex = tournament.teams.findIndex(t => t.toString() === teamId);
+    const teamIndex = tournament.teams.findIndex(
+      (t) => t.toString() === teamId,
+    );
 
     if (teamIndex === -1) {
       throw new NotFoundException('Team is not registered for this tournament');
@@ -177,7 +213,11 @@ export class TournementsService {
   }
 
   // Phase Management Methods
-  async updatePhaseStatus(tournamentId: string, phaseName: string, status: string): Promise<Tournament> {
+  async updatePhaseStatus(
+    tournamentId: string,
+    phaseName: string,
+    status: string,
+  ): Promise<Tournament> {
     if (!Types.ObjectId.isValid(tournamentId)) {
       throw new BadRequestException('Invalid tournament ID');
     }
@@ -185,10 +225,12 @@ export class TournementsService {
     const tournament = await this.tournamentModel.findById(tournamentId);
 
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
-    const phase = tournament.phases.find(p => p.name === phaseName);
+    const phase = tournament.phases.find((p) => p.name === phaseName);
 
     if (!phase) {
       throw new NotFoundException(`Phase ${phaseName} not found in tournament`);
@@ -200,7 +242,10 @@ export class TournementsService {
     return await this.findOne(tournamentId);
   }
 
-  async addPhase(tournamentId: string, phaseData: { name: string; startDate?: Date; endDate?: Date }): Promise<Tournament> {
+  async addPhase(
+    tournamentId: string,
+    phaseData: { name: string; startDate?: Date; endDate?: Date },
+  ): Promise<Tournament> {
     if (!Types.ObjectId.isValid(tournamentId)) {
       throw new BadRequestException('Invalid tournament ID');
     }
@@ -208,11 +253,13 @@ export class TournementsService {
     const tournament = await this.tournamentModel.findById(tournamentId);
 
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
     // Check if phase already exists
-    if (tournament.phases.some(p => p.name === phaseData.name)) {
+    if (tournament.phases.some((p) => p.name === phaseData.name)) {
       throw new BadRequestException(`Phase ${phaseData.name} already exists`);
     }
 
@@ -229,7 +276,10 @@ export class TournementsService {
     return await this.findOne(tournamentId);
   }
 
-  async addTicketTypes(tournamentId: string, { ticketTypes }: AddTicketTypesDto): Promise<Tournament> {
+  async addTicketTypes(
+    tournamentId: string,
+    { ticketTypes }: AddTicketTypesDto,
+  ): Promise<Tournament> {
     if (!Types.ObjectId.isValid(tournamentId)) {
       throw new BadRequestException('Invalid tournament ID');
     }
@@ -237,7 +287,9 @@ export class TournementsService {
     const tournament = await this.tournamentModel.findById(tournamentId);
 
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
     // 1. Create separate TicketTypeDefinition documents
@@ -245,10 +297,10 @@ export class TournementsService {
       ticketTypes.map(async (ticketDto) => {
         const definition = new this.ticketTypeDefinitionModel({
           ...ticketDto,
-          tournament: new Types.ObjectId(tournamentId) // Link it to tournament
+          tournament: new Types.ObjectId(tournamentId), // Link it to tournament
         });
         return await definition.save();
-      })
+      }),
     );
 
     // 2. Clear existing (if any) and assign new IDs
@@ -257,7 +309,7 @@ export class TournementsService {
     // Ideally we should delete old orphaned definitions if they are exclusive to this tournament.
     // For now, simpler approach: just overwrite the reference list.
 
-    tournament.ticketTypes = createdDefinitions.map(def => def._id as any);
+    tournament.ticketTypes = createdDefinitions.map((def) => def._id as any);
 
     await tournament.save();
 
@@ -271,12 +323,18 @@ export class TournementsService {
 
     const tournament = await this.tournamentModel.findById(tournamentId).exec();
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
     const teams = await this.teamModel
       .find({ _id: { $in: tournament.teams } })
-      .populate({ path: 'members', model: 'User', select: 'nickname avatar email country' })
+      .populate({
+        path: 'members',
+        model: 'User',
+        select: 'nickname avatar email country',
+      })
       .exec();
 
     return teams;
@@ -287,10 +345,15 @@ export class TournementsService {
       throw new BadRequestException('Invalid tournament ID');
     }
 
-    const tournament = await this.tournamentModel.findById(tournamentId).populate('ticketTypes').exec();
+    const tournament = await this.tournamentModel
+      .findById(tournamentId)
+      .populate('ticketTypes')
+      .exec();
 
     if (!tournament) {
-      throw new NotFoundException(`Tournament with ID ${tournamentId} not found`);
+      throw new NotFoundException(
+        `Tournament with ID ${tournamentId} not found`,
+      );
     }
 
     if (!tournament.ticketTypes || tournament.ticketTypes.length === 0) {
@@ -300,20 +363,22 @@ export class TournementsService {
           name: tournament.name,
           startDate: tournament.startDate,
           endDate: tournament.endDate,
-          bannerImageUrl: tournament.bannerImageUrl
+          bannerImageUrl: tournament.bannerImageUrl,
         },
-        availableTickets: []
+        availableTickets: [],
       };
     }
 
     // Map populated documents
-    const availableTickets = (tournament.ticketTypes as any[]).map(ticketType => ({
-      id: ticketType._id, // Include ID for client-side reference
-      name: ticketType.name,
-      price: ticketType.price,
-      capacity: ticketType.capacity,
-      bundles: ticketType.bundles || []
-    }));
+    const availableTickets = (tournament.ticketTypes as any[]).map(
+      (ticketType) => ({
+        id: ticketType._id, // Include ID for client-side reference
+        name: ticketType.name,
+        price: ticketType.price,
+        capacity: ticketType.capacity,
+        bundles: ticketType.bundles || [],
+      }),
+    );
 
     return {
       tournament: {
@@ -321,9 +386,9 @@ export class TournementsService {
         name: tournament.name,
         startDate: tournament.startDate,
         endDate: tournament.endDate,
-        bannerImageUrl: tournament.bannerImageUrl
+        bannerImageUrl: tournament.bannerImageUrl,
       },
-      availableTickets
+      availableTickets,
     };
   }
 }

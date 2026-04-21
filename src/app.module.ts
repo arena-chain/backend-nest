@@ -63,7 +63,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 
 const mongoLogger = new Logger('MongoDB');
 
-const uploadRoot = join(__dirname, '..', 'uploads');
+const uploadRoot = resolve(process.cwd(), 'uploads');
 const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
 
 @Module({
@@ -71,14 +71,18 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
     ConfigModule.forRoot({
       isGlobal: true,
       // Load `.env` from repo root even if `process.cwd()` differs (e.g. `node dist/main` from another folder).
-      envFilePath: [resolve(process.cwd(), '.env'), join(__dirname, '..', '.env')],
+      envFilePath: [
+        resolve(process.cwd(), '.env'),
+        join(__dirname, '..', '.env'),
+      ],
     }),
     EventEmitterModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => {
         const uri =
-          config.get<string>('MONGO_URI') || 'mongodb://localhost:27017/arenachain';
+          config.get<string>('MONGO_URI') ||
+          'mongodb://localhost:27017/arenachain';
         const dbName = config.get<string>('MONGO_DB_NAME') || 'arenachain';
         mongoLogger.log(
           `Using database name "${dbName}" (set MONGO_DB_NAME in env if your Atlas DB differs)`,
@@ -96,10 +100,10 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
     }),
     ...(existsSync(inventoryStaticRoot)
       ? [
-            ServeStaticModule.forRoot({
-                rootPath: inventoryStaticRoot,
-                serveRoot: '/inventory-files',
-            }),
+          ServeStaticModule.forRoot({
+            rootPath: inventoryStaticRoot,
+            serveRoot: '/inventory-files',
+          }),
         ]
       : []),
     AuthModule,
@@ -159,4 +163,4 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

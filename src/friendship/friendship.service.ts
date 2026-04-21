@@ -1,21 +1,34 @@
 // src/friendship/friendship.service.ts
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Friendship, FriendshipDocument, FriendshipStatus } from './schemas/friendship.schema';
+import {
+  Friendship,
+  FriendshipDocument,
+  FriendshipStatus,
+} from './schemas/friendship.schema';
 import { MissionService } from '../mission/mission.service';
 
 @Injectable()
 export class FriendshipService {
   constructor(
-    @InjectModel(Friendship.name) private friendshipModel: Model<FriendshipDocument>,
+    @InjectModel(Friendship.name)
+    private friendshipModel: Model<FriendshipDocument>,
     private readonly missionService: MissionService,
-  ) { }
+  ) {}
 
   /**
    * Send a friend request
    */
-  async sendFriendRequest(requesterId: string, recipientId: string): Promise<FriendshipDocument> {
+  async sendFriendRequest(
+    requesterId: string,
+    recipientId: string,
+  ): Promise<FriendshipDocument> {
     // Validate that users are different
     if (requesterId === recipientId) {
       throw new BadRequestException('Cannot send friend request to yourself');
@@ -24,8 +37,14 @@ export class FriendshipService {
     // Check if friendship already exists
     const existingFriendship = await this.friendshipModel.findOne({
       $or: [
-        { requesterId: new Types.ObjectId(requesterId), recipientId: new Types.ObjectId(recipientId) },
-        { requesterId: new Types.ObjectId(recipientId), recipientId: new Types.ObjectId(requesterId) },
+        {
+          requesterId: new Types.ObjectId(requesterId),
+          recipientId: new Types.ObjectId(recipientId),
+        },
+        {
+          requesterId: new Types.ObjectId(recipientId),
+          recipientId: new Types.ObjectId(requesterId),
+        },
       ],
     });
 
@@ -37,7 +56,9 @@ export class FriendshipService {
         throw new ConflictException('Friend request already pending');
       }
       if (existingFriendship.status === FriendshipStatus.BLOCKED) {
-        throw new BadRequestException('Cannot send friend request - user is blocked');
+        throw new BadRequestException(
+          'Cannot send friend request - user is blocked',
+        );
       }
     }
 
@@ -56,7 +77,10 @@ export class FriendshipService {
   /**
    * Accept a friend request
    */
-  async acceptFriendRequest(userId: string, friendshipId: string): Promise<FriendshipDocument> {
+  async acceptFriendRequest(
+    userId: string,
+    friendshipId: string,
+  ): Promise<FriendshipDocument> {
     const friendship = await this.friendshipModel.findById(friendshipId);
 
     if (!friendship) {
@@ -65,7 +89,9 @@ export class FriendshipService {
 
     // Ensure the user is the recipient
     if (friendship.recipientId.toString() !== userId) {
-      throw new BadRequestException('You are not authorized to accept this request');
+      throw new BadRequestException(
+        'You are not authorized to accept this request',
+      );
     }
 
     if (friendship.status !== FriendshipStatus.PENDING) {
@@ -77,14 +103,20 @@ export class FriendshipService {
 
     const acceptedFriendship = await friendship.save();
     await this.missionService.onFriendshipAccepted(userId, { amount: 1 });
-    await this.missionService.onFriendshipAccepted(friendship.requesterId.toString(), { amount: 1 });
+    await this.missionService.onFriendshipAccepted(
+      friendship.requesterId.toString(),
+      { amount: 1 },
+    );
     return acceptedFriendship;
   }
 
   /**
    * Reject a friend request
    */
-  async rejectFriendRequest(userId: string, friendshipId: string): Promise<FriendshipDocument> {
+  async rejectFriendRequest(
+    userId: string,
+    friendshipId: string,
+  ): Promise<FriendshipDocument> {
     const friendship = await this.friendshipModel.findById(friendshipId);
 
     if (!friendship) {
@@ -93,7 +125,9 @@ export class FriendshipService {
 
     // Ensure the user is the recipient
     if (friendship.recipientId.toString() !== userId) {
-      throw new BadRequestException('You are not authorized to reject this request');
+      throw new BadRequestException(
+        'You are not authorized to reject this request',
+      );
     }
 
     if (friendship.status !== FriendshipStatus.PENDING) {
@@ -112,8 +146,14 @@ export class FriendshipService {
   async removeFriend(userId: string, friendId: string): Promise<void> {
     const friendship = await this.friendshipModel.findOne({
       $or: [
-        { requesterId: new Types.ObjectId(userId), recipientId: new Types.ObjectId(friendId) },
-        { requesterId: new Types.ObjectId(friendId), recipientId: new Types.ObjectId(userId) },
+        {
+          requesterId: new Types.ObjectId(userId),
+          recipientId: new Types.ObjectId(friendId),
+        },
+        {
+          requesterId: new Types.ObjectId(friendId),
+          recipientId: new Types.ObjectId(userId),
+        },
       ],
       status: FriendshipStatus.ACCEPTED,
     });
@@ -128,12 +168,21 @@ export class FriendshipService {
   /**
    * Block a user
    */
-  async blockUser(userId: string, blockedUserId: string): Promise<FriendshipDocument> {
+  async blockUser(
+    userId: string,
+    blockedUserId: string,
+  ): Promise<FriendshipDocument> {
     // Check if friendship exists
     let friendship = await this.friendshipModel.findOne({
       $or: [
-        { requesterId: new Types.ObjectId(userId), recipientId: new Types.ObjectId(blockedUserId) },
-        { requesterId: new Types.ObjectId(blockedUserId), recipientId: new Types.ObjectId(userId) },
+        {
+          requesterId: new Types.ObjectId(userId),
+          recipientId: new Types.ObjectId(blockedUserId),
+        },
+        {
+          requesterId: new Types.ObjectId(blockedUserId),
+          recipientId: new Types.ObjectId(userId),
+        },
       ],
     });
 
@@ -143,7 +192,10 @@ export class FriendshipService {
       friendship.blockedAt = new Date();
       // Ensure the blocker is the requester
       if (friendship.recipientId.toString() === userId) {
-        [friendship.requesterId, friendship.recipientId] = [friendship.recipientId, friendship.requesterId];
+        [friendship.requesterId, friendship.recipientId] = [
+          friendship.recipientId,
+          friendship.requesterId,
+        ];
       }
       return friendship.save();
     } else {
@@ -182,8 +234,14 @@ export class FriendshipService {
     return this.friendshipModel
       .find({
         $or: [
-          { requesterId: new Types.ObjectId(userId), status: FriendshipStatus.ACCEPTED },
-          { recipientId: new Types.ObjectId(userId), status: FriendshipStatus.ACCEPTED },
+          {
+            requesterId: new Types.ObjectId(userId),
+            status: FriendshipStatus.ACCEPTED,
+          },
+          {
+            recipientId: new Types.ObjectId(userId),
+            status: FriendshipStatus.ACCEPTED,
+          },
         ],
       })
       .populate('requesterId', 'nickname email avatar')
@@ -236,8 +294,14 @@ export class FriendshipService {
   async areFriends(userId1: string, userId2: string): Promise<boolean> {
     const friendship = await this.friendshipModel.findOne({
       $or: [
-        { requesterId: new Types.ObjectId(userId1), recipientId: new Types.ObjectId(userId2) },
-        { requesterId: new Types.ObjectId(userId2), recipientId: new Types.ObjectId(userId1) },
+        {
+          requesterId: new Types.ObjectId(userId1),
+          recipientId: new Types.ObjectId(userId2),
+        },
+        {
+          requesterId: new Types.ObjectId(userId2),
+          recipientId: new Types.ObjectId(userId1),
+        },
       ],
       status: FriendshipStatus.ACCEPTED,
     });
@@ -251,8 +315,14 @@ export class FriendshipService {
   async getFriendshipStatus(userId1: string, userId2: string): Promise<string> {
     const friendship = await this.friendshipModel.findOne({
       $or: [
-        { requesterId: new Types.ObjectId(userId1), recipientId: new Types.ObjectId(userId2) },
-        { requesterId: new Types.ObjectId(userId2), recipientId: new Types.ObjectId(userId1) },
+        {
+          requesterId: new Types.ObjectId(userId1),
+          recipientId: new Types.ObjectId(userId2),
+        },
+        {
+          requesterId: new Types.ObjectId(userId2),
+          recipientId: new Types.ObjectId(userId1),
+        },
       ],
     });
 

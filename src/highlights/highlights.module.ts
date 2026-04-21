@@ -9,7 +9,10 @@ import {
   HighlightComment,
   HighlightCommentSchema,
 } from './schemas/highlight-comment.schema';
-import { HighlightLike, HighlightLikeSchema } from './schemas/highlight-like.schema';
+import {
+  HighlightLike,
+  HighlightLikeSchema,
+} from './schemas/highlight-like.schema';
 import {
   HighlightCommentLike,
   HighlightCommentLikeSchema,
@@ -27,7 +30,11 @@ import { HighlightsEngagementService } from './highlights-engagement.service';
     ]),
   ],
   controllers: [HighlightsController],
-  providers: [HighlightsService, HighlightBullmqService, HighlightsEngagementService],
+  providers: [
+    HighlightsService,
+    HighlightBullmqService,
+    HighlightsEngagementService,
+  ],
   exports: [HighlightsService, HighlightBullmqService],
 })
-export class HighlightsModule { }
+export class HighlightsModule {}

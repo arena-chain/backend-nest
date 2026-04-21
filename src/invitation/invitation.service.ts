@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Invitation, InvitationDocument, InvitationStatus, InvitationType } from './schemas/invitation.schema';
+import {
+  Invitation,
+  InvitationDocument,
+  InvitationStatus,
+  InvitationType,
+} from './schemas/invitation.schema';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import { TournementsService } from '../tournements/tournements.service';
 import { LeagueRegistrationService } from '../league-registration/league-registration.service';
@@ -15,24 +20,34 @@ import { TeamManagerService } from '../team-manager/team-manager.service';
 @Injectable()
 export class InvitationService {
   constructor(
-    @InjectModel(Invitation.name) private invitationModel: Model<InvitationDocument>,
+    @InjectModel(Invitation.name)
+    private invitationModel: Model<InvitationDocument>,
     private readonly tournamentService: TournementsService,
     private readonly registrationService: LeagueRegistrationService,
     private readonly teamManagerService: TeamManagerService,
   ) {}
 
-  async create(dto: CreateInvitationDto, senderId: string): Promise<Invitation> {
+  async create(
+    dto: CreateInvitationDto,
+    senderId: string,
+  ): Promise<Invitation> {
     if (dto.type === InvitationType.TOURNAMENT && !dto.tournamentId) {
-      throw new BadRequestException('tournamentId is required when type is TOURNAMENT');
+      throw new BadRequestException(
+        'tournamentId is required when type is TOURNAMENT',
+      );
     }
     if (dto.type === InvitationType.LEAGUE_SEASON && !dto.seasonId) {
-      throw new BadRequestException('seasonId is required when type is LEAGUE_SEASON');
+      throw new BadRequestException(
+        'seasonId is required when type is LEAGUE_SEASON',
+      );
     }
 
     const invitation = new this.invitationModel({
       teamId: new Types.ObjectId(dto.teamId),
       type: dto.type,
-      tournamentId: dto.tournamentId ? new Types.ObjectId(dto.tournamentId) : undefined,
+      tournamentId: dto.tournamentId
+        ? new Types.ObjectId(dto.tournamentId)
+        : undefined,
       seasonId: dto.seasonId ? new Types.ObjectId(dto.seasonId) : undefined,
       senderId: new Types.ObjectId(senderId),
       status: InvitationStatus.PENDING,
@@ -55,7 +70,10 @@ export class InvitationService {
     return inv;
   }
 
-  async findByTeam(teamId: string, status?: InvitationStatus): Promise<Invitation[]> {
+  async findByTeam(
+    teamId: string,
+    status?: InvitationStatus,
+  ): Promise<Invitation[]> {
     const filter: any = { teamId: new Types.ObjectId(teamId) };
     if (status) filter.status = status;
     return this.invitationModel
@@ -71,8 +89,12 @@ export class InvitationService {
    * Invitations for teams managed by this team manager.
    * Used by team manager to consult their invitations.
    */
-  async findByTeamManager(teamManagerUserId: string, status?: InvitationStatus): Promise<Invitation[]> {
-    const profile = await this.teamManagerService.findByUserId(teamManagerUserId);
+  async findByTeamManager(
+    teamManagerUserId: string,
+    status?: InvitationStatus,
+  ): Promise<Invitation[]> {
+    const profile =
+      await this.teamManagerService.findByUserId(teamManagerUserId);
     const teamId = (profile as any).team?.toString();
     if (!teamId) return [];
 
@@ -101,14 +123,19 @@ export class InvitationService {
       throw new BadRequestException('Invitation has expired');
     }
 
-    const profile = await this.teamManagerService.findByUserId(teamManagerUserId);
-    const managesTeam = (profile as any).team?.toString() === inv.teamId.toString();
+    const profile =
+      await this.teamManagerService.findByUserId(teamManagerUserId);
+    const managesTeam =
+      (profile as any).team?.toString() === inv.teamId.toString();
     if (!managesTeam) {
       throw new ForbiddenException('You do not manage this team');
     }
 
     if (inv.type === InvitationType.TOURNAMENT && inv.tournamentId) {
-      await this.tournamentService.registerTeam(inv.tournamentId.toString(), inv.teamId.toString());
+      await this.tournamentService.registerTeam(
+        inv.tournamentId.toString(),
+        inv.teamId.toString(),
+      );
     } else if (inv.type === InvitationType.LEAGUE_SEASON && inv.seasonId) {
       await this.registrationService.register({
         seasonId: inv.seasonId.toString(),
@@ -133,8 +160,10 @@ export class InvitationService {
       throw new BadRequestException(`Invitation is already ${inv.status}`);
     }
 
-    const profile = await this.teamManagerService.findByUserId(teamManagerUserId);
-    const managesTeam = (profile as any).team?.toString() === inv.teamId.toString();
+    const profile =
+      await this.teamManagerService.findByUserId(teamManagerUserId);
+    const managesTeam =
+      (profile as any).team?.toString() === inv.teamId.toString();
     if (!managesTeam) {
       throw new ForbiddenException('You do not manage this team');
     }

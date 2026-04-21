@@ -1,7 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ScouterProfile, ScouterProfileDocument, ScouterLevel } from './schemas/scouter-profile.schema';
+import {
+  ScouterProfile,
+  ScouterProfileDocument,
+  ScouterLevel,
+} from './schemas/scouter-profile.schema';
 import { SeasonRoster } from '../season-roster/schemas/season-roster.schema';
 import { PlayerService } from '../player/player.service';
 import { MatchService } from '../match/match.service';
@@ -9,7 +13,8 @@ import { MatchService } from '../match/match.service';
 @Injectable()
 export class ScouterService {
   constructor(
-    @InjectModel(ScouterProfile.name) private scouterModel: Model<ScouterProfileDocument>,
+    @InjectModel(ScouterProfile.name)
+    private scouterModel: Model<ScouterProfileDocument>,
     @InjectModel(SeasonRoster.name) private rosterModel: Model<any>,
     private readonly playerService: PlayerService,
     private readonly matchService: MatchService,
@@ -31,7 +36,9 @@ export class ScouterService {
     return profile.save();
   }
 
-  async findByUserId(userId: string | Types.ObjectId): Promise<ScouterProfileDocument> {
+  async findByUserId(
+    userId: string | Types.ObjectId,
+  ): Promise<ScouterProfileDocument> {
     const id = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
     const profile = await this.scouterModel.findOne({ userId: id }).exec();
     if (!profile) throw new NotFoundException('Scouter profile not found');
@@ -55,7 +62,10 @@ export class ScouterService {
   }
 
   /** Add a player to the scouter's evaluated list */
-  async addScoutedPlayer(scouterUserId: string, playerProfileId: string): Promise<ScouterProfileDocument> {
+  async addScoutedPlayer(
+    scouterUserId: string,
+    playerProfileId: string,
+  ): Promise<ScouterProfileDocument> {
     const profile = await this.findByUserId(scouterUserId);
     const pid = new Types.ObjectId(playerProfileId);
     if (!profile.scoutedPlayers.some((id) => id.equals(pid))) {
@@ -86,18 +96,26 @@ export class ScouterService {
    */
   async getPlayerMatchHistory(playerUserId: string): Promise<any[]> {
     const playerId = new Types.ObjectId(playerUserId);
-    const playerRosters = await this.rosterModel.find({ playerIds: playerId }).exec();
+    const playerRosters = await this.rosterModel
+      .find({ playerIds: playerId })
+      .exec();
     if (playerRosters.length === 0) return [];
 
     const matches: any[] = [];
     for (const roster of playerRosters) {
-      const seasonMatches = await this.matchService.findBySeason(roster.seasonId);
+      const seasonMatches = await this.matchService.findBySeason(
+        roster.seasonId,
+      );
       const relevant = seasonMatches.filter(
         (m: any) => m.team1Id === roster.teamId || m.team2Id === roster.teamId,
       );
       matches.push(...relevant);
     }
-    matches.sort((a, b) => new Date(b.scheduledStart).getTime() - new Date(a.scheduledStart).getTime());
+    matches.sort(
+      (a, b) =>
+        new Date(b.scheduledStart).getTime() -
+        new Date(a.scheduledStart).getTime(),
+    );
     return matches;
   }
 }

@@ -1,7 +1,4 @@
-import {
-  ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 /**
@@ -11,7 +8,9 @@ import { AuthGuard } from '@nestjs/passport';
 @Injectable()
 export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<{ headers?: { authorization?: string }; user?: unknown }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ headers?: { authorization?: string }; user?: unknown }>();
     const auth = request.headers?.authorization;
     if (!auth?.startsWith('Bearer ')) {
       request.user = undefined;
@@ -25,7 +24,10 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
     }
   }
 
-  handleRequest<TUser = unknown>(err: Error | undefined, user: TUser): TUser | undefined {
+  handleRequest<TUser = unknown>(
+    err: Error | undefined,
+    user: TUser,
+  ): TUser | undefined {
     if (err || !user) {
       return undefined;
     }

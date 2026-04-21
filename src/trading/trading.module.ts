@@ -11,16 +11,16 @@ import { TradingSeedService } from './trading-seed.service';
 import { TradingController } from './trading.controller';
 
 @Module({
-    imports: [
-        MongooseModule.forFeature([
-            { name: TradingOrder.name, schema: TradingOrderSchema },
-            { name: TradingTrade.name, schema: TradingTradeSchema },
-            { name: TradingAsset.name, schema: TradingAssetSchema },
-            { name: User.name, schema: UserSchema },
-        ]),
-    ],
-    controllers: [TradingController],
-    providers: [TradingService, TradingGateway, TradingSeedService],
-    exports: [TradingService, TradingGateway],
+  imports: [
+    MongooseModule.forFeature([
+      { name: TradingOrder.name, schema: TradingOrderSchema },
+      { name: TradingTrade.name, schema: TradingTradeSchema },
+      { name: TradingAsset.name, schema: TradingAssetSchema },
+      { name: User.name, schema: UserSchema },
+    ]),
+  ],
+  controllers: [TradingController],
+  providers: [TradingService, TradingGateway, TradingSeedService],
+  exports: [TradingService, TradingGateway],
 })
-export class TradingModule { }
+export class TradingModule {}

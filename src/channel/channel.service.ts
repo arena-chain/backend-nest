@@ -1,4 +1,10 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -13,10 +19,15 @@ export class ChannelService {
   constructor(
     @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
-  async create(ownerId: string, createChannelDto: CreateChannelDto): Promise<ChannelDocument> {
-    const existing = await this.channelModel.findOne({ ownerId: new Types.ObjectId(ownerId) }).exec();
+  async create(
+    ownerId: string,
+    createChannelDto: CreateChannelDto,
+  ): Promise<ChannelDocument> {
+    const existing = await this.channelModel
+      .findOne({ ownerId: new Types.ObjectId(ownerId) })
+      .exec();
 
     if (existing) {
       throw new ConflictException('This user already has a channel');
@@ -28,19 +39,31 @@ export class ChannelService {
       subscribers: [],
       subscriberCount: 0,
     });
-    return channel.save().then((doc) => doc.populate('ownerId', 'email nickname'));
+    return channel
+      .save()
+      .then((doc) => doc.populate('ownerId', 'email nickname'));
   }
 
   async findAll(): Promise<ChannelDocument[]> {
-    return this.channelModel.find().populate('ownerId', 'email nickname').sort({ isActive: -1, viewerCount: -1 }).exec();
+    return this.channelModel
+      .find()
+      .populate('ownerId', 'email nickname')
+      .sort({ isActive: -1, viewerCount: -1 })
+      .exec();
   }
 
   async findMine(ownerId: string): Promise<ChannelDocument | null> {
-    return this.channelModel.findOne({ ownerId: new Types.ObjectId(ownerId) }).populate('ownerId', 'email nickname').exec();
+    return this.channelModel
+      .findOne({ ownerId: new Types.ObjectId(ownerId) })
+      .populate('ownerId', 'email nickname')
+      .exec();
   }
 
   async findOne(id: string): Promise<ChannelDocument> {
-    const channel = await this.channelModel.findById(id).populate('ownerId', 'email nickname').exec();
+    const channel = await this.channelModel
+      .findById(id)
+      .populate('ownerId', 'email nickname')
+      .exec();
 
     if (!channel) {
       throw new NotFoundException(`Channel with ID ${id} not found`);
@@ -50,10 +73,17 @@ export class ChannelService {
   }
 
   async findByOwner(ownerId: string): Promise<ChannelDocument[]> {
-    return this.channelModel.find({ ownerId: new Types.ObjectId(ownerId) }).populate('ownerId', 'email nickname').exec();
+    return this.channelModel
+      .find({ ownerId: new Types.ObjectId(ownerId) })
+      .populate('ownerId', 'email nickname')
+      .exec();
   }
 
-  async update(id: string, ownerId: string, updateChannelDto: UpdateChannelDto): Promise<ChannelDocument> {
+  async update(
+    id: string,
+    ownerId: string,
+    updateChannelDto: UpdateChannelDto,
+  ): Promise<ChannelDocument> {
     const existing = await this.channelModel.findById(id).exec();
 
     if (!existing) {
@@ -64,11 +94,10 @@ export class ChannelService {
       throw new ForbiddenException('You can only update your own channel');
     }
 
-    const channel = await this.channelModel.findByIdAndUpdate(
-      id,
-      updateChannelDto,
-      { new: true },
-    ).populate('ownerId', 'email nickname').exec();
+    const channel = await this.channelModel
+      .findByIdAndUpdate(id, updateChannelDto, { new: true })
+      .populate('ownerId', 'email nickname')
+      .exec();
 
     if (!channel) {
       throw new NotFoundException(`Channel with ID ${id} not found`);
@@ -102,20 +131,24 @@ export class ChannelService {
     if (!channel) throw new NotFoundException('Channel not found');
 
     const userObjectId = new Types.ObjectId(userId);
-    const isSubscribed = channel.subscribers.some(subId => subId.toString() === userId);
+    const isSubscribed = channel.subscribers.some(
+      (subId) => subId.toString() === userId,
+    );
 
     if (isSubscribed) {
       return channel;
     }
 
-    const updated = await this.channelModel.findByIdAndUpdate(
-      id,
-      {
-        $addToSet: { subscribers: userObjectId },
-        $inc: { subscriberCount: 1 }
-      },
-      { new: true }
-    ).exec();
+    const updated = await this.channelModel
+      .findByIdAndUpdate(
+        id,
+        {
+          $addToSet: { subscribers: userObjectId },
+          $inc: { subscriberCount: 1 },
+        },
+        { new: true },
+      )
+      .exec();
 
     if (!updated) {
       throw new NotFoundException(`Channel with ID ${id} not found`);
@@ -139,20 +172,24 @@ export class ChannelService {
     if (!channel) throw new NotFoundException('Channel not found');
 
     const userObjectId = new Types.ObjectId(userId);
-    const isSubscribed = channel.subscribers.some(subId => subId.toString() === userId);
+    const isSubscribed = channel.subscribers.some(
+      (subId) => subId.toString() === userId,
+    );
 
     if (!isSubscribed) {
       return channel;
     }
 
-    const updated = await this.channelModel.findByIdAndUpdate(
-      id,
-      {
-        $pull: { subscribers: userObjectId },
-        $inc: { subscriberCount: -1 }
-      },
-      { new: true }
-    ).exec();
+    const updated = await this.channelModel
+      .findByIdAndUpdate(
+        id,
+        {
+          $pull: { subscribers: userObjectId },
+          $inc: { subscriberCount: -1 },
+        },
+        { new: true },
+      )
+      .exec();
 
     if (!updated) {
       throw new NotFoundException(`Channel with ID ${id} not found`);
@@ -162,12 +199,21 @@ export class ChannelService {
   }
 
   async findFollowing(userId: string): Promise<ChannelDocument[]> {
-    return this.channelModel.find({
-      subscribers: new Types.ObjectId(userId)
-    }).populate('ownerId', 'email nickname').exec();
+    return this.channelModel
+      .find({
+        subscribers: new Types.ObjectId(userId),
+      })
+      .populate('ownerId', 'email nickname')
+      .exec();
   }
 
-  async updateStatus(id: string, isActive: boolean, viewerCount: number): Promise<void> {
-    await this.channelModel.findByIdAndUpdate(id, { isActive, viewerCount }).exec();
+  async updateStatus(
+    id: string,
+    isActive: boolean,
+    viewerCount: number,
+  ): Promise<void> {
+    await this.channelModel
+      .findByIdAndUpdate(id, { isActive, viewerCount })
+      .exec();
   }
 }

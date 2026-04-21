@@ -6,32 +6,32 @@ export type RegistrationDocument = Registration & Document;
 
 @Schema({ timestamps: true })
 export class Registration {
-    @Prop({ required: true })
-    email: string;
+  @Prop({ required: true })
+  email: string;
 
-    @Prop({ required: true })
-    passwordHash: string;
+  @Prop({ required: true })
+  passwordHash: string;
 
-    @Prop({ required: true })
-    nickname: string;
+  @Prop({ required: true })
+  nickname: string;
 
-    @Prop({ default: 'EUROPE' })
-    region: string;
+  @Prop({ default: 'EUROPE' })
+  region: string;
 
-    @Prop({ default: 'TUNISIA' })
-    country: string;
+  @Prop({ default: 'TUNISIA' })
+  country: string;
 
-    @Prop({ required: true, enum: UserRole })
-    role: string;
+  @Prop({ required: true, enum: UserRole })
+  role: string;
 
-    @Prop({ type: Object })
-    roleData: any;
+  @Prop({ type: Object })
+  roleData: any;
 
-    @Prop({ required: true })
-    otp: string;
+  @Prop({ required: true })
+  otp: string;
 
-    @Prop({ required: true })
-    otpExpires: Date;
+  @Prop({ required: true })
+  otpExpires: Date;
 }
 
 export const RegistrationSchema = SchemaFactory.createForClass(Registration);

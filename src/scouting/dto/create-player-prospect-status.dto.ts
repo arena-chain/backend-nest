@@ -1,5 +1,8 @@
 import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { ProspectLevel, ProspectPriority } from '../schemas/player-prospect-status.schema';
+import {
+  ProspectLevel,
+  ProspectPriority,
+} from '../schemas/player-prospect-status.schema';
 
 export class CreatePlayerProspectStatusDto {
   @IsString()

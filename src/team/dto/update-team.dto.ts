@@ -3,11 +3,11 @@ import { CreateTeamDto } from './create-team.dto';
 import { IsMongoId, IsOptional, IsArray } from 'class-validator';
 
 export class UpdateTeamDto extends PartialType(CreateTeamDto) {
-    @IsOptional()
-    @IsMongoId()
-    teamManagerId?: string;
+  @IsOptional()
+  @IsMongoId()
+  teamManagerId?: string;
 
-    @IsOptional()
-    @IsArray()
-    members?: string[];
+  @IsOptional()
+  @IsArray()
+  members?: string[];
 }

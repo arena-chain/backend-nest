@@ -6,95 +6,95 @@ export type GameDocument = Game & Document;
 
 @Schema({ timestamps: true })
 export class Game {
-    @Prop({ type: Types.ObjectId, ref: 'Catalog', required: true })
-    game_id: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'Catalog', required: true })
+  game_id: Types.ObjectId;
 
-    @Prop({ required: true })
-    match_type: string;
+  @Prop({ required: true })
+  match_type: string;
 
-    @Prop({
-        enum: [
-            'SCHEDULED',
-            'PENDING_ACCEPTANCE',
-            'ACCEPTED',
-            'CANCELLED',
-            'IN_PROGRESS',
-            'WAITING_FOR_RESULT',
-            'COMPLETED',
-        ],
-        default: 'SCHEDULED',
-    })
-    status: string;
+  @Prop({
+    enum: [
+      'SCHEDULED',
+      'PENDING_ACCEPTANCE',
+      'ACCEPTED',
+      'CANCELLED',
+      'IN_PROGRESS',
+      'WAITING_FOR_RESULT',
+      'COMPLETED',
+    ],
+    default: 'SCHEDULED',
+  })
+  status: string;
 
-    @Prop({ required: true })
-    scheduled_at: Date;
+  @Prop({ required: true })
+  scheduled_at: Date;
 
-    @Prop({ default: 2 })
-    number_of_participant: number;
+  @Prop({ default: 2 })
+  number_of_participant: number;
 
-    @Prop()
-    started_at: Date;
+  @Prop()
+  started_at: Date;
 
-    @Prop()
-    finished_at: Date;
+  @Prop()
+  finished_at: Date;
 
-    @Prop()
-    mode?: string;
+  @Prop()
+  mode?: string;
 
-    @Prop()
-    server?: string;
+  @Prop()
+  server?: string;
 
-    @Prop()
-    region?: string;
+  @Prop()
+  region?: string;
 
-    @Prop({ type: Object })
-    roomInfo?: {
-        roomId: string;
-        map?: string;
-    };
+  @Prop({ type: Object })
+  roomInfo?: {
+    roomId: string;
+    map?: string;
+  };
 
-    @Prop({ default: false })
-    isScheduled: boolean;
+  @Prop({ default: false })
+  isScheduled: boolean;
 
-    @Prop({ type: String, enum: ['BLUE', 'RED'], default: null })
-    winningTeam?: 'BLUE' | 'RED' | null;
+  @Prop({ type: String, enum: ['BLUE', 'RED'], default: null })
+  winningTeam?: 'BLUE' | 'RED' | null;
 
-    @Prop({
-        type: [
-            {
-                userId: { type: Types.ObjectId, ref: 'User', required: true },
-                team: { type: String, enum: ['BLUE', 'RED'], required: true },
-                accepted: { type: Boolean, default: null },
-                elo: { type: Number, default: 1000 },
-                riotAccountInfo: {
-                    type: {
-                        originalIconId: Number,
-                        riotGameName: String,
-                        riotLinkStatus: String,
-                        riotPuuid: String,
-                        riotRegion: String,
-                        riotTagLine: String,
-                    },
-                    default: null,
-                },
-            },
-        ],
-        default: [],
-    })
-    participants: {
-        userId: Types.ObjectId;
-        team: 'BLUE' | 'RED';
-        accepted: boolean | null;
-        elo: number;
-        riotAccountInfo?: {
-            originalIconId: number;
-            riotGameName: string;
-            riotLinkStatus: string;
-            riotPuuid: string;
-            riotRegion: string;
-            riotTagLine: string;
-        } | null;
-    }[];
+  @Prop({
+    type: [
+      {
+        userId: { type: Types.ObjectId, ref: 'User', required: true },
+        team: { type: String, enum: ['BLUE', 'RED'], required: true },
+        accepted: { type: Boolean, default: null },
+        elo: { type: Number, default: 1000 },
+        riotAccountInfo: {
+          type: {
+            originalIconId: Number,
+            riotGameName: String,
+            riotLinkStatus: String,
+            riotPuuid: String,
+            riotRegion: String,
+            riotTagLine: String,
+          },
+          default: null,
+        },
+      },
+    ],
+    default: [],
+  })
+  participants: {
+    userId: Types.ObjectId;
+    team: 'BLUE' | 'RED';
+    accepted: boolean | null;
+    elo: number;
+    riotAccountInfo?: {
+      originalIconId: number;
+      riotGameName: string;
+      riotLinkStatus: string;
+      riotPuuid: string;
+      riotRegion: string;
+      riotTagLine: string;
+    } | null;
+  }[];
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);

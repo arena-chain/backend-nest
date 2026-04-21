@@ -55,13 +55,16 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly chatService: ChatService,
-  ) { }
+  ) {}
 
   private readonly logger = new Logger(StreamGateway.name);
   private readonly broadcasterByChannel = new Map<string, string>();
   private readonly socketChannel = new Map<string, string>();
   private readonly socketRole = new Map<string, 'broadcaster' | 'viewer'>();
-  private readonly reactionsByChannel = new Map<string, Map<string, Set<string>>>();
+  private readonly reactionsByChannel = new Map<
+    string,
+    Map<string, Set<string>>
+  >();
 
   private async authenticateSocket(socket: Socket) {
     const token = socket.handshake.auth?.token;
@@ -132,10 +135,16 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const channelId = this.socketChannel.get(socket.id);
     const role = this.socketRole.get(socket.id);
 
-    if (channelId && role === 'broadcaster' && this.broadcasterByChannel.get(channelId) === socket.id) {
+    if (
+      channelId &&
+      role === 'broadcaster' &&
+      this.broadcasterByChannel.get(channelId) === socket.id
+    ) {
       this.broadcasterByChannel.delete(channelId);
       this.server.to(channelId).emit('broadcast-ended', { channelId });
-      this.server.to(channelId).emit('broadcaster-status', { channelId, isBroadcasting: false });
+      this.server
+        .to(channelId)
+        .emit('broadcaster-status', { channelId, isBroadcasting: false });
       this.logger.log(`broadcaster disconnected channel=${channelId}`);
     }
 
@@ -169,7 +178,9 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
         channelId: payload.channelId,
         isBroadcasting: true,
       });
-      this.logger.log(`broadcaster joined channel=${payload.channelId} socket=${socket.id}`);
+      this.logger.log(
+        `broadcaster joined channel=${payload.channelId} socket=${socket.id}`,
+      );
       return { ok: true, role: payload.role };
     }
 
@@ -190,7 +201,9 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
       counts: this.getReactionSummary(payload.channelId),
     });
 
-    this.logger.log(`viewer joined channel=${payload.channelId} socket=${socket.id}`);
+    this.logger.log(
+      `viewer joined channel=${payload.channelId} socket=${socket.id}`,
+    );
     return { ok: true, role: payload.role, hasBroadcaster: !!broadcasterId };
   }
 
@@ -207,7 +220,10 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('signal-offer')
-  signalOffer(@ConnectedSocket() socket: Socket, @MessageBody() payload: SignalPayload) {
+  signalOffer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: SignalPayload,
+  ) {
     this.server.to(payload.targetId).emit('signal-offer', {
       sourceId: socket.id,
       channelId: payload.channelId,
@@ -216,7 +232,10 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('signal-answer')
-  signalAnswer(@ConnectedSocket() socket: Socket, @MessageBody() payload: SignalPayload) {
+  signalAnswer(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: SignalPayload,
+  ) {
     this.server.to(payload.targetId).emit('signal-answer', {
       sourceId: socket.id,
       channelId: payload.channelId,
@@ -225,7 +244,10 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('ice-candidate')
-  iceCandidate(@ConnectedSocket() socket: Socket, @MessageBody() payload: SignalPayload) {
+  iceCandidate(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: SignalPayload,
+  ) {
     this.server.to(payload.targetId).emit('ice-candidate', {
       sourceId: socket.id,
       channelId: payload.channelId,
@@ -234,7 +256,10 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('chat-message')
-  async chatMessage(@ConnectedSocket() socket: Socket, @MessageBody() payload: ChatMessagePayload) {
+  async chatMessage(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: ChatMessagePayload,
+  ) {
     const user = socket.data.user as LiveSocketUser | null;
     const message = payload.message?.trim();
     if (!payload.channelId || !message) {
@@ -243,23 +268,26 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const created = user?.userId
       ? await this.chatService.createForUser(user.userId, {
-        channelId: payload.channelId,
-        message,
-      })
-      : await this.chatService.createAnonymous(
-        {
           channelId: payload.channelId,
           message,
-        },
-        user?.nickname || `Guest-${socket.id.slice(0, 4)}`,
-      );
+        })
+      : await this.chatService.createAnonymous(
+          {
+            channelId: payload.channelId,
+            message,
+          },
+          user?.nickname || `Guest-${socket.id.slice(0, 4)}`,
+        );
 
     this.server.to(payload.channelId).emit('chat-message', created);
     return { ok: true };
   }
 
   @SubscribeMessage('reaction')
-  reaction(@ConnectedSocket() socket: Socket, @MessageBody() payload: ReactionPayload) {
+  reaction(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: ReactionPayload,
+  ) {
     const user = socket.data.user as LiveSocketUser | null;
     if (!payload.channelId || !payload.emoji) {
       return { ok: false };
@@ -268,7 +296,7 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const counts = this.toggleReaction(
       payload.channelId,
       payload.emoji,
-      user?.userId || socket.id
+      user?.userId || socket.id,
     );
 
     this.server.to(payload.channelId).emit('reaction-event', {

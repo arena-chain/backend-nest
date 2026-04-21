@@ -8,7 +8,7 @@ import { LevelService } from './level.service';
 @UseGuards(AuthGuard('jwt'))
 @Controller('me')
 export class LevelController {
-  constructor(private readonly levelService: LevelService) { }
+  constructor(private readonly levelService: LevelService) {}
 
   @Get('level')
   @ApiOperation({ summary: 'Get current user level progression' })
@@ -17,9 +17,7 @@ export class LevelController {
 
     const view = await this.levelService.getPlayerLevel(userId);
     const progressPct =
-      view.xpToNextLevel > 0
-        ? (view.currentXP / view.xpToNextLevel) * 100
-        : 0;
+      view.xpToNextLevel > 0 ? (view.currentXP / view.xpToNextLevel) * 100 : 0;
 
     return {
       level: view.level,
@@ -30,4 +28,3 @@ export class LevelController {
     };
   }
 }
-

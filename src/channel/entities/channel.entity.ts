@@ -5,35 +5,35 @@ export type ChannelDocument = Channel & Document;
 
 @Schema({ timestamps: true })
 export class Channel {
-    @Prop({ required: true })
-    name: string;
+  @Prop({ required: true })
+  name: string;
 
-    @Prop()
-    description?: string;
+  @Prop()
+  description?: string;
 
-    @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-    ownerId: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  ownerId: Types.ObjectId;
 
-    @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-    subscribers: Types.ObjectId[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
+  subscribers: Types.ObjectId[];
 
-    @Prop({ default: 0 })
-    subscriberCount: number;
+  @Prop({ default: 0 })
+  subscriberCount: number;
 
-    @Prop({ default: false })
-    isActive: boolean;
+  @Prop({ default: false })
+  isActive: boolean;
 
-    @Prop({ default: 0 })
-    viewerCount: number;
+  @Prop({ default: 0 })
+  viewerCount: number;
 
-    @Prop()
-    bannerUrl?: string;
+  @Prop()
+  bannerUrl?: string;
 
-    @Prop()
-    avatarUrl?: string;
+  @Prop()
+  avatarUrl?: string;
 
-    @Prop({ type: [String], default: [] })
-    categories: string[];
+  @Prop({ type: [String], default: [] })
+  categories: string[];
 }
 
 export const ChannelSchema = SchemaFactory.createForClass(Channel);

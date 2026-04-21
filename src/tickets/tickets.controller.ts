@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
@@ -7,11 +16,14 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 @ApiTags('Tickets')
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) { }
+  constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new ticket with QR code' })
-  @ApiResponse({ status: 201, description: 'The ticket has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The ticket has been successfully created.',
+  })
   create(@Body() createTicketDto: CreateTicketDto) {
     return this.ticketsService.create(createTicketDto);
   }
@@ -24,7 +36,7 @@ export class TicketsController {
     if (!userId) {
       // Check if we can get it from a common decorator or request if available
       // For this specific codebase, based on previous interactions, it seems we might need to rely on the client sending the ID
-      // But typically `req.user` is used. 
+      // But typically `req.user` is used.
       // Let's assume the client sends `userId` query param for now as a fallback if no Guard is shown
       throw new Error('User ID is required');
     }
@@ -63,7 +75,9 @@ export class TicketsController {
   }
 
   @Post('validate')
-  @ApiOperation({ summary: 'Validate and mark ticket as used (QR code scanning)' })
+  @ApiOperation({
+    summary: 'Validate and mark ticket as used (QR code scanning)',
+  })
   @ApiResponse({ status: 200, description: 'Ticket validation result' })
   validateTicket(@Body('ticketNumber') ticketNumber: string) {
     return this.ticketsService.validateTicket(ticketNumber);

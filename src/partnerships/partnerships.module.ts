@@ -6,9 +6,11 @@ import { Partnership, PartnershipSchema } from './schemas/partnership.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Partnership.name, schema: PartnershipSchema }]),
+    MongooseModule.forFeature([
+      { name: Partnership.name, schema: PartnershipSchema },
+    ]),
   ],
   controllers: [PartnershipsController],
   providers: [PartnershipsService],
 })
-export class PartnershipsModule { }
+export class PartnershipsModule {}

@@ -17,4 +17,4 @@ import { MissionModule } from '../mission/mission.module';
   providers: [FriendshipService],
   exports: [FriendshipService],
 })
-export class FriendshipModule { }
+export class FriendshipModule {}

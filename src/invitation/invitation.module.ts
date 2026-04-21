@@ -9,7 +9,9 @@ import { TeamManagerModule } from '../team-manager/team-manager.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Invitation.name, schema: InvitationSchema }]),
+    MongooseModule.forFeature([
+      { name: Invitation.name, schema: InvitationSchema },
+    ]),
     TournementsModule,
     LeagueRegistrationModule,
     TeamManagerModule,

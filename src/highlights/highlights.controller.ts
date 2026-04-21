@@ -116,7 +116,9 @@ export class HighlightsController {
 
   @Get(':id/engagement')
   @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: 'Like count, comment count, and whether the current user liked' })
+  @ApiOperation({
+    summary: 'Like count, comment count, and whether the current user liked',
+  })
   getEngagement(
     @Param('id') id: string,
     @Request() req: { user?: { userId?: string } },
@@ -263,11 +265,7 @@ export class HighlightsController {
   ) {
     const userId = req.user?.userId;
     if (!userId) throw new UnauthorizedException();
-    return this.highlightsService.updateVisibility(
-      id,
-      userId,
-      dto.visibility,
-    );
+    return this.highlightsService.updateVisibility(id, userId, dto.visibility);
   }
 
   @Patch(':id/details')
