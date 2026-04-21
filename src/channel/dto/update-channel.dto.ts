@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsUrl, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsBoolean, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateChannelDto {
@@ -24,12 +24,12 @@ export class UpdateChannelDto {
 
     @ApiProperty({ required: false, description: 'Banner URL' })
     @IsOptional()
-    @IsUrl()
+    @IsString()
     bannerUrl?: string;
 
     @ApiProperty({ required: false, description: 'Avatar URL' })
     @IsOptional()
-    @IsUrl()
+    @IsString()
     avatarUrl?: string;
 
     @ApiProperty({ required: false, description: 'Channel categories', type: [String] })

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsUrl } from 'class-validator';
+import { IsString, IsOptional, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateChannelDto {
@@ -16,14 +16,15 @@ export class CreateChannelDto {
     @IsString()
     ownerId?: string;
 
+    /** Use IsString (not IsUrl) so CDN / Dicebear / querystring URLs always validate. */
     @ApiProperty({ required: false, description: 'Banner URL' })
     @IsOptional()
-    @IsUrl()
+    @IsString()
     bannerUrl?: string;
 
     @ApiProperty({ required: false, description: 'Avatar URL' })
     @IsOptional()
-    @IsUrl()
+    @IsString()
     avatarUrl?: string;
 
     @ApiProperty({ required: false, description: 'Channel categories', type: [String] })

@@ -4,6 +4,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PlayerProfile, PlayerProfileDocument } from './schemas/player-profile.schema';
 
+/** Omit email so public player profile responses do not expose it. */
+const POPULATE_USER = { path: 'userId', select: 'nickname region country avatar' } as const;
+
 @Injectable()
 export class PlayerService {
     constructor(
@@ -29,7 +32,10 @@ export class PlayerService {
     }
 
     async findByUserId(userId: string | Types.ObjectId): Promise<PlayerProfileDocument> {
-        const profile = await this.playerProfileModel.findOne({ userId: this.toObjectId(userId) });
+        const profile = await this.playerProfileModel
+            .findOne({ userId: this.toObjectId(userId) })
+            .populate(POPULATE_USER)
+            .exec();
 
         if (!profile) {
             throw new NotFoundException('Player profile not found');
@@ -42,11 +48,10 @@ export class PlayerService {
         userId: string | Types.ObjectId,
         updateData: Partial<PlayerProfile>
     ): Promise<PlayerProfileDocument> {
-        const profile = await this.playerProfileModel.findOneAndUpdate(
-            { userId: this.toObjectId(userId) },
-            updateData,
-            { new: true },
-        );
+        const profile = await this.playerProfileModel
+            .findOneAndUpdate({ userId: this.toObjectId(userId) }, updateData, { new: true })
+            .populate(POPULATE_USER)
+            .exec();
 
         if (!profile) {
             throw new NotFoundException('Player profile not found');
@@ -57,7 +62,7 @@ export class PlayerService {
 
     async findOrCreateByUserId(userId: string | Types.ObjectId): Promise<PlayerProfileDocument> {
         const objectId = this.toObjectId(userId);
-        const existing = await this.playerProfileModel.findOne({ userId: objectId });
+        const existing = await this.playerProfileModel.findOne({ userId: objectId }).populate(POPULATE_USER).exec();
         if (existing) return existing;
 
         try {
@@ -67,17 +72,23 @@ export class PlayerService {
                 isVerified: false,
                 stats: {},
             });
-            return await profile.save();
+            await profile.save();
         } catch (error: any) {
             if (error.code === 11000) {
-                const found = await this.playerProfileModel.findOne({ userId: objectId });
+                const found = await this.playerProfileModel.findOne({ userId: objectId }).populate(POPULATE_USER).exec();
                 if (found) return found;
             }
             throw error;
         }
+
+        const created = await this.playerProfileModel.findOne({ userId: objectId }).populate(POPULATE_USER).exec();
+        if (!created) {
+            throw new NotFoundException('Player profile not found');
+        }
+        return created;
     }
 
     async findAll(): Promise<PlayerProfileDocument[]> {
-        return this.playerProfileModel.find().populate('userId').exec();
+        return this.playerProfileModel.find().populate(POPULATE_USER).exec();
     }
 }

@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -7,6 +7,8 @@ import { Channel, ChannelDocument } from './entities/channel.entity';
 
 @Injectable()
 export class ChannelService {
+  private readonly logger = new Logger(ChannelService.name);
+
   constructor(
     @InjectModel(Channel.name) private channelModel: Model<ChannelDocument>,
   ) { }
@@ -24,7 +26,10 @@ export class ChannelService {
       subscribers: [],
       subscriberCount: 0,
     });
-    return channel.save().then((doc) => doc.populate('ownerId', 'email nickname'));
+    const saved = await channel.save();
+    this.logger.log(`Channel created id=${saved._id.toString()} owner=${ownerId} name=${saved.name}`);
+    await saved.populate('ownerId', 'email nickname');
+    return saved;
   }
 
   async findAll(): Promise<ChannelDocument[]> {

@@ -186,7 +186,7 @@ export class UsersService {
 
         return this.userModel
             .find(filter)
-            .select('_id nickname email') // Only return necessary fields
+            .select('_id nickname email avatar') // avatar for client list/search thumbnails
             .limit(20) // Limit results to prevent performance issues
             .exec();
     }
