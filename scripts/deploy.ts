@@ -1,17 +1,17 @@
-import { ethers } from "hardhat";
+import { ethers } from 'hardhat';
 
 async function main() {
-    const [deployer] = await ethers.getSigners();
-    console.log("Deploying with:", deployer.address);
+  const [deployer] = await ethers.getSigners();
+  console.log('Deploying with:', deployer.address);
 
-    const Factory = await ethers.getContractFactory("ArenaTicketNFT");
-    const contract = await Factory.deploy(deployer.address);
+  const Factory = await ethers.getContractFactory('ArenaTicketNFT');
+  const contract = await Factory.deploy(deployer.address);
 
-    await contract.waitForDeployment();
-    console.log("ArenaTicketNFT:", await contract.getAddress());
+  await contract.deployed();
+  console.log('ArenaTicketNFT:', contract.address);
 }
 
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
+  console.error(error);
+  process.exitCode = 1;
 });

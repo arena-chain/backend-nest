@@ -26,7 +26,9 @@
     "seed": "ts-node --project tsconfig.seed.json src/seeder/seed.ts",
     "seed:fresh": "ts-node --project tsconfig.seed.json src/seeder/seed.ts --fresh",
     "seed:admin": "ts-node --project tsconfig.seed.json src/seeder/ensure-admin.ts",
-    "deploy:game-token:local": "node scripts/deploy-game-token-local.cjs"
+    "deploy:game-token:local": "node scripts/deploy-game-token-local.cjs",
+    "deploy:ticket-nft:local": "hardhat run scripts/deploy.ts --network anvil",
+    "deploy:ticket-nft:amoy": "hardhat run scripts/deploy.ts --network amoy"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
@@ -68,6 +70,8 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@openzeppelin/contracts": "^5.0.2",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.17",
@@ -83,6 +87,7 @@
     "@types/passport-steam": "^1.0.6",
     "@types/qrcode": "^1.5.6",
     "@types/supertest": "^6.0.2",
+    "hardhat": "^2.22.17",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
