@@ -2,10 +2,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import {
-  PlayerProfile,
-  PlayerProfileDocument,
-} from './schemas/player-profile.schema';
+import { PlayerProfile, PlayerProfileDocument } from './schemas/player-profile.schema';
+
+/** Omit email so public player profile responses do not expose it. */
+const POPULATE_USER = { path: 'userId', select: 'nickname region country avatar' } as const;
 
 @Injectable()
 export class PlayerService {
@@ -34,12 +34,11 @@ export class PlayerService {
     return typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
   }
 
-  async findByUserId(
-    userId: string | Types.ObjectId,
-  ): Promise<PlayerProfileDocument> {
-    const profile = await this.playerProfileModel.findOne({
-      userId: this.toObjectId(userId),
-    });
+    async findByUserId(userId: string | Types.ObjectId): Promise<PlayerProfileDocument> {
+        const profile = await this.playerProfileModel
+            .findOne({ userId: this.toObjectId(userId) })
+            .populate(POPULATE_USER)
+            .exec();
 
     if (!profile) {
       throw new NotFoundException('Player profile not found');
@@ -48,15 +47,14 @@ export class PlayerService {
     return profile;
   }
 
-  async update(
-    userId: string | Types.ObjectId,
-    updateData: Partial<PlayerProfile>,
-  ): Promise<PlayerProfileDocument> {
-    const profile = await this.playerProfileModel.findOneAndUpdate(
-      { userId: this.toObjectId(userId) },
-      updateData,
-      { new: true },
-    );
+    async update(
+        userId: string | Types.ObjectId,
+        updateData: Partial<PlayerProfile>
+    ): Promise<PlayerProfileDocument> {
+        const profile = await this.playerProfileModel
+            .findOneAndUpdate({ userId: this.toObjectId(userId) }, updateData, { new: true })
+            .populate(POPULATE_USER)
+            .exec();
 
     if (!profile) {
       throw new NotFoundException('Player profile not found');
@@ -65,37 +63,35 @@ export class PlayerService {
     return profile;
   }
 
-  async findOrCreateByUserId(
-    userId: string | Types.ObjectId,
-  ): Promise<PlayerProfileDocument> {
-    const objectId = this.toObjectId(userId);
-    const existing = await this.playerProfileModel.findOne({
-      userId: objectId,
-    });
-    if (existing) return existing;
+    async findOrCreateByUserId(userId: string | Types.ObjectId): Promise<PlayerProfileDocument> {
+        const objectId = this.toObjectId(userId);
+        const existing = await this.playerProfileModel.findOne({ userId: objectId }).populate(POPULATE_USER).exec();
+        if (existing) return existing;
 
-    try {
-      const profile = new this.playerProfileModel({
-        userId: objectId,
-        isPro: false,
-        isVerified: false,
-        elo: 1000,
-        rank: 'Unranked',
-        stats: {},
-      });
-      return await profile.save();
-    } catch (error: any) {
-      if (error.code === 11000) {
-        const found = await this.playerProfileModel.findOne({
-          userId: objectId,
-        });
-        if (found) return found;
-      }
-      throw error;
+        try {
+            const profile = new this.playerProfileModel({
+                userId: objectId,
+                isPro: false,
+                isVerified: false,
+                stats: {},
+            });
+            await profile.save();
+        } catch (error: any) {
+            if (error.code === 11000) {
+                const found = await this.playerProfileModel.findOne({ userId: objectId }).populate(POPULATE_USER).exec();
+                if (found) return found;
+            }
+            throw error;
+        }
+
+        const created = await this.playerProfileModel.findOne({ userId: objectId }).populate(POPULATE_USER).exec();
+        if (!created) {
+            throw new NotFoundException('Player profile not found');
+        }
+        return created;
     }
-  }
 
-  async findAll(): Promise<PlayerProfileDocument[]> {
-    return this.playerProfileModel.find().populate('userId').exec();
-  }
+    async findAll(): Promise<PlayerProfileDocument[]> {
+        return this.playerProfileModel.find().populate(POPULATE_USER).exec();
+    }
 }

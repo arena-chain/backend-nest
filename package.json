@@ -25,9 +25,8 @@
     "drop-leaguerule-league-id-index": "node scripts/drop-leaguerule-league-id-index.js",
     "seed": "ts-node --project tsconfig.seed.json src/seeder/seed.ts",
     "seed:fresh": "ts-node --project tsconfig.seed.json src/seeder/seed.ts --fresh",
-    "gtk:deploy-anvil": "cd game-token && forge script script/Deploy.s.sol:Deploy --rpc-url http://127.0.0.1:8545 --broadcast --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-    "gtk:anvil": "bash scripts/gtk-anvil.sh",
-    "gtk:bootstrap": "bash scripts/gtk-bootstrap-anvil.sh"
+    "seed:admin": "ts-node --project tsconfig.seed.json src/seeder/ensure-admin.ts",
+    "deploy:game-token:local": "node scripts/deploy-game-token-local.cjs"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
@@ -90,6 +89,7 @@
     "globals": "^16.0.0",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
+    "solc": "^0.8.26",
     "source-map-support": "^0.5.21",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.5",

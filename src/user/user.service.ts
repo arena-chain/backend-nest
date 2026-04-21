@@ -199,10 +199,10 @@ export class UsersService {
       filter._id = { $ne: excludeUserId };
     }
 
-    return this.userModel
-      .find(filter)
-      .select('_id nickname email') // Only return necessary fields
-      .limit(20) // Limit results to prevent performance issues
-      .exec();
-  }
+        return this.userModel
+            .find(filter)
+            .select('_id nickname email avatar') // avatar for client list/search thumbnails
+            .limit(20) // Limit results to prevent performance issues
+            .exec();
+    }
 }
