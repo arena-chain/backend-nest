@@ -37,7 +37,18 @@ const UserModel = m(
   ),
 );
 
-<<<<<<< HEAD
+const AdminProfileModel = m(
+  'AdminProfile',
+  new Schema(
+    {
+      userId: { type: Schema.Types.ObjectId, required: true, unique: true },
+      adminLevel: { type: Number, default: 1 },
+      permissions: { type: [String], default: [] },
+    },
+    { timestamps: true },
+  ),
+);
+
 const PlayerProfileModel = m(
   'PlayerProfile',
   new Schema(
@@ -53,23 +64,6 @@ const PlayerProfileModel = m(
     { timestamps: true },
   ),
 );
-=======
-const AdminProfileModel = m('AdminProfile', new Schema({
-  userId: { type: Schema.Types.ObjectId, required: true, unique: true },
-  adminLevel: { type: Number, default: 1 },
-  permissions: { type: [String], default: [] },
-}, { timestamps: true }));
-
-const PlayerProfileModel = m('PlayerProfile', new Schema({
-  userId: { type: Schema.Types.ObjectId, required: true, unique: true },
-  isPro: { type: Boolean, default: false },
-  isVerified: { type: Boolean, default: false },
-  elo: { type: Number, default: 1000 },
-  rank: { type: String, default: 'Unranked' },
-  stats: { type: Object, default: {} },
-  riotLinkStatus: { type: String, default: 'unlinked' },
-}, { timestamps: true }));
->>>>>>> origin/Integration_7.0.0
 
 const TeamManagerProfileModel = m(
   'TeamManagerProfile',
@@ -562,8 +556,8 @@ async function seed() {
 
   if (FRESH) {
     console.log('🗑  --fresh: wiping collections...');
-<<<<<<< HEAD
     for (const mdl of [
+      AdminProfileModel,
       UserModel,
       PlayerProfileModel,
       TeamManagerProfileModel,
@@ -578,13 +572,7 @@ async function seed() {
       StandingsModel,
       BracketModel,
     ]) {
-      await mdl.deleteMany({});
-=======
-    for (const mdl of [AdminProfileModel, UserModel, PlayerProfileModel, TeamManagerProfileModel, TeamModel,
-      CatalogModel, LeagueModel, SeasonModel, SeasonRuleModel, SeasonTeamModel,
-      RoundModel, MatchModel, StandingsModel, BracketModel]) {
       await (mdl as any).deleteMany({});
->>>>>>> origin/Integration_7.0.0
     }
     console.log('   Done.\n');
   }
@@ -1089,20 +1077,16 @@ async function seed() {
   console.log(`  Rounds:  3 COMPLETED | 1 ONGOING | 1 SCHEDULED`);
   console.log(`  Bracket: ACTIVE — Grand Final pending`);
   console.log(border);
-<<<<<<< HEAD
-  console.log('  🔑 All passwords: Arena123!');
+  console.log(
+    '  🔑 All seeded passwords: Arena123! (override admin with SEED_ADMIN_PASSWORD)',
+  );
+  console.log('  📧 Admin login    : admin@arena.test');
   console.log(
     '  📧 Player logins  : shadowstrike@arena.test … solarflare@arena.test',
   );
   console.log(
     '  📧 Manager logins : phantomgm@arena.test … ciphergm@arena.test',
   );
-=======
-  console.log('  🔑 All seeded passwords: Arena123! (override admin with SEED_ADMIN_PASSWORD)');
-  console.log('  📧 Admin login    : admin@arena.test');
-  console.log('  📧 Player logins  : shadowstrike@arena.test … solarflare@arena.test');
-  console.log('  📧 Manager logins : phantomgm@arena.test … ciphergm@arena.test');
->>>>>>> origin/Integration_7.0.0
   console.log(border + '\n');
 
   await mongoose.disconnect();
