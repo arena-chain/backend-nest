@@ -6,7 +6,9 @@ type Tournament = { id: string; name: string; startsAt: string };
 
 @Injectable()
 export class TicketsNftService {
-    private readonly provider = new ethers.JsonRpcProvider(process.env.POLYGON_AMOY_RPC_URL);
+    private readonly provider = new ethers.providers.JsonRpcProvider(
+        process.env.POLYGON_AMOY_RPC_URL || '',
+    );
     private readonly wallet = new ethers.Wallet(process.env.MINTER_PRIVATE_KEY || '', this.provider);
     private readonly contract = new ethers.Contract(
         process.env.TICKET_NFT_CONTRACT_ADDRESS || '',
@@ -61,7 +63,7 @@ export class TicketsNftService {
 
             output.push({
                 tokenId: parsed?.args?.tokenId?.toString() || '',
-                txHash: receipt?.hash || '',
+                txHash: receipt?.transactionHash || '',
                 recipient
             });
         }
