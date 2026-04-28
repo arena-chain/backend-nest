@@ -1,0 +1,7 @@
+﻿
+> arena_chain@0.0.1 start
+> nest start
+
+[32m[Nest] 32952  - [39m21/02/2026 23:54:20 [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 32952  - [39m21/02/2026 23:54:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +66ms[39m
+[32m[Nest] 32952  - [39m21/02/2026 23:54:20 [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m

@@ -1,0 +1,338 @@
+[
+  {
+    "_id": {"$oid": "662000000000000000000201"},
+    "name": "AhmedVAL TV",
+    "description": "Valorant content from Team Liquid's captain. Daily ranked games, tips, and team analysis.",
+    "ownerId": {"$oid": "662000000000000000000001"},
+    "subscribers": [
+      {"$oid": "662000000000000000000002"},
+      {"$oid": "662000000000000000000005"},
+      {"$oid": "662000000000000000000012"},
+      {"$oid": "662000000000000000000016"},
+      {"$oid": "662000000000000000000026"}
+    ],
+    "subscriberCount": 5,
+    "isActive": true,
+    "categories": ["Valorant", "Ranked", "Tutorial"],
+    "createdAt": {"$date": "2024-01-20T12:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-20T12:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000202"},
+    "name": "YassinePro Stream",
+    "description": "Ascendant-ranked Tunisian streamer. Watch the grind to Immortal live.",
+    "ownerId": {"$oid": "662000000000000000000003"},
+    "subscribers": [
+      {"$oid": "662000000000000000000001"},
+      {"$oid": "662000000000000000000007"},
+      {"$oid": "662000000000000000000009"},
+      {"$oid": "662000000000000000000023"}
+    ],
+    "subscriberCount": 4,
+    "isActive": true,
+    "categories": ["Valorant", "Ranked"],
+    "createdAt": {"$date": "2024-01-21T09:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-21T09:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000203"},
+    "name": "Maher Valorant",
+    "description": "Fnatic MENA support player's channel. Sage mains welcome.",
+    "ownerId": {"$oid": "662000000000000000000007"},
+    "subscribers": [
+      {"$oid": "662000000000000000000003"},
+      {"$oid": "662000000000000000000008"},
+      {"$oid": "662000000000000000000011"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Support"],
+    "createdAt": {"$date": "2024-01-22T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-22T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000204"},
+    "name": "Oussama HD Gaming",
+    "description": "High-definition Valorant content. Platinum grind, highlights, and clutch moments.",
+    "ownerId": {"$oid": "662000000000000000000009"},
+    "subscribers": [
+      {"$oid": "662000000000000000000001"},
+      {"$oid": "662000000000000000000002"},
+      {"$oid": "662000000000000000000006"},
+      {"$oid": "662000000000000000000015"}
+    ],
+    "subscriberCount": 4,
+    "isActive": true,
+    "categories": ["Valorant", "Highlights"],
+    "createdAt": {"$date": "2024-01-23T11:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-23T11:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000205"},
+    "name": "Mortadha Channel",
+    "description": "NAVI MENA Sage main. Ascendant gameplay, team comps, and Valorant meta discussion.",
+    "ownerId": {"$oid": "662000000000000000000012"},
+    "subscribers": [
+      {"$oid": "662000000000000000000011"},
+      {"$oid": "662000000000000000000014"},
+      {"$oid": "662000000000000000000026"},
+      {"$oid": "662000000000000000000028"},
+      {"$oid": "662000000000000000000033"}
+    ],
+    "subscriberCount": 5,
+    "isActive": true,
+    "categories": ["Valorant", "Meta", "Ranked"],
+    "createdAt": {"$date": "2024-01-24T12:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-24T12:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000206"},
+    "name": "WajdiK Gaming",
+    "description": "Ascendant duelist from Tunisia. Killjoy setups and ranked highlights.",
+    "ownerId": {"$oid": "662000000000000000000015"},
+    "subscribers": [
+      {"$oid": "662000000000000000000012"},
+      {"$oid": "662000000000000000000013"},
+      {"$oid": "662000000000000000000021"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Highlights"],
+    "createdAt": {"$date": "2024-01-25T08:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-25T08:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000207"},
+    "name": "Boufal Plays",
+    "description": "Cloud9 MENA Diamond player. Valorant from Morocco — creative plays and IGL content.",
+    "ownerId": {"$oid": "662000000000000000000017"},
+    "subscribers": [
+      {"$oid": "662000000000000000000016"},
+      {"$oid": "662000000000000000000018"},
+      {"$oid": "662000000000000000000025"},
+      {"$oid": "662000000000000000000026"}
+    ],
+    "subscriberCount": 4,
+    "isActive": true,
+    "categories": ["Valorant", "IGL", "Ranked"],
+    "createdAt": {"$date": "2024-01-26T09:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-26T09:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000208"},
+    "name": "Jawad Valorant",
+    "description": "Casual Valorant streams from Morocco. Gold-ranked but always improving.",
+    "ownerId": {"$oid": "662000000000000000000020"},
+    "subscribers": [
+      {"$oid": "662000000000000000000017"},
+      {"$oid": "662000000000000000000019"},
+      {"$oid": "662000000000000000000023"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Casual"],
+    "createdAt": {"$date": "2024-01-27T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-27T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000209"},
+    "name": "Ilias Chair GG",
+    "description": "100 Thieves Ascendant duelist. Reyna one-tricks welcome. Moroccan Valorant scene coverage.",
+    "ownerId": {"$oid": "662000000000000000000023"},
+    "subscribers": [
+      {"$oid": "662000000000000000000016"},
+      {"$oid": "662000000000000000000020"},
+      {"$oid": "662000000000000000000021"},
+      {"$oid": "662000000000000000000026"},
+      {"$oid": "662000000000000000000036"}
+    ],
+    "subscriberCount": 5,
+    "isActive": true,
+    "categories": ["Valorant", "Duelist", "Community"],
+    "createdAt": {"$date": "2024-01-28T11:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-28T11:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000210"},
+    "name": "Mahrez Valorant",
+    "description": "Pro player RMahrez official channel. Immortal-ranked, Sentinels captain. Riot-verified account.",
+    "ownerId": {"$oid": "662000000000000000000026"},
+    "subscribers": [
+      {"$oid": "662000000000000000000001"},
+      {"$oid": "662000000000000000000003"},
+      {"$oid": "662000000000000000000012"},
+      {"$oid": "662000000000000000000023"},
+      {"$oid": "662000000000000000000036"},
+      {"$oid": "662000000000000000000038"},
+      {"$oid": "662000000000000000000044"}
+    ],
+    "subscriberCount": 7,
+    "isActive": true,
+    "categories": ["Valorant", "Pro", "Ranked", "Tutorial"],
+    "createdAt": {"$date": "2024-01-29T08:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-29T08:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000211"},
+    "name": "Youcef Atal Gaming",
+    "description": "Sentinels Ascendant player. Pending Riot verification. Algerian esports content.",
+    "ownerId": {"$oid": "662000000000000000000028"},
+    "subscribers": [
+      {"$oid": "662000000000000000000026"},
+      {"$oid": "662000000000000000000027"},
+      {"$oid": "662000000000000000000031"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Ranked"],
+    "createdAt": {"$date": "2024-01-30T09:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-30T09:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000212"},
+    "name": "Zerkane Streaming",
+    "description": "LOUD MENA Jett main. Platinum-ranked, road to Diamond. Algerian Valorant scene.",
+    "ownerId": {"$oid": "662000000000000000000031"},
+    "subscribers": [
+      {"$oid": "662000000000000000000028"},
+      {"$oid": "662000000000000000000029"},
+      {"$oid": "662000000000000000000033"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Ranked"],
+    "createdAt": {"$date": "2024-02-01T09:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-01T09:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000213"},
+    "name": "Idrissi VAL",
+    "description": "LOUD MENA Omen controller. Platinum grind, smokes tutorials, site executes.",
+    "ownerId": {"$oid": "662000000000000000000034"},
+    "subscribers": [
+      {"$oid": "662000000000000000000031"},
+      {"$oid": "662000000000000000000032"},
+      {"$oid": "662000000000000000000036"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Controller", "Tutorial"],
+    "createdAt": {"$date": "2024-02-02T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-02T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000214"},
+    "name": "Marmoush Gaming",
+    "description": "EG MENA Reyna main. Egyptian Valorant content — highlights, ranked, and tourney VODs.",
+    "ownerId": {"$oid": "662000000000000000000038"},
+    "subscribers": [
+      {"$oid": "662000000000000000000036"},
+      {"$oid": "662000000000000000000037"},
+      {"$oid": "662000000000000000000041"},
+      {"$oid": "662000000000000000000044"}
+    ],
+    "subscriberCount": 4,
+    "isActive": true,
+    "categories": ["Valorant", "Highlights", "Tournament"],
+    "createdAt": {"$date": "2024-02-03T11:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-03T11:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000215"},
+    "name": "Trezeguet Stream",
+    "description": "Free agent Egyptian Jett main. Diamond gameplay, ranked series, Egyptian esports talk.",
+    "ownerId": {"$oid": "662000000000000000000041"},
+    "subscribers": [
+      {"$oid": "662000000000000000000038"},
+      {"$oid": "662000000000000000000039"},
+      {"$oid": "662000000000000000000042"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Ranked"],
+    "createdAt": {"$date": "2024-02-04T08:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-04T08:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000216"},
+    "name": "Salem Dawsari GG",
+    "description": "Saudi Arabian Valorant content. Platinum Omen player, free agent looking for team.",
+    "ownerId": {"$oid": "662000000000000000000044"},
+    "subscribers": [
+      {"$oid": "662000000000000000000041"},
+      {"$oid": "662000000000000000000046"},
+      {"$oid": "662000000000000000000051"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Saudi Arabia"],
+    "createdAt": {"$date": "2024-02-05T09:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T09:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000217"},
+    "name": "Sultan Gaming",
+    "description": "Saudi free agent, Diamond-ranked. Sage and Sage only. KSA Valorant community.",
+    "ownerId": {"$oid": "662000000000000000000047"},
+    "subscribers": [
+      {"$oid": "662000000000000000000044"},
+      {"$oid": "662000000000000000000045"},
+      {"$oid": "662000000000000000000048"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Support", "Saudi Arabia"],
+    "createdAt": {"$date": "2024-02-06T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-06T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000218"},
+    "name": "Omar AR Channel",
+    "description": "UAE Ascendant player. The Arab region's best Jett — pro tips, match reviews, and highlights.",
+    "ownerId": {"$oid": "662000000000000000000051"},
+    "subscribers": [
+      {"$oid": "662000000000000000000026"},
+      {"$oid": "662000000000000000000036"},
+      {"$oid": "662000000000000000000044"},
+      {"$oid": "662000000000000000000052"},
+      {"$oid": "662000000000000000000055"}
+    ],
+    "subscriberCount": 5,
+    "isActive": true,
+    "categories": ["Valorant", "Pro", "Highlights", "UAE"],
+    "createdAt": {"$date": "2024-02-07T11:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-07T11:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000219"},
+    "name": "Ali Mabkhout TV",
+    "description": "UAE Ascendant Killjoy sentinel. Free agent. Setup guides, turret placement, and ranked VODs.",
+    "ownerId": {"$oid": "662000000000000000000055"},
+    "subscribers": [
+      {"$oid": "662000000000000000000051"},
+      {"$oid": "662000000000000000000052"},
+      {"$oid": "662000000000000000000053"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Sentinel", "Tutorial"],
+    "createdAt": {"$date": "2024-02-08T08:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-08T08:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000220"},
+    "name": "Hassan AF Stream",
+    "description": "Lebanese Valorant player. Diamond Reyna one-trick. Middle East gaming content.",
+    "ownerId": {"$oid": "662000000000000000000058"},
+    "subscribers": [
+      {"$oid": "662000000000000000000055"},
+      {"$oid": "662000000000000000000056"},
+      {"$oid": "662000000000000000000060"}
+    ],
+    "subscriberCount": 3,
+    "isActive": true,
+    "categories": ["Valorant", "Lebanon", "Duelist"],
+    "createdAt": {"$date": "2024-02-09T09:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-09T09:00:00.000Z"}
+  }
+]

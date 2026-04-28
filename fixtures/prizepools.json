@@ -1,0 +1,52 @@
+[
+  {
+    "_id": {"$oid": "663000000000000000000901"},
+    "seasonId": {"$oid": "663000000000000000000101"},
+    "leagueId": {"$oid": "663000000000000000000001"},
+    "totalAmount": 8500,
+    "currency": "USD",
+    "source": "PLATFORM",
+    "distribution": [
+      {"rank": 1, "amount": 5000, "percentage": 58.8},
+      {"rank": 2, "amount": 2500, "percentage": 29.4},
+      {"rank": 3, "amount": 1000, "percentage": 11.8}
+    ],
+    "status": "CONFIRMED",
+    "notes": "Inaugural MENA VCL prize pool fully funded by ArenaChain platform.",
+    "createdAt": {"$date": "2024-01-20T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-20T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000000902"},
+    "seasonId": {"$oid": "663000000000000000000102"},
+    "leagueId": {"$oid": "663000000000000000000002"},
+    "totalAmount": 5000,
+    "currency": "USD",
+    "source": "SPONSORED",
+    "distribution": [
+      {"rank": 1, "amount": 3000, "percentage": 60.0},
+      {"rank": 2, "amount": 1500, "percentage": 30.0},
+      {"rank": 3, "amount": 500,  "percentage": 10.0}
+    ],
+    "status": "CONFIRMED",
+    "notes": "Maghreb Cup prize pool co-sponsored by regional esports partners.",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000000903"},
+    "seasonId": {"$oid": "663000000000000000000103"},
+    "leagueId": {"$oid": "663000000000000000000003"},
+    "totalAmount": 2800,
+    "currency": "USD",
+    "source": "MIXED",
+    "distribution": [
+      {"rank": 1, "amount": 2000, "percentage": 71.4},
+      {"rank": 2, "amount": 800,  "percentage": 28.6}
+    ],
+    "status": "CONFIRMED",
+    "notes": "Arab Elite Series prize pool — platform contribution plus a community fundraiser.",
+    "createdAt": {"$date": "2024-02-20T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-20T10:00:00.000Z"}
+  }
+]
