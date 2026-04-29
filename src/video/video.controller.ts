@@ -35,11 +35,18 @@ import { parseHighlightVisibility } from '../highlights/utils/highlight-visibili
 import { VideoDocument } from './schema/video.schema';
 import { VideoEngagementService } from './video-engagement.service';
 import { CreateVideoCommentDto } from './dto/create-video-comment.dto';
+import { HighlightSelectionMode } from '../highlights/highlights.service';
 
 @ApiTags('Video')
 @Controller('video')
 export class VideoController {
   private readonly logger = new Logger(VideoController.name);
+  private static readonly DEFAULT_HIGHLIGHT_MODE: HighlightSelectionMode =
+    'all';
+  private static readonly DEFAULT_HIGHLIGHT_TOP_K = 3;
+  private static readonly DEFAULT_HIGHLIGHT_MIN_SCORE = 0.62;
+  private static readonly DEFAULT_HIGHLIGHT_MIN_GAP_SEC = 8;
+  private static readonly DEFAULT_HIGHLIGHT_CLIP_DURATION_SEC = 12;
 
   constructor(
     private readonly videoService: VideoService,
@@ -102,6 +109,36 @@ export class VideoController {
           description:
             'Show this video on your channel page when public (default: private)',
         },
+        highlightMode: {
+          type: 'string',
+          enum: ['top_k', 'threshold', 'all'],
+          description: 'How highlights are selected (default: all)',
+        },
+        highlightTopK: {
+          type: 'number',
+          description: 'Used when highlightMode=top_k (default: 3)',
+        },
+        highlightMinScore: {
+          type: 'number',
+          description: 'Used when highlightMode=threshold (0..1)',
+        },
+        highlightMinGapSec: {
+          type: 'number',
+          description: 'Minimum seconds between selected highlights',
+        },
+        highlightClipDurationSec: {
+          type: 'number',
+          description: 'Duration of each generated clip in seconds',
+        },
+        highlightMaxTotalSec: {
+          type: 'number',
+          description: 'Optional cap for cumulative generated clip seconds',
+        },
+        highlightFullScan: {
+          type: 'boolean',
+          description:
+            'If true, scans full timeline; if false, uses faster sparse scan',
+        },
       },
     },
   })
@@ -141,6 +178,33 @@ export class VideoController {
     const visibility = parseHighlightVisibility(
       (body as { highlightsVisibility?: string }).highlightsVisibility,
     );
+    const parsedMode = this.parseHighlightMode(
+      (body as { highlightMode?: string }).highlightMode,
+    );
+    const highlightTopK = this.parsePositiveInt(
+      (body as { highlightTopK?: string | number }).highlightTopK,
+      VideoController.DEFAULT_HIGHLIGHT_TOP_K,
+    );
+    const highlightMinScore = this.parseScore(
+      (body as { highlightMinScore?: string | number }).highlightMinScore,
+      VideoController.DEFAULT_HIGHLIGHT_MIN_SCORE,
+    );
+    const highlightMinGapSec = this.parsePositiveInt(
+      (body as { highlightMinGapSec?: string | number }).highlightMinGapSec,
+      VideoController.DEFAULT_HIGHLIGHT_MIN_GAP_SEC,
+    );
+    const highlightClipDurationSec = this.parsePositiveInt(
+      (body as { highlightClipDurationSec?: string | number })
+        .highlightClipDurationSec,
+      VideoController.DEFAULT_HIGHLIGHT_CLIP_DURATION_SEC,
+    );
+    const highlightMaxTotalSec = this.parseOptionalPositiveInt(
+      (body as { highlightMaxTotalSec?: string | number }).highlightMaxTotalSec,
+    );
+    const highlightFullScan = this.parseBoolean(
+      (body as { highlightFullScan?: string | boolean }).highlightFullScan,
+      true,
+    );
 
     const videoJson = video.toObject();
 
@@ -149,14 +213,85 @@ export class VideoController {
         videoId,
         uploaderId: uploader,
         visibility,
+        selectionMode: parsedMode,
+        topK: highlightTopK,
+        minScore: highlightMinScore,
+        minGapSec: highlightMinGapSec,
+        clipDurationSec: highlightClipDurationSec,
+        maxTotalSec: highlightMaxTotalSec,
+        fullScan: highlightFullScan,
       });
-      return { video: videoJson, highlightJobId: jobId };
+      return {
+        video: videoJson,
+        highlightJobId: jobId,
+        highlightConfig: {
+          mode: parsedMode,
+          topK: highlightTopK,
+          minScore: highlightMinScore,
+          minGapSec: highlightMinGapSec,
+          clipDurationSec: highlightClipDurationSec,
+          maxTotalSec: highlightMaxTotalSec ?? null,
+          fullScan: highlightFullScan,
+        },
+      };
     } catch (err) {
       this.logger.warn(
         `Video ${videoId} saved but highlight job was not enqueued: ${err instanceof Error ? err.message : err}`,
       );
-      return { video: videoJson, highlightJobId: null };
+      return {
+        video: videoJson,
+        highlightJobId: null,
+        highlightConfig: {
+          mode: parsedMode,
+          topK: highlightTopK,
+          minScore: highlightMinScore,
+          minGapSec: highlightMinGapSec,
+          clipDurationSec: highlightClipDurationSec,
+          maxTotalSec: highlightMaxTotalSec ?? null,
+          fullScan: highlightFullScan,
+        },
+      };
     }
+  }
+
+  private parseHighlightMode(value?: string): HighlightSelectionMode {
+    if (value === 'top_k' || value === 'threshold' || value === 'all') {
+      return value;
+    }
+    return VideoController.DEFAULT_HIGHLIGHT_MODE;
+  }
+
+  private parsePositiveInt(value: string | number | undefined, fallback: number) {
+    if (value === undefined || value === null || value === '') return fallback;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return fallback;
+    return Math.floor(n);
+  }
+
+  private parseOptionalPositiveInt(value?: string | number): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    return Math.floor(n);
+  }
+
+  private parseScore(value: string | number | undefined, fallback: number): number {
+    if (value === undefined || value === null || value === '') return fallback;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(0, Math.min(1, n));
+  }
+
+  private parseBoolean(
+    value: string | boolean | undefined,
+    fallback: boolean,
+  ): boolean {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value === 'boolean') return value;
+    const normalized = value.toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0') return false;
+    return fallback;
   }
 
   @Get(':id/engagement')

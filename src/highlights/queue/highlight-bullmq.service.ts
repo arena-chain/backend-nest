@@ -11,6 +11,7 @@ import { HighlightsService } from '../highlights.service.js';
 import {
   HIGHLIGHT_QUEUE_NAME,
   HighlightJobPayload,
+  toHighlightGenerationOptions,
 } from './highlight-job.types';
 
 @Injectable()
@@ -54,9 +55,14 @@ export class HighlightBullmqService implements OnModuleInit, OnModuleDestroy {
       async (job) => {
         const { videoId, uploaderId, visibility } =
           job.data as HighlightJobPayload;
-        await this.highlightsService.processVideoById(videoId, uploaderId, {
-          visibility,
-        });
+        await this.highlightsService.processVideoById(
+          videoId,
+          uploaderId,
+          toHighlightGenerationOptions({
+            ...(job.data as HighlightJobPayload),
+            visibility,
+          }),
+        );
       },
       { connection: this.redis },
     );

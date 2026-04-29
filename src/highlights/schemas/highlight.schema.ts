@@ -31,6 +31,9 @@ export class Highlight {
   @Prop({ required: true })
   clipUrl: string; // path or URL to generated highlight clip
 
+  @Prop({ min: 0, max: 1, default: 0 })
+  score: number;
+
   @Prop({
     enum: HighlightVisibility,
     default: HighlightVisibility.PRIVATE,

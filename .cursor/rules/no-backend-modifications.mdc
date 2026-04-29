@@ -1,8 +1,6 @@
 ---
-description: Prevents AI from modifying any backend NestJS files. Only the Electron frontend can be modified.
 alwaysApply: true
 ---
-
 # No Backend Modifications — Electron Frontend Only
 
 You are working on two projects in this workspace:
