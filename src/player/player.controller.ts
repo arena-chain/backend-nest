@@ -92,36 +92,6 @@ export class PlayerController {
     return { profiles };
   }
 
-  @Get('game/:gameId/recent-matches')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  async getRecentMatches(
-    @Request() req: { user: { userId: string } },
-    @Param('gameId') gameId: string,
-    @Query('limit') limit?: string,
-  ): Promise<{ matches: any[] }> {
-    const parsedLimit = parseInt(limit || '10', 10) || 10;
-    const matches = await this.playerGameProfileService.getUserRecentMatches(
-      req.user.userId,
-      gameId,
-      parsedLimit,
-    );
-    return { matches };
-  }
-
-  @Get('leaderboard/:gameId')
-  async getLeaderboard(
-    @Param('gameId') gameId: string,
-    @Query('limit') limit?: string,
-  ): Promise<{ leaderboard: GameProfileStatsDto[] }> {
-    const parsedLimit = parseInt(limit || '100', 10) || 100;
-    const leaderboard = await this.playerGameProfileService.getLeaderboard(
-      gameId,
-      parsedLimit,
-    );
-    return { leaderboard };
-  }
-
   @Get('game-cards')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -158,6 +128,36 @@ export class PlayerController {
       }),
     );
     return { cards };
+  }
+
+  @Get('game/:gameId/recent-matches')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async getRecentMatches(
+    @Request() req: { user: { userId: string } },
+    @Param('gameId') gameId: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ matches: any[] }> {
+    const parsedLimit = parseInt(limit || '10', 10) || 10;
+    const matches = await this.playerGameProfileService.getUserRecentMatches(
+      req.user.userId,
+      gameId,
+      parsedLimit,
+    );
+    return { matches };
+  }
+
+  @Get('leaderboard/:gameId')
+  async getLeaderboard(
+    @Param('gameId') gameId: string,
+    @Query('limit') limit?: string,
+  ): Promise<{ leaderboard: GameProfileStatsDto[] }> {
+    const parsedLimit = parseInt(limit || '100', 10) || 100;
+    const leaderboard = await this.playerGameProfileService.getLeaderboard(
+      gameId,
+      parsedLimit,
+    );
+    return { leaderboard };
   }
 
   @Get(':userId')
