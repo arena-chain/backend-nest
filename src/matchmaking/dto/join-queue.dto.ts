@@ -48,4 +48,8 @@ export class JoinQueueDto {
   @ValidateNested()
   @Type(() => RiotAccountInfoDto)
   riotAccountInfo?: RiotAccountInfoDto;
+
+  @IsOptional()
+  @IsString()
+  partyId?: string;
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
@@ -18,6 +18,8 @@ import {
   PlayerProfileSchema,
 } from '../player/schemas/player-profile.schema';
 import { RankModule } from '../rank/rank.module';
+import { PlayerModule } from '../player/player.module';
+import { PartyModule } from '../party/party.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { RankModule } from '../rank/rank.module';
     }),
     ConfigModule,
     RankModule,
+    PlayerModule,
+    forwardRef(() => PartyModule),
   ],
   controllers: [MatchmakingController],
   providers: [MatchmakingService, MatchmakingGateway],

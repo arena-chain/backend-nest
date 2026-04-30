@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreatePlayerRankDto } from './dto/create-rank.dto';
@@ -35,13 +34,14 @@ const TIER_THRESHOLDS: {
   divisions: number;
 }[] = [
   { tier: TierName.IRON, minElo: 0, maxElo: 499, divisions: 3 },
-  { tier: TierName.BRONZE, minElo: 500, maxElo: 999, divisions: 3 },
-  { tier: TierName.GOLD, minElo: 1000, maxElo: 1499, divisions: 3 },
-  { tier: TierName.PLATINUM, minElo: 1500, maxElo: 1999, divisions: 3 },
-  { tier: TierName.DIAMOND, minElo: 2000, maxElo: 2499, divisions: 3 },
-  { tier: TierName.MASTER, minElo: 2500, maxElo: 2999, divisions: 2 },
-  { tier: TierName.GRANDMASTER, minElo: 3000, maxElo: 3499, divisions: 2 },
-  { tier: TierName.CHALLENGER, minElo: 3500, maxElo: Infinity, divisions: 1 },
+  { tier: TierName.BRONZE, minElo: 500, maxElo: 699, divisions: 3 },
+  { tier: TierName.SILVER, minElo: 700, maxElo: 999, divisions: 3 },
+  { tier: TierName.GOLD, minElo: 1000, maxElo: 1399, divisions: 3 },
+  { tier: TierName.PLATINUM, minElo: 1400, maxElo: 1799, divisions: 3 },
+  { tier: TierName.DIAMOND, minElo: 1800, maxElo: 2199, divisions: 3 },
+  { tier: TierName.MASTER, minElo: 2200, maxElo: 2799, divisions: 2 },
+  { tier: TierName.GRANDMASTER, minElo: 2800, maxElo: 3399, divisions: 2 },
+  { tier: TierName.CHALLENGER, minElo: 3400, maxElo: Infinity, divisions: 1 },
 ];
 
 export interface MatchParticipant {
@@ -68,7 +68,6 @@ export class RankService {
     @InjectModel(Penalty.name) private penaltyModel: Model<PenaltyDocument>,
     @InjectModel(RankTierConfig.name)
     private rankTierConfigModel: Model<RankTierConfigDocument>,
-    private eventEmitter: EventEmitter2,
   ) {}
 
   // ──────────────────────────────────────────────────────────
@@ -94,6 +93,8 @@ export class RankService {
     participants: MatchParticipant[],
     winningTeam: 'BLUE' | 'RED',
     gameId: string,
+    _mode?: string,
+    _partyId?: string,
   ): Promise<EloUpdateResult[]> {
     const blueTeam = participants.filter((p) => p.team === 'BLUE');
     const redTeam = participants.filter((p) => p.team === 'RED');
@@ -179,13 +180,6 @@ export class RankService {
         newLevel: level,
         isTierPromotion,
         isTierDemotion,
-      });
-
-      this.eventEmitter.emit('match.completed', {
-        matchId: gameId,
-        userId: participant.userId.toString(),
-        mode: 'RANKED',
-        won: didWin,
       });
 
       results.push({

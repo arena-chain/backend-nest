@@ -9,6 +9,12 @@ import {
   PlayerProfile,
   PlayerProfileSchema,
 } from './schemas/player-profile.schema';
+import {
+  PlayerGameProfile,
+  PlayerGameProfileSchema,
+} from './schemas/player-game-profile.schema';
+import { Game, GameSchema } from '../games/entities/game.entity';
+import { PlayerGameProfileService } from './services/player-game-profile.service';
 
 @Module({
   imports: [
@@ -22,10 +28,12 @@ import {
     }),
     MongooseModule.forFeature([
       { name: PlayerProfile.name, schema: PlayerProfileSchema },
+      { name: PlayerGameProfile.name, schema: PlayerGameProfileSchema },
+      { name: Game.name, schema: GameSchema },
     ]),
   ],
   controllers: [PlayerController],
-  providers: [PlayerService],
-  exports: [PlayerService],
+  providers: [PlayerService, PlayerGameProfileService],
+  exports: [PlayerService, PlayerGameProfileService],
 })
 export class PlayerModule {}

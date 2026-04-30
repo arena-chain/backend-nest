@@ -44,6 +44,9 @@ export class MatchmakingTicket {
 
   @Prop({ type: Types.ObjectId, ref: 'Game' })
   gameId?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'GameParty' })
+  partyId?: Types.ObjectId;
 }
 
 export const MatchmakingTicketSchema =

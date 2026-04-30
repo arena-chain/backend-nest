@@ -57,6 +57,9 @@ export class Game {
   @Prop({ type: Types.ObjectId, ref: 'User' })
   hostUserId?: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'GameParty' })
+  partyId?: Types.ObjectId;
+
   @Prop({ default: false })
   isScheduled: boolean;
 

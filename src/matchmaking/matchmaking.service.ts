@@ -3,6 +3,7 @@ import {
     Logger,
     NotFoundException,
     BadRequestException,
+    ForbiddenException,
     Inject,
     forwardRef,
 } from '@nestjs/common';
@@ -21,6 +22,9 @@ import { MatchmakingGateway } from './matchmaking.gateway';
 import { JoinQueueDto } from './dto/join-queue.dto';
 import { User, UserDocument } from '../user/schemas/user.schema';
 import { PlayerProfile, PlayerProfileDocument } from '../player/schemas/player-profile.schema';
+import { PlayerGameProfileService } from '../player/services/player-game-profile.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PartyService } from '../party/party.service';
 
 // ──────────────────────────────────────────────────────────
 // CONFIGURATION
@@ -62,6 +66,10 @@ export class MatchmakingService {
         private readonly userModel: Model<UserDocument>,
         @InjectModel(PlayerProfile.name)
         private readonly playerModel: Model<PlayerProfileDocument>,
+        private readonly playerGameProfileService: PlayerGameProfileService,
+        private readonly eventEmitter: EventEmitter2,
+        @Inject(forwardRef(() => PartyService))
+        private readonly partyService: PartyService,
     ) {}
 
     // ──────────────────────────────────────────────────────────
@@ -175,66 +183,141 @@ export class MatchmakingService {
 
     async joinQueue(userId: string, dto: JoinQueueDto) {
         const isScheduled = !!dto.scheduledAt;
+        let partyId: Types.ObjectId | null = null;
+        let partyMembers: string[] = [userId];
+        let partyTicketHostId: string = userId;
+        let partyGameId: string | null = null;
+
+        if (dto.partyId) {
+            const party = await this.partyService
+                .getParty(dto.partyId)
+                .catch(() => null);
+            if (!party) {
+                throw new BadRequestException('Invalid partyId');
+            }
+
+            const requesterInParty = party.members.some((m) => m.userId === userId);
+            if (!requesterInParty) {
+                throw new ForbiddenException('User is not a member of this party');
+            }
+
+            if (party.status !== 'READY') {
+                throw new BadRequestException('Party must be READY to queue');
+            }
+
+            const acceptedMembers = party.members.filter((m) => m.status === 'ACCEPTED');
+            partyMembers = acceptedMembers.map((m) => m.userId);
+            partyId = new Types.ObjectId(party.id);
+            partyTicketHostId = party.hostUserId;
+            partyGameId = party.gameId;
+        }
+
+        const catalogId = await this.resolveCatalogId(dto.game);
+        if (partyGameId && catalogId && partyGameId !== catalogId.toString()) {
+            throw new BadRequestException('Party game does not match queue game');
+        }
+
+        if (partyMembers.length > 1 && catalogId) {
+            for (const memberId of partyMembers) {
+                const memberProfile = await this.playerGameProfileService.getProfile(
+                    memberId,
+                    catalogId.toString(),
+                );
+                if (!memberProfile || memberProfile.linkStatus !== 'VERIFIED') {
+                    throw new BadRequestException(
+                        `User ${memberId} has not verified account link for this game`,
+                    );
+                }
+            }
+        }
 
         if (!isScheduled) {
-            await this.ticketModel.updateMany(
-                { userId: new Types.ObjectId(userId), status: 'MATCHED' },
-                { $set: { status: 'CANCELLED' } },
-            );
+            for (const memberId of partyMembers) {
+                await this.ticketModel.updateMany(
+                    { userId: new Types.ObjectId(memberId), status: 'MATCHED' },
+                    { $set: { status: 'CANCELLED' } },
+                );
 
-            await this.gameModel.updateMany(
-                {
-                    'participants.userId': new Types.ObjectId(userId),
-                    status: 'PENDING_ACCEPTANCE',
-                    match_type: 'MATCHMAKING',
-                },
-                { $set: { status: 'CANCELLED' } },
-            );
+                await this.gameModel.updateMany(
+                    {
+                        'participants.userId': new Types.ObjectId(memberId),
+                        status: 'PENDING_ACCEPTANCE',
+                        match_type: 'MATCHMAKING',
+                    },
+                    { $set: { status: 'CANCELLED' } },
+                );
 
-            const existingSearch = await this.ticketModel.findOne({
-                userId: new Types.ObjectId(userId),
-                status: 'SEARCHING',
-            });
-            if (existingSearch) {
-                return existingSearch;
+                const existingSearch = await this.ticketModel.findOne({
+                    userId: new Types.ObjectId(memberId),
+                    status: 'SEARCHING',
+                    ...(partyId ? { partyId } : {}),
+                });
+                if (existingSearch) {
+                    return existingSearch;
+                }
             }
         } else {
             const scheduledTime = new Date(dto.scheduledAt!);
             const windowMs = 5 * 60 * 1000;
-            const existingScheduled = await this.ticketModel.findOne({
-                userId: new Types.ObjectId(userId),
-                status: 'SCHEDULED',
-                mode: dto.mode,
-                server: dto.server,
-                scheduledAt: {
-                    $gte: new Date(scheduledTime.getTime() - windowMs),
-                    $lte: new Date(scheduledTime.getTime() + windowMs),
-                },
-            });
-            if (existingScheduled) {
-                return existingScheduled;
+            for (const memberId of partyMembers) {
+                const existingScheduled = await this.ticketModel.findOne({
+                    userId: new Types.ObjectId(memberId),
+                    status: 'SCHEDULED',
+                    mode: dto.mode,
+                    server: dto.server,
+                    ...(partyId ? { partyId } : {}),
+                    scheduledAt: {
+                        $gte: new Date(scheduledTime.getTime() - windowMs),
+                        $lte: new Date(scheduledTime.getTime() + windowMs),
+                    },
+                });
+                if (existingScheduled) {
+                    return existingScheduled;
+                }
             }
         }
 
-        const catalogId = await this.resolveCatalogId(dto.game);
-        let elo = 1000;
-        if (catalogId) {
-            elo = await this.rankService.getPlayerElo(userId, catalogId.toString());
+        const tickets: MatchmakingTicketDocument[] = [];
+        for (const partyMemberId of partyMembers) {
+            let elo = 1000;
+            if (catalogId) {
+                elo = await this.rankService.getPlayerElo(
+                    partyMemberId,
+                    catalogId.toString(),
+                );
+            }
+
+            const ticket = await this.ticketModel.create({
+                userId: new Types.ObjectId(partyMemberId),
+                game: dto.game,
+                mode: dto.mode,
+                server: dto.server,
+                region: dto.region,
+                elo,
+                status: isScheduled ? 'SCHEDULED' : 'SEARCHING',
+                ...(partyId ? { partyId } : {}),
+                ...(isScheduled && { scheduledAt: new Date(dto.scheduledAt!) }),
+                ...(dto.riotAccountInfo && { riotAccountInfo: dto.riotAccountInfo }),
+            });
+            tickets.push(ticket);
         }
 
-        const ticket = await this.ticketModel.create({
-            userId: new Types.ObjectId(userId),
-            game: dto.game,
-            mode: dto.mode,
-            server: dto.server,
-            region: dto.region,
-            elo,
-            status: isScheduled ? 'SCHEDULED' : 'SEARCHING',
-            ...(isScheduled && { scheduledAt: new Date(dto.scheduledAt!) }),
-            ...(dto.riotAccountInfo && { riotAccountInfo: dto.riotAccountInfo }),
-        });
+        if (partyId && !isScheduled) {
+            const party = await this.partyService.getParty(partyId.toString()).catch(() => null);
+            if (party) {
+                await this.partyService.startQueueing(
+                    party.id,
+                    party.hostUserId,
+                    tickets[0]._id.toString(),
+                );
+            }
+        }
 
-        return ticket;
+        return (
+            tickets.find((t) => t.userId.toString() === partyTicketHostId) ||
+            tickets.find((t) => t.userId.toString() === userId) ||
+            tickets[0]
+        );
     }
 
     // ──────────────────────────────────────────────────────────
@@ -355,7 +438,32 @@ export class MatchmakingService {
             participants,
             winningTeam,
             gameId,
+            game.mode,
+            game.partyId ? game.partyId.toString() : undefined,
         );
+
+        const rankedModes = new Set(['RANKED_5V5', 'RANKED_SOLO_5V5', 'RANKED_SOLO_1V1']);
+        const customModes = new Set(['CUSTOM_1V1', 'CUSTOM_2V2']);
+
+        if (rankedModes.has(game.mode || '')) {
+            for (const result of eloResults) {
+                await this.playerGameProfileService.updateElo(
+                    result.userId.toString(),
+                    catalogId.toString(),
+                    result.eloChange,
+                    result.didWin,
+                );
+            }
+        } else if (customModes.has(game.mode || '')) {
+            for (const participant of game.participants) {
+                const isWin = participant.team === winningTeam;
+                await this.playerGameProfileService.updateCustomStats(
+                    participant.userId.toString(),
+                    catalogId.toString(),
+                    isWin,
+                );
+            }
+        }
 
         game.status = 'COMPLETED';
         game.winningTeam = winningTeam;
@@ -367,6 +475,21 @@ export class MatchmakingService {
             eloUpdates: eloResults,
             winningTeam,
         });
+
+        const eventMode: 'RANKED' | 'UNRANKED' = rankedModes.has(game.mode || '') ? 'RANKED' : 'UNRANKED';
+        for (const participant of game.participants) {
+            const won = participant.team === winningTeam;
+            const xpAmount = won ? 150 : 50;
+            this.eventEmitter.emit('match.completed', {
+                matchId: gameId,
+                userId: participant.userId.toString(),
+                mode: eventMode,
+                won,
+                gameId: catalogId.toString(),
+                partyId: game.partyId ? game.partyId.toString() : undefined,
+                xpAmount,
+            });
+        }
 
         this.logger.log(
             `Match ${gameId} completed | winner=${winningTeam} | elo changes: ${eloResults.map((r) => `${r.userId}:${r.eloChange > 0 ? '+' : ''}${r.eloChange}`).join(', ')}`,
@@ -560,34 +683,58 @@ export class MatchmakingService {
         for (const [, tickets] of byServer) {
             if (tickets.length < requiredPlayers) continue;
 
-            for (let i = 0; i + requiredPlayers - 1 < tickets.length; i++) {
-                if (matched.has(tickets[i]._id.toString())) continue;
+            const unitMap = new Map<string, MatchmakingTicketDocument[]>();
+            for (const ticket of tickets) {
+                if (matched.has(ticket._id.toString())) continue;
+                const unitKey = ticket.partyId
+                    ? `party:${ticket.partyId.toString()}`
+                    : `solo:${ticket._id.toString()}`;
+                if (!unitMap.has(unitKey)) unitMap.set(unitKey, []);
+                unitMap.get(unitKey)!.push(ticket);
+            }
 
-                const anchor = tickets[i];
+            const units = Array.from(unitMap.values()).sort((a, b) => {
+                const aTime = new Date((a[0] as any).createdAt).getTime();
+                const bTime = new Date((b[0] as any).createdAt).getTime();
+                return aTime - bTime;
+            });
+
+            for (let i = 0; i < units.length; i++) {
+                const anchorUnit = units[i];
+                if (!anchorUnit.length) continue;
+                if (anchorUnit.some((t) => matched.has(t._id.toString()))) continue;
+
+                const anchor = anchorUnit[0];
                 const dynamicThreshold = this.calculateDynamicThreshold(
                     (anchor as any).createdAt,
                 );
 
-                const group: MatchmakingTicketDocument[] = [anchor];
+                const group: MatchmakingTicketDocument[] = [...anchorUnit];
+                if (group.length > requiredPlayers) continue;
                 let effectiveRegion = (anchor.region ?? 'ALL').toUpperCase();
 
-                for (
-                    let j = i + 1;
-                    j < tickets.length && group.length < requiredPlayers;
-                    j++
-                ) {
-                    if (matched.has(tickets[j]._id.toString())) continue;
+                for (let j = i + 1; j < units.length && group.length < requiredPlayers; j++) {
+                    const unit = units[j];
+                    if (!unit.length) continue;
+                    if (unit.some((t) => matched.has(t._id.toString()))) continue;
+                    if (group.length + unit.length > requiredPlayers) continue;
 
-                    const elos = [...group.map((t) => t.elo), tickets[j].elo];
+                    const candidateRegion = (unit[0].region ?? 'ALL').toUpperCase();
+                    let regionOk = false;
+                    if (effectiveRegion === 'ALL') {
+                        regionOk = true;
+                    } else if (candidateRegion === 'ALL' || candidateRegion === effectiveRegion) {
+                        regionOk = true;
+                    }
+                    if (!regionOk) continue;
+
+                    const combined = [...group, ...unit];
+                    const elos = combined.map((t) => t.elo);
                     if (Math.max(...elos) - Math.min(...elos) > dynamicThreshold) continue;
 
-                    const candidateRegion = (tickets[j].region ?? 'ALL').toUpperCase();
-
-                    if (effectiveRegion === 'ALL') {
-                        group.push(tickets[j]);
-                        if (candidateRegion !== 'ALL') effectiveRegion = candidateRegion;
-                    } else if (candidateRegion === 'ALL' || candidateRegion === effectiveRegion) {
-                        group.push(tickets[j]);
+                    group.push(...unit);
+                    if (effectiveRegion === 'ALL' && candidateRegion !== 'ALL') {
+                        effectiveRegion = candidateRegion;
                     }
                 }
 
@@ -609,6 +756,14 @@ export class MatchmakingService {
 
         const half = Math.ceil(group.length / 2);
         const hasScheduledTicket = group.some((t) => t.scheduledAt != null);
+        const isPartyMatch =
+            !!group[0].partyId &&
+            group.every(
+                (t) =>
+                    !!t.partyId &&
+                    t.partyId.toString() === group[0].partyId!.toString(),
+            );
+        const firstPartyId = group[0].partyId;
 
         // Fetch user documents to get steamId
         const userIds = group.map((t) => t.userId);
@@ -661,6 +816,7 @@ export class MatchmakingService {
             participants,
             teams, // Include structured teams in payload
             hostUserId: group[0].userId,
+            partyId: isPartyMatch ? firstPartyId : undefined,
         };
 
         const [game] = await this.gameModel.create([gamePayload]);
@@ -670,10 +826,16 @@ export class MatchmakingService {
             { $set: { status: 'MATCHED', gameId: game._id } },
         );
 
+        if (isPartyMatch && firstPartyId) {
+            await this.partyService
+                .matchParty(firstPartyId.toString(), game._id.toString())
+                .catch(() => null);
+        }
+
         this.gateway.emitMatchFound(userIds.map(id => id.toString()), game);
 
         this.logger.log(
-            `Match created: ${game._id} | mode=${mode} | server=${group[0].server} | host=${group[0].userId} | players=${group.length}`,
+            `Match created: ${game._id} | mode=${mode} | server=${group[0].server} | host=${group[0].userId} | players=${group.length} | party=${isPartyMatch && firstPartyId ? firstPartyId.toString() : 'none'}`,
         );
     }
 }
