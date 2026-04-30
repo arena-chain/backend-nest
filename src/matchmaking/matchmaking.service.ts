@@ -128,6 +128,38 @@ export class MatchmakingService {
         return { username, steamPersonaName };
     }
 
+    private async hasVerifiedGameLink(
+        memberId: string,
+        gameKey: string,
+        catalogId?: Types.ObjectId | null,
+    ): Promise<boolean> {
+        if (catalogId) {
+            const perGame = await this.playerGameProfileService.getProfile(
+                memberId,
+                catalogId.toString(),
+            );
+            if (perGame?.linkStatus === 'VERIFIED') return true;
+        }
+
+        const upperGame = (gameKey || '').toUpperCase();
+        const isRiotGame = upperGame === 'LOL' || upperGame === 'VALORANT';
+        if (isRiotGame) {
+            const profile = await this.playerModel
+                .findOne({ userId: new Types.ObjectId(memberId) })
+                .select('riotLinkStatus')
+                .lean();
+            return (
+                profile?.riotLinkStatus === 'verified'
+            );
+        }
+
+        const user = await this.userModel
+            .findById(new Types.ObjectId(memberId))
+            .select('steamVerified steamId')
+            .lean();
+        return !!(user?.steamVerified || user?.steamId);
+    }
+
     private isMissingDisplayName(value: string | undefined) {
         const normalized = (value ?? '').trim().toLowerCase();
         return !normalized || normalized === 'player' || normalized.startsWith('player ');
@@ -217,13 +249,14 @@ export class MatchmakingService {
             throw new BadRequestException('Party game does not match queue game');
         }
 
-        if (partyMembers.length > 1 && catalogId) {
+        if (partyMembers.length > 1) {
             for (const memberId of partyMembers) {
-                const memberProfile = await this.playerGameProfileService.getProfile(
+                const verified = await this.hasVerifiedGameLink(
                     memberId,
-                    catalogId.toString(),
+                    dto.game,
+                    catalogId,
                 );
-                if (!memberProfile || memberProfile.linkStatus !== 'VERIFIED') {
+                if (!verified) {
                     throw new BadRequestException(
                         `User ${memberId} has not verified account link for this game`,
                     );
@@ -545,6 +578,7 @@ export class MatchmakingService {
     async getActiveGame(userId: string) {
         const pendingCutoff = new Date(Date.now() - 60 * 1000);
         const acceptedCutoff = new Date(Date.now() - 10 * 60 * 1000);
+        const inProgressCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
 
         const game = await this.gameModel
             .findOne({
@@ -557,6 +591,10 @@ export class MatchmakingService {
                     {
                         status: 'ACCEPTED',
                         createdAt: { $gte: acceptedCutoff },
+                    },
+                    {
+                        status: 'IN_PROGRESS',
+                        createdAt: { $gte: inProgressCutoff },
                     },
                 ],
             })

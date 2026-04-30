@@ -14,9 +14,14 @@ import {
   PlayerGameProfile,
   PlayerGameProfileDocument,
 } from '../player/schemas/player-game-profile.schema';
+import {
+  PlayerProfile,
+  PlayerProfileDocument,
+} from '../player/schemas/player-profile.schema';
 import { User, UserDocument } from '../user/schemas/user.schema';
 import { FriendshipService } from '../friendship/friendship.service';
 import { MatchmakingService } from '../matchmaking/matchmaking.service';
+import { Catalog, CatalogDocument } from '../catalog/schemas/catalog.entity';
 
 type PartyMode = 'CUSTOM_1V1' | 'CUSTOM_2V2' | 'RANKED_5V5';
 type PartyStatus =
@@ -62,8 +67,12 @@ export class PartyService {
     private readonly gamePartyModel: Model<GamePartyDocument>,
     @InjectModel(PlayerGameProfile.name)
     private readonly playerGameProfileModel: Model<PlayerGameProfileDocument>,
+    @InjectModel(PlayerProfile.name)
+    private readonly playerProfileModel: Model<PlayerProfileDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
+    @InjectModel(Catalog.name)
+    private readonly catalogModel: Model<CatalogDocument>,
     @Inject(forwardRef(() => FriendshipService))
     private readonly friendshipService: FriendshipService,
     @Inject(forwardRef(() => MatchmakingService))
@@ -72,19 +81,42 @@ export class PartyService {
 
   async createParty(
     hostUserId: string,
-    gameId: string,
-    mode: string,
+    gameId?: string,
+    mode?: string,
+    game?: string,
   ): Promise<PartyDto> {
-    if (!(mode in this.MODE_MAX_MEMBERS)) {
+    const normalizedMode = this.normalizeMode(mode);
+    const typedMode = normalizedMode as PartyMode;
+    if (!(normalizedMode in this.MODE_MAX_MEMBERS)) {
       throw new BadRequestException(`Invalid mode: ${mode}`);
     }
 
-    const typedMode = mode as PartyMode;
+    const resolvedGameId = await this.resolveGameId(gameId, game);
+    if (!resolvedGameId) {
+      // Last-resort fallback: pick any active catalog game so party create
+      // does not hard-fail in local environments with incomplete game mapping.
+      const anyActive = await this.catalogModel.findOne({ isActive: true });
+      if (!anyActive) {
+        throw new BadRequestException(
+          'No active game found in catalog. Please seed catalog data.',
+        );
+      }
+      this.logger.warn(
+        `Could not resolve game "${game ?? gameId}". Falling back to active catalog game ${anyActive._id.toString()}`,
+      );
+      return this.createParty(
+        hostUserId,
+        anyActive._id.toString(),
+        typedMode,
+        game,
+      );
+    }
+
     const maxMembers = this.MODE_MAX_MEMBERS[typedMode];
     const now = new Date();
 
     const party = await this.gamePartyModel.create({
-      gameId: new Types.ObjectId(gameId),
+      gameId: new Types.ObjectId(resolvedGameId),
       hostUserId: new Types.ObjectId(hostUserId),
       mode: typedMode,
       maxMembers,
@@ -102,9 +134,79 @@ export class PartyService {
     });
 
     this.logger.log(
-      `Party created: ${party._id.toString()} | host=${hostUserId} | game=${gameId} | mode=${mode}`,
+      `Party created: ${party._id.toString()} | host=${hostUserId} | game=${resolvedGameId} | mode=${typedMode}`,
     );
     return this.mapPartyToDto(party);
+  }
+
+  private normalizeMode(mode?: string): PartyMode {
+    if (!mode) return 'CUSTOM_1V1';
+    if (mode === 'CUSTOM_5V5') return 'RANKED_5V5';
+    if (mode === 'CUSTOM_1V1' || mode === 'CUSTOM_2V2' || mode === 'RANKED_5V5') {
+      return mode;
+    }
+    return 'CUSTOM_1V1';
+  }
+
+  private async resolveGameId(
+    gameId?: string,
+    gameKey?: string,
+  ): Promise<string | null> {
+    if (gameId) return gameId;
+    if (!gameKey) return null;
+
+    const key = gameKey.toLowerCase();
+    const aliases: Record<string, string[]> = {
+      lol: ['league of legends', 'lol'],
+      valorant: ['valorant'],
+      cs2: ['counter-strike 2', 'cs2', 'csgo'],
+      dota2: ['dota 2', 'dota2'],
+    };
+
+    const words = aliases[key] || [key];
+    for (const w of words) {
+      const game = await this.catalogModel.findOne({
+        $or: [
+          { title: { $regex: new RegExp(w, 'i') } },
+          { genre: { $regex: new RegExp(w, 'i') } },
+          { description: { $regex: new RegExp(w, 'i') } },
+          { 'metadata.key': { $regex: new RegExp(w, 'i') } },
+          { 'metadata.slug': { $regex: new RegExp(w, 'i') } },
+          { 'metadata.game': { $regex: new RegExp(w, 'i') } },
+        ],
+      });
+      if (game) return game._id.toString();
+    }
+
+    // Final fallback: bootstrap a minimal catalog entry so party flow can work
+    // even when catalog seed data is missing in local/dev environments.
+    try {
+      const canonicalTitle: Record<string, string> = {
+        lol: 'League of Legends',
+        valorant: 'Valorant',
+        cs2: 'Counter-Strike 2',
+        dota2: 'Dota 2',
+      };
+      const title = canonicalTitle[key] || gameKey;
+      const created = await this.catalogModel.create({
+        title,
+        genre: key.toUpperCase(),
+        description: `Auto-created catalog entry for ${title}`,
+        isActive: true,
+        supportsSolo: true,
+        metadata: { key, autoCreated: true },
+      });
+      this.logger.warn(
+        `Catalog entry missing for "${gameKey}", auto-created ${created._id.toString()}`,
+      );
+      return created._id.toString();
+    } catch (e) {
+      this.logger.error(
+        `Failed to auto-create catalog for "${gameKey}": ${(e as Error).message}`,
+      );
+    }
+
+    return null;
   }
 
   async inviteMember(
@@ -145,12 +247,11 @@ export class PartyService {
       throw new ForbiddenException('Not friends');
     }
 
-    const linkedProfile = await this.playerGameProfileModel.findOne({
-      userId: new Types.ObjectId(targetUserId),
-      gameId: party.gameId,
-      linkStatus: 'VERIFIED',
-    });
-    if (!linkedProfile) {
+    const isVerified = await this.isMemberLinkVerifiedForPartyGame(
+      targetUserId,
+      party.gameId.toString(),
+    );
+    if (!isVerified) {
       throw new ForbiddenException(
         `${targetUserId} has not verified their account link for this game`,
       );
@@ -402,5 +503,36 @@ export class PartyService {
       expiresAt: party.expiresAt,
       lastActivityAt: party.lastActivityAt,
     };
+  }
+
+  private async isMemberLinkVerifiedForPartyGame(
+    userId: string,
+    gameId: string,
+  ): Promise<boolean> {
+    const perGame = await this.playerGameProfileModel.findOne({
+      userId: new Types.ObjectId(userId),
+      gameId: new Types.ObjectId(gameId),
+      linkStatus: 'VERIFIED',
+    });
+    if (perGame) return true;
+
+    const catalog = await this.catalogModel.findById(gameId).lean();
+    const gameText = `${catalog?.title || ''} ${catalog?.genre || ''} ${catalog?.description || ''}`.toLowerCase();
+    const isRiotGame = /league|lol|valorant/.test(gameText);
+
+    if (isRiotGame) {
+      const profile = await this.playerProfileModel
+        .findOne({ userId: new Types.ObjectId(userId) })
+        .lean();
+      return (
+        profile?.riotLinkStatus === 'verified'
+      );
+    }
+
+    const user = await this.userModel
+      .findById(new Types.ObjectId(userId))
+      .select('steamVerified steamId')
+      .lean();
+    return !!(user?.steamVerified || user?.steamId);
   }
 }

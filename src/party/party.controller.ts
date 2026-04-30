@@ -11,8 +11,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PartyDto, PartyService } from './party.service';
 
 export class CreatePartyDto {
-  gameId: string;
-  mode: 'CUSTOM_1V1' | 'CUSTOM_2V2' | 'RANKED_5V5';
+  gameId?: string;
+  game?: string;
+  mode?: 'CUSTOM_1V1' | 'CUSTOM_2V2' | 'RANKED_5V5' | 'CUSTOM_5V5';
 }
 
 export class InviteMemberDto {
@@ -38,7 +39,12 @@ export class PartyController {
 
   @Post('create')
   async createParty(@Req() req, @Body() dto: CreatePartyDto): Promise<PartyDto> {
-    return this.partyService.createParty(req.user.userId, dto.gameId, dto.mode);
+    return this.partyService.createParty(
+      req.user.userId,
+      dto.gameId,
+      dto.mode,
+      dto.game,
+    );
   }
 
   @Post(':partyId/invite')
