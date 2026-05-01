@@ -12,6 +12,7 @@ import { ScouterService } from './scouter.service';
 import { ScouterController } from './scouter.controller';
 import { PlayerModule } from '../player/player.module';
 import { MatchModule } from '../match/match.module';
+import { RiotApiModule } from '../riot-api/riot-api.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MatchModule } from '../match/match.module';
     ]),
     PlayerModule,
     MatchModule,
+    RiotApiModule,
   ],
   controllers: [ScouterController],
   providers: [ScouterService],

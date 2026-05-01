@@ -58,6 +58,20 @@ export class ScouterController {
     return this.scouterService.getPlayerMatchHistory(playerUserId);
   }
 
+  @Get('players/:playerUserId/riot-matches')
+  @ApiOperation({
+    summary:
+      "Get player's latest Riot LoL matches (linked+verified accounts only)",
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Riot match history payload ({ linked, game, matches, total })',
+  })
+  getPlayerRiotMatchHistory(@Param('playerUserId') playerUserId: string) {
+    return this.scouterService.getPlayerRiotMatchHistory(playerUserId, 8);
+  }
+
   @Patch(':scouterUserId/scouted/:playerProfileId')
   @ApiOperation({ summary: 'Add player to scouter evaluated list' })
   @ApiResponse({ status: 200, description: 'Scouter profile updated' })

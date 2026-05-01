@@ -43,6 +43,15 @@ export class User {
   @Prop({ unique: true, sparse: true })
   steamId?: string;
 
+  @Prop()
+  steamUsername?: string;
+
+  @Prop()
+  steamAvatarUrl?: string;
+
+  @Prop({ default: false })
+  steamVerified: boolean;
+
   @Prop({ default: 'EUROPE' })
   region: string;
 

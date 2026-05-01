@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { LevelService } from './level.service';
+import { PlayerGameProfileService } from '../player/services/player-game-profile.service';
 
 @Injectable()
 export class LevelListener {
   private readonly logger = new Logger(LevelListener.name);
 
-  constructor(private readonly levelService: LevelService) {}
+  constructor(
+    private readonly levelService: LevelService,
+    private readonly playerGameProfileService: PlayerGameProfileService,
+  ) {}
 
   @OnEvent('match.completed')
   async handleMatchCompleted(payload: {
@@ -15,9 +19,12 @@ export class LevelListener {
     mode: 'RANKED' | 'UNRANKED';
     won: boolean;
     score?: number;
+    gameId?: string;
+    partyId?: string;
+    xpAmount?: number;
   }) {
     this.logger.log(`Handling match.completed for user ${payload.userId}`);
-    await this.levelService.applyEvent({
+    const xpResult = await this.levelService.applyEvent({
       id: `match_${payload.matchId}`,
       userId: payload.userId,
       type: 'MATCH_COMPLETED',
@@ -27,6 +34,15 @@ export class LevelListener {
         stats: payload.score ? { score: payload.score } : undefined,
       },
     });
+
+    if (payload.gameId) {
+      const xpAmount = payload.xpAmount ?? xpResult?.addedXP ?? (payload.won ? 150 : 50);
+      await this.playerGameProfileService.addXp(
+        payload.userId,
+        payload.gameId,
+        xpAmount,
+      );
+    }
   }
 
   @OnEvent('mission.completed')

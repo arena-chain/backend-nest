@@ -9,6 +9,7 @@ import {
 import { SeasonRoster } from '../season-roster/schemas/season-roster.schema';
 import { PlayerService } from '../player/player.service';
 import { MatchService } from '../match/match.service';
+import { RiotApiService } from '../riot-api/riot-api.service';
 
 @Injectable()
 export class ScouterService {
@@ -18,6 +19,7 @@ export class ScouterService {
     @InjectModel(SeasonRoster.name) private rosterModel: Model<any>,
     private readonly playerService: PlayerService,
     private readonly matchService: MatchService,
+    private readonly riotApiService: RiotApiService,
   ) {}
 
   async create(
@@ -117,5 +119,12 @@ export class ScouterService {
         new Date(a.scheduledStart).getTime(),
     );
     return matches;
+  }
+
+  /**
+   * Get latest Riot LoL matches for a player, if that player's account is linked+verified.
+   */
+  async getPlayerRiotMatchHistory(playerUserId: string, count = 8) {
+    return this.riotApiService.getMatchHistory(playerUserId, 'lol', 0, count);
   }
 }

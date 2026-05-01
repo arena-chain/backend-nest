@@ -59,7 +59,15 @@ import { PresenceModule } from './presence/presence.module';
 import { TrainingModule } from './training/training.module';
 import { LevelModule } from './level/level.module';
 import { LiveGameModule } from './live-game/live-game.module';
+import { SteamModule } from './steam/steam.module';
+import { DuelModule } from './duel/duel.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { PartyModule } from './party/party.module';
+import {
+  PlayerGameProfile,
+  PlayerGameProfileSchema,
+} from './player/schemas/player-game-profile.schema';
+import { GameParty, GamePartySchema } from './party/schemas/game-party.schema';
 
 const mongoLogger = new Logger('MongoDB');
 
@@ -94,6 +102,10 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
       },
       inject: [ConfigService],
     }),
+    MongooseModule.forFeature([
+      { name: PlayerGameProfile.name, schema: PlayerGameProfileSchema },
+      { name: GameParty.name, schema: GamePartySchema },
+    ]),
     ServeStaticModule.forRoot({
       rootPath: uploadRoot,
       serveRoot: '/uploads',
@@ -159,6 +171,9 @@ const inventoryStaticRoot = join(process.cwd(), 'src', 'inventory');
     PresenceModule,
     TrainingModule,
     LiveGameModule,
+    SteamModule,
+    DuelModule,
+    PartyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

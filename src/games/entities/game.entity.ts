@@ -51,7 +51,14 @@ export class Game {
   roomInfo?: {
     roomId: string;
     map?: string;
+    steamLobbyId?: string;
   };
+
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  hostUserId?: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'GameParty' })
+  partyId?: Types.ObjectId;
 
   @Prop({ default: false })
   isScheduled: boolean;
@@ -63,6 +70,7 @@ export class Game {
     type: [
       {
         userId: { type: Types.ObjectId, ref: 'User', required: true },
+        steamId: { type: String, default: null },
         team: { type: String, enum: ['BLUE', 'RED'], required: true },
         accepted: { type: Boolean, default: null },
         elo: { type: Number, default: 1000 },
@@ -77,12 +85,19 @@ export class Game {
           },
           default: null,
         },
+        username: { type: String },
+        steamPersonaName: { type: String },
+        avatar: { type: String },
       },
     ],
     default: [],
   })
   participants: {
     userId: Types.ObjectId;
+    steamId?: string;
+    username?: string;
+    steamPersonaName?: string;
+    avatar?: string;
     team: 'BLUE' | 'RED';
     accepted: boolean | null;
     elo: number;
@@ -95,6 +110,12 @@ export class Game {
       riotTagLine: string;
     } | null;
   }[];
+
+  @Prop({ type: Object, default: {} })
+  teams: {
+    blue: any[];
+    red: any[];
+  };
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);

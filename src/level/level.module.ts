@@ -4,6 +4,7 @@ import { LevelService } from './level.service';
 import { LevelController } from './level.controller';
 import { LevelListener } from './level.listener';
 import { PlayerLevel, PlayerLevelSchema } from './schemas/player-level.schema';
+import { PlayerModule } from '../player/player.module';
 import {
   ProcessedXpEvent,
   ProcessedXpEventSchema,
@@ -11,6 +12,7 @@ import {
 
 @Module({
   imports: [
+    PlayerModule,
     MongooseModule.forFeature([
       { name: PlayerLevel.name, schema: PlayerLevelSchema },
       { name: ProcessedXpEvent.name, schema: ProcessedXpEventSchema },
