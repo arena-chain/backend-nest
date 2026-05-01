@@ -6,13 +6,46 @@ import {
   AdminProfile,
   AdminProfileDocument,
 } from './schemas/admin-profile.schema';
+import * as bcrypt from 'bcrypt';
+import { UsersService } from '../user/user.service';
+import { UserRole } from '../common/enums/role.enum';
+import { CreateCheckInAgentDto } from './dto/create-check-in-agent.dto';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectModel(AdminProfile.name)
     private adminProfileModel: Model<AdminProfileDocument>,
+    private readonly usersService: UsersService,
   ) {}
+
+  async createCheckInAgent(dto: CreateCheckInAgentDto) {
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const created = await this.usersService.create({
+      email: dto.email,
+      password: passwordHash,
+      nickname: dto.nickname,
+      role: UserRole.CHECK_IN_AGENT,
+      region: dto.region,
+      country: dto.country,
+    });
+
+    await this.usersService.update(created._id.toString(), {
+      isEmailVerified: true,
+      isActive: true,
+    });
+
+    return {
+      id: created._id,
+      email: created.email,
+      nickname: created.nickname,
+      role: created.role,
+      region: created.region,
+      country: created.country,
+      isEmailVerified: true,
+      isActive: true,
+    };
+  }
 
   async create(
     userId: Types.ObjectId,

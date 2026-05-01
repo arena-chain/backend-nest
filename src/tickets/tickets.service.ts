@@ -237,6 +237,7 @@ export class TicketsService {
     success: boolean;
     message: string;
     ticket?: Ticket;
+    scanStatus?: 'CONFIRMED' | 'USED';
   }> {
     const ticket = await this.ticketModel
       .findOne({ ticketNumber })
@@ -257,6 +258,7 @@ export class TicketsService {
         success: false,
         message: `Ticket already used on ${ticket.usedAt?.toISOString()}`,
         ticket,
+        scanStatus: 'USED',
       };
     }
 
@@ -266,6 +268,7 @@ export class TicketsService {
         success: false,
         message: 'Ticket has been cancelled',
         ticket,
+        scanStatus: 'USED',
       };
     }
 
@@ -278,6 +281,7 @@ export class TicketsService {
         success: false,
         message: 'Ticket has expired',
         ticket,
+        scanStatus: 'USED',
       };
     }
 
@@ -288,8 +292,9 @@ export class TicketsService {
 
     return {
       success: true,
-      message: 'Ticket validated successfully',
+      message: 'Ticket confirmed and access granted',
       ticket,
+      scanStatus: 'CONFIRMED',
     };
   }
 

@@ -1,10 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { UsersService } from '../user/user.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { UpdateAdminDto } from './dto/update-admin.dto';
 import { Types } from 'mongoose';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../common/enums/role.enum';
+import { CreateCheckInAgentDto } from './dto/create-check-in-agent.dto';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -52,6 +57,18 @@ export class AdminController {
   @ApiResponse({ status: 404, description: 'Admin profile not found' })
   findByUserId(@Param('userId') userId: string) {
     return this.adminService.findByUserId(userId);
+  }
+
+  @Post('check-in-agents')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a check-in agent account (admin only)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Check-in agent account created successfully',
+  })
+  createCheckInAgent(@Body() dto: CreateCheckInAgentDto) {
+    return this.adminService.createCheckInAgent(dto);
   }
 
   @Patch(':userId')

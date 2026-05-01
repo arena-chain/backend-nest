@@ -7,11 +7,16 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRole } from '../common/enums/role.enum';
 
 @ApiTags('Tickets')
 @Controller('tickets')
@@ -79,6 +84,8 @@ export class TicketsController {
     summary: 'Validate and mark ticket as used (QR code scanning)',
   })
   @ApiResponse({ status: 200, description: 'Ticket validation result' })
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.CHECK_IN_AGENT)
   validateTicket(@Body('ticketNumber') ticketNumber: string) {
     return this.ticketsService.validateTicket(ticketNumber);
   }

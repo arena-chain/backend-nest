@@ -134,7 +134,7 @@ export function App() {
     });
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [tab, setTab] = useState<'player' | 'admin'>('player');
+    const [tab, setTab] = useState<'player' | 'admin' | 'checkin-agents'>('player');
     const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -409,9 +409,18 @@ export function App() {
                             Store
                         </button>
                         {isAdmin ? (
-                            <button type="button" data-active={tab === 'admin'} onClick={() => setTab('admin')}>
-                                Currency offers
-                            </button>
+                            <>
+                                <button type="button" data-active={tab === 'admin'} onClick={() => setTab('admin')}>
+                                    Currency offers
+                                </button>
+                                <button
+                                    type="button"
+                                    data-active={tab === 'checkin-agents'}
+                                    onClick={() => setTab('checkin-agents')}
+                                >
+                                    Check-in agents
+                                </button>
+                            </>
                         ) : null}
                     </nav>
                 ) : (
@@ -644,8 +653,109 @@ export function App() {
                     chainSymbol={chainSymbol}
                 />
             )}
+            {token && tab === 'checkin-agents' && isAdmin && (
+                <AdminCheckInAgents loading={loading} setLoading={setLoading} setMessage={setMessage} apiJson={apiJson} />
+            )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function AdminCheckInAgents(props: {
+    loading: boolean;
+    setLoading: (v: boolean) => void;
+    setMessage: (m: { type: 'ok' | 'err'; text: string } | null) => void;
+    apiJson: (path: string, init?: RequestInit) => Promise<unknown>;
+}) {
+    const { loading, setLoading, setMessage, apiJson } = props;
+    const [email, setEmail] = useState('');
+    const [nickname, setNickname] = useState('');
+    const [password, setPassword] = useState('');
+    const [region, setRegion] = useState('EUROPE');
+    const [country, setCountry] = useState('TUNISIA');
+
+    const onCreateAgent = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage(null);
+        setLoading(true);
+        try {
+            const created = (await apiJson('admin/check-in-agents', {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: email.trim(),
+                    nickname: nickname.trim(),
+                    password,
+                    region: region.trim() || undefined,
+                    country: country.trim() || undefined,
+                }),
+            })) as { email?: string; role?: string };
+            setMessage({
+                type: 'ok',
+                text: `Check-in agent created: ${created.email || email.trim()} (${created.role || 'check_in_agent'})`,
+            });
+            setEmail('');
+            setNickname('');
+            setPassword('');
+        } catch (err) {
+            setMessage({ type: 'err', text: err instanceof Error ? err.message : 'Could not create check-in agent' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="card">
+            <div className="card-head">
+                <h2>Create Check-in Agent</h2>
+            </div>
+            <form className="offer-form" onSubmit={onCreateAgent}>
+                <div className="field-dark">
+                    <label>Email</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="checkin.agent@arena.test"
+                        required
+                    />
+                </div>
+                <div className="field-dark">
+                    <label>Nickname</label>
+                    <input
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value)}
+                        placeholder="Gate Agent 01"
+                        required
+                    />
+                </div>
+                <div className="field-dark">
+                    <label>Password</label>
+                    <input
+                        type="password"
+                        minLength={8}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Min 8 characters"
+                        required
+                    />
+                </div>
+                <button type="submit" className="btn-add" disabled={loading}>
+                    + Create agent
+                </button>
+                <div className="field-dark">
+                    <label>Region (optional)</label>
+                    <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="EUROPE" />
+                </div>
+                <div className="field-dark">
+                    <label>Country (optional)</label>
+                    <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="TUNISIA" />
+                </div>
+            </form>
+            <p className="muted" style={{ marginBottom: 0 }}>
+                Agent logs in on mobile with the created email/password, then scans tickets via{' '}
+                <span className="mono">/api/tickets/validate</span>.
+            </p>
         </div>
     );
 }

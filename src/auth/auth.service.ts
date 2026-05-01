@@ -138,6 +138,9 @@ export class AuthService {
       case UserRole.ADMIN:
         result = await this.registerAdmin(dto as RegisterAdminDto);
         break;
+      case UserRole.CHECK_IN_AGENT:
+        result = await this.registerCheckInAgent(dto);
+        break;
       default:
         throw new BadRequestException('Invalid role');
     }
@@ -303,6 +306,35 @@ export class AuthService {
     return { message: 'Verification code sent to your email' };
   }
 
+  async registerCheckInAgent(dto: RegisterDto) {
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('User already exists');
+
+    const hash = await bcrypt.hash(dto.password, 10);
+    const otp = this.generateOtp();
+    const otpExpires = new Date();
+    otpExpires.setMinutes(otpExpires.getMinutes() + 10);
+
+    await this.registrationModel.findOneAndUpdate(
+      { email: dto.email },
+      {
+        email: dto.email,
+        passwordHash: hash,
+        nickname: dto.nickname,
+        region: dto.region || 'EUROPE',
+        role: UserRole.CHECK_IN_AGENT,
+        roleData: {},
+        otp,
+        otpExpires,
+      },
+      { upsert: true, new: true },
+    );
+
+    await this.mailService.sendVerificationEmail(dto.email, otp);
+
+    return { message: 'Verification code sent to your email' };
+  }
+
   async login(dto: LoginDto) {
     const identifier = dto.email.trim();
     let user = await this.usersService.findByEmailOrNickname(identifier);
@@ -376,6 +408,10 @@ export class AuthService {
         case UserRole.ADMIN:
           profile = await this.adminService.findByUserId(user._id);
           role = UserRole.ADMIN;
+          break;
+        case UserRole.CHECK_IN_AGENT:
+          profile = null;
+          role = UserRole.CHECK_IN_AGENT;
           break;
         default:
           profile = await this.playerService.findOrCreateByUserId(user._id);
@@ -455,6 +491,9 @@ export class AuthService {
           break;
         case UserRole.ADMIN:
           profile = await this.adminService.create(user._id, pending.roleData);
+          break;
+        case UserRole.CHECK_IN_AGENT:
+          profile = null;
           break;
       }
 
@@ -825,34 +864,39 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new NotFoundException('User not found');
 
-    let role: UserRole;
-    let profile: any;
+    const roleKey = (user.role || UserRole.PLAYER).toLowerCase();
+    let role: UserRole = UserRole.PLAYER;
+    let profile: any = null;
 
-    try {
-      profile = await this.playerService.findByUserId(user._id);
-      role = UserRole.PLAYER;
-    } catch {
-      try {
-        profile = await this.teamManagerService.findByUserId(user._id);
+    switch (roleKey) {
+      case UserRole.PLAYER:
+        role = UserRole.PLAYER;
+        profile = await this.playerService.findOrCreateByUserId(user._id);
+        break;
+      case UserRole.TEAM_MANAGER:
         role = UserRole.TEAM_MANAGER;
-      } catch {
-        try {
-          profile = await this.refereeService.findByUserId(user._id);
-          role = UserRole.REFEREE;
-        } catch {
-          try {
-            profile = await this.scouterService.findByUserId(user._id);
-            role = UserRole.SCOUTER;
-          } catch {
-            try {
-              profile = await this.adminService.findByUserId(user._id);
-              role = UserRole.ADMIN;
-            } catch {
-              role = UserRole.PLAYER; // Fallback
-            }
-          }
-        }
-      }
+        profile = await this.teamManagerService.findByUserId(user._id);
+        break;
+      case UserRole.REFEREE:
+        role = UserRole.REFEREE;
+        profile = await this.refereeService.findByUserId(user._id);
+        break;
+      case UserRole.SCOUTER:
+        role = UserRole.SCOUTER;
+        profile = await this.scouterService.findByUserId(user._id);
+        break;
+      case UserRole.ADMIN:
+        role = UserRole.ADMIN;
+        profile = await this.adminService.findByUserId(user._id);
+        break;
+      case UserRole.CHECK_IN_AGENT:
+        role = UserRole.CHECK_IN_AGENT;
+        profile = null;
+        break;
+      default:
+        role = UserRole.PLAYER;
+        profile = await this.playerService.findOrCreateByUserId(user._id);
+        break;
     }
 
     return {
