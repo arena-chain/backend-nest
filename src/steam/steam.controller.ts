@@ -33,13 +33,7 @@ export class SteamController {
 
   @Get('status')
   async status(@Req() req) {
-    const user = await this.steamService['userModel'].findById(req.user.userId).lean();
-    return {
-      steamVerified: user?.steamVerified || false,
-      steamId: user?.steamId || null,
-      steamUsername: user?.steamUsername || null,
-      steamAvatarUrl: user?.steamAvatarUrl || null,
-    };
+    return this.steamService.getSteamStatusPayload(req.user.userId);
   }
 
   @Delete('unlink')
