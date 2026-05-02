@@ -85,4 +85,43 @@ export class SteamVerificationService {
       },
     });
   }
+
+  /**
+   * GET /steam-verification/status — returns stored user fields only
+   * (steamAvatarUrl is set on verify from GetPlayerSummaries when linking).
+   */
+  async getSteamStatusPayload(userId: string): Promise<{
+    steamVerified: boolean;
+    steamId: string | null;
+    steamUsername: string | null;
+    steamAvatarUrl: string | null;
+  }> {
+    const user = await this.userModel.findById(userId).lean();
+    if (!user) {
+      return {
+        steamVerified: false,
+        steamId: null,
+        steamUsername: null,
+        steamAvatarUrl: null,
+      };
+    }
+
+    const steamIdRaw = user.steamId ?? null;
+    const steamId =
+      steamIdRaw != null && String(steamIdRaw).trim() !== ''
+        ? String(steamIdRaw).trim()
+        : null;
+    const steamVerified = !!user.steamVerified;
+    const steamAvatarUrl =
+      user.steamAvatarUrl && String(user.steamAvatarUrl).trim() !== ''
+        ? String(user.steamAvatarUrl).trim()
+        : null;
+
+    return {
+      steamVerified,
+      steamId,
+      steamUsername: user.steamUsername ?? null,
+      steamAvatarUrl,
+    };
+  }
 }

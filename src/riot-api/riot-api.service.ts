@@ -18,6 +18,7 @@ import { PlayerService } from '../player/player.service';
 import { RiotLinkStatus } from '../player/schemas/player-profile.schema';
 import { LinkAccountDto } from './dto/link-account.dto';
 import { MissionService } from '../mission/mission.service';
+import { buildRiotAvatarUrl } from './riot-cdn.util';
 
 interface RiotAccount {
   puuid: string;
@@ -969,7 +970,7 @@ export class RiotApiService {
   async getLinkStatus(userId: string) {
     const profile = await this.playerService.findByUserId(userId);
 
-    return {
+    const base = {
       status: profile.riotLinkStatus || RiotLinkStatus.UNLINKED,
       riotGameName: profile.riotGameName || null,
       riotTagLine: profile.riotTagLine || null,
@@ -977,6 +978,43 @@ export class RiotApiService {
       riotPuuid: profile.riotPuuid || null,
       originalIconId: profile.originalIconId || null,
     };
+
+    let profileIconId: number | null = null;
+    let riotAvatarUrl: string | null = null;
+
+    if (
+      profile.riotPuuid &&
+      profile.riotRegion &&
+      profile.riotLinkStatus === RiotLinkStatus.VERIFIED
+    ) {
+      profileIconId = await this.tryGetSummonerProfileIconId(
+        profile.riotPuuid,
+        profile.riotRegion as RiotRegion,
+      );
+      riotAvatarUrl = await buildRiotAvatarUrl(profileIconId);
+    }
+
+    return {
+      ...base,
+      profileIconId,
+      riotAvatarUrl,
+    };
+  }
+
+  private async tryGetSummonerProfileIconId(
+    puuid: string,
+    region: RiotRegion,
+  ): Promise<number | null> {
+    try {
+      const summoner = await this.getSummonerByPuuid(puuid, region);
+      return summoner.profileIconId ?? null;
+    } catch (e: any) {
+      console.warn(
+        '[RiotApiService] summoner-v4 failed for link-status avatar:',
+        e?.message || e,
+      );
+      return null;
+    }
   }
 
   /**
