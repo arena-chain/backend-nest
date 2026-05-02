@@ -77,6 +77,9 @@ export class League extends Document {
 
   @Prop({ default: false })
   rewardsDistributed: boolean;
+
+  @Prop({ type: [{ name: String, price: Number, capacity: Number, category: String }] })
+  ticketTypes: { name: string; price: number; capacity: number; category: string }[];
 }
 
 export const LeagueSchema = SchemaFactory.createForClass(League);

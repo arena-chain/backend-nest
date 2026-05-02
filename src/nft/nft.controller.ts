@@ -330,6 +330,66 @@ export class NftController {
     return this.nftService.removeCollection(collectionId);
   }
 
+  // ───────────────── Marketplace Endpoints ─────────────────
+
+  @Get('marketplace')
+  @ApiOperation({ summary: 'Get all NFT items listed for sale' })
+  @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'rarity', required: false })
+  @ApiQuery({ name: 'isFeatured', required: false, type: Boolean })
+  @ApiResponse({ status: 200, description: 'List of NFT items for sale' })
+  getMarketplace(
+    @Query('search') search?: string,
+    @Query('rarity') rarity?: string,
+    @Query('isFeatured') isFeatured?: string,
+  ) {
+    return this.nftService.getMarketplace({
+      search,
+      rarity,
+      isFeatured: isFeatured !== undefined ? isFeatured === 'true' : undefined,
+    });
+  }
+
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get my NFT items (short endpoint)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of NFT items owned by the current user',
+  })
+  getMyNfts(@Req() req) {
+    return this.nftService.getItemsByOwner(req.user.userId);
+  }
+
+  @Get('transactions/history')
+  @ApiOperation({ summary: 'Get recent marketplace transactions' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'List of recent transactions' })
+  getHistory(@Query('limit') limit?: number) {
+    return this.nftService.getTransactionHistory(limit);
+  }
+
+  @Get('admin/marketplace')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get all active listings for admin moderation' })
+  @ApiResponse({ status: 200, description: 'All listed items' })
+  getAdminMarketplace() {
+    return this.nftService.getAdminMarketplace();
+  }
+
+  @Get('admin/marketplace/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get marketplace statistics' })
+  @ApiResponse({ status: 200, description: 'Stats data' })
+  getMarketplaceStats() {
+    return this.nftService.getMarketplaceStats();
+  }
+
   // ───────────────── Dynamic :id routes (must be last) ─────────────────
 
   @Get(':id/attributes')
@@ -381,46 +441,6 @@ export class NftController {
     return this.nftService.remove(id);
   }
 
-  // ───────────────── Marketplace Endpoints ─────────────────
-
-  @Get('marketplace')
-  @ApiOperation({ summary: 'Get all NFT items listed for sale' })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'rarity', required: false })
-  @ApiQuery({ name: 'isFeatured', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'List of NFT items for sale' })
-  getMarketplace(
-    @Query('search') search?: string,
-    @Query('rarity') rarity?: string,
-    @Query('isFeatured') isFeatured?: string,
-  ) {
-    return this.nftService.getMarketplace({
-      search,
-      rarity,
-      isFeatured: isFeatured === 'true',
-    });
-  }
-
-  @Get('admin/marketplace')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get all active listings for admin moderation' })
-  @ApiResponse({ status: 200, description: 'All listed items' })
-  getAdminMarketplace() {
-    return this.nftService.getAdminMarketplace();
-  }
-
-  @Get('admin/marketplace/stats')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get marketplace statistics' })
-  @ApiResponse({ status: 200, description: 'Stats data' })
-  getMarketplaceStats() {
-    return this.nftService.getMarketplaceStats();
-  }
-
   @Post(':id/feature')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -439,18 +459,6 @@ export class NftController {
   @ApiResponse({ status: 200, description: 'Item unlisted' })
   forceUnlist(@Param('id') id: string) {
     return this.nftService.forceUnlist(id);
-  }
-
-  @Get('my')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get my NFT items (short endpoint)' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of NFT items owned by the current user',
-  })
-  getMyNfts(@Req() req) {
-    return this.nftService.getItemsByOwner(req.user.userId);
   }
 
   @Post(':id/list')
@@ -490,11 +498,4 @@ export class NftController {
     return this.nftService.buy(req.user.userId, id);
   }
 
-  @Get('transactions/history')
-  @ApiOperation({ summary: 'Get recent marketplace transactions' })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'List of recent transactions' })
-  getHistory(@Query('limit') limit?: number) {
-    return this.nftService.getTransactionHistory(limit);
-  }
 }

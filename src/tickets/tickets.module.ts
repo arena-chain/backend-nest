@@ -11,6 +11,9 @@ import {
   TicketTypeDefinition,
   TicketTypeDefinitionSchema,
 } from './schemas/ticket-type.schema';
+import { League, LeagueSchema } from '../league/schemas/league.schema';
+import { LeagueParticipant, LeagueParticipantSchema } from '../league/schemas/league-participant.schema';
+
 
 @Module({
   imports: [
@@ -18,7 +21,10 @@ import {
       { name: Ticket.name, schema: TicketSchema },
       { name: Tournament.name, schema: TournamentSchema },
       { name: TicketTypeDefinition.name, schema: TicketTypeDefinitionSchema },
+      { name: League.name, schema: LeagueSchema },
+      { name: LeagueParticipant.name, schema: LeagueParticipantSchema },
     ]),
+
   ],
   controllers: [TicketsController],
   providers: [TicketsService],

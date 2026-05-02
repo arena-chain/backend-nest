@@ -8,12 +8,14 @@ import {
   LeagueParticipantSchema,
 } from './schemas/league-participant.schema';
 import { PlayerModule } from '../player/player.module';
+import { Ticket, TicketSchema } from '../tickets/schemas/ticket.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: League.name, schema: LeagueSchema },
       { name: LeagueParticipant.name, schema: LeagueParticipantSchema },
+      { name: Ticket.name, schema: TicketSchema },
     ]),
     PlayerModule,
   ],
@@ -22,3 +24,4 @@ import { PlayerModule } from '../player/player.module';
   exports: [LeagueService],
 })
 export class LeagueModule {}
+

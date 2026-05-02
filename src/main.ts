@@ -12,9 +12,7 @@ async function bootstrap() {
     mkdirSync(uploadsDir, { recursive: true });
   }
 
-  const app = await NestFactory.create(AppModule, {
-    bodyParser: false,
-  });
+  const app = await NestFactory.create(AppModule);
 
   // Custom body parser with higher limit (e.g. for base64 logos or large JSON)
   app.use(express.json({ limit: '2mb' }));
@@ -34,10 +32,7 @@ async function bootstrap() {
     });
   });
 
-  app.use((req: express.Request, _res, next) => {
-    console.log(`[HTTP] ${req.method} ${req.url}`);
-    next();
-  });
+
 
   // Enable CORS for mobile apps
   app.enableCors({

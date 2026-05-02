@@ -82,7 +82,6 @@ export class LeagueController {
     summary: 'Distribute rewards for a finished league (Admin only)',
   })
   distributeRewards(@Param('id') id: string) {
-    // Role check should be added here
     return this.leagueService.processLeagueRewards(id);
   }
 }

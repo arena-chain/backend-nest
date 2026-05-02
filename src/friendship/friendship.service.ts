@@ -22,6 +22,48 @@ export class FriendshipService {
     private readonly missionService: MissionService,
   ) {}
 
+  private formatFriendship(doc: any): any {
+    if (!doc) return doc;
+    
+    const formatted: any = {
+      id: doc._id?.toString(),
+      status: doc.status,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+      blockedAt: doc.blockedAt,
+    };
+
+    // Safely format requester
+    if (doc.requesterId) {
+      if (typeof doc.requesterId === 'object' && doc.requesterId._id) {
+        formatted.requesterId = {
+          id: doc.requesterId._id.toString(),
+          nickname: doc.requesterId.nickname,
+          email: doc.requesterId.email,
+          avatar: doc.requesterId.avatar || `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(doc.requesterId.nickname || 'user')}`,
+        };
+      } else {
+        formatted.requesterId = doc.requesterId.toString();
+      }
+    }
+
+    // Safely format recipient
+    if (doc.recipientId) {
+      if (typeof doc.recipientId === 'object' && doc.recipientId._id) {
+        formatted.recipientId = {
+          id: doc.recipientId._id.toString(),
+          nickname: doc.recipientId.nickname,
+          email: doc.recipientId.email,
+          avatar: doc.recipientId.avatar || `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(doc.recipientId.nickname || 'user')}`,
+        };
+      } else {
+        formatted.recipientId = doc.recipientId.toString();
+      }
+    }
+
+    return formatted;
+  }
+
   /**
    * Send a friend request
    */
@@ -231,7 +273,9 @@ export class FriendshipService {
    * Get all friends of a user (accepted friendships only)
    */
   async getFriends(userId: string): Promise<FriendshipDocument[]> {
-    return this.friendshipModel
+    if (!Types.ObjectId.isValid(userId)) return [];
+    
+    const results = await this.friendshipModel
       .find({
         $or: [
           {
@@ -246,46 +290,67 @@ export class FriendshipService {
       })
       .populate('requesterId', 'nickname email avatar')
       .populate('recipientId', 'nickname email avatar')
+      .lean()
       .exec();
+    return results.map(r => this.formatFriendship(r)) as any;
   }
 
   /**
    * Get pending friend requests (received by user)
    */
   async getPendingRequests(userId: string): Promise<FriendshipDocument[]> {
-    return this.friendshipModel
+    if (!Types.ObjectId.isValid(userId)) return [];
+    
+    const results = await this.friendshipModel
       .find({
         recipientId: new Types.ObjectId(userId),
         status: FriendshipStatus.PENDING,
       })
       .populate('requesterId', 'nickname email avatar')
+      .lean()
       .exec();
+    return results.map(r => this.formatFriendship(r)) as any;
   }
 
   /**
    * Get sent friend requests (sent by user)
    */
   async getSentRequests(userId: string): Promise<FriendshipDocument[]> {
-    return this.friendshipModel
+    if (!Types.ObjectId.isValid(userId)) return [];
+    
+    const results = await this.friendshipModel
       .find({
         requesterId: new Types.ObjectId(userId),
         status: FriendshipStatus.PENDING,
       })
       .populate('recipientId', 'nickname email avatar')
+      .lean()
       .exec();
+    try {
+      const mapped = results.map(r => this.formatFriendship(r));
+      console.log("MAPPED RESULTS:", JSON.stringify(mapped));
+      return mapped as any;
+    } catch (e) {
+      console.error("FORMAT ERROR:", e);
+      throw e;
+    }
   }
 
   /**
    * Get blocked users
    */
   async getBlockedUsers(userId: string): Promise<FriendshipDocument[]> {
-    return this.friendshipModel
+    if (!Types.ObjectId.isValid(userId)) return [];
+    
+    const results = await this.friendshipModel
       .find({
         requesterId: new Types.ObjectId(userId),
         status: FriendshipStatus.BLOCKED,
       })
       .populate('recipientId', 'nickname email avatar')
+      .lean()
       .exec();
+    return results.map(r => this.formatFriendship(r)) as any;
   }
 
   /**

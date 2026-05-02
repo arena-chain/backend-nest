@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 
 @Injectable()
@@ -195,14 +195,23 @@ export class UsersService {
     };
 
     // Exclude specific user (e.g., current user)
-    if (excludeUserId) {
-      filter._id = { $ne: excludeUserId };
+    if (excludeUserId && Types.ObjectId.isValid(excludeUserId)) {
+      filter._id = { $ne: new Types.ObjectId(excludeUserId) };
     }
 
-        return this.userModel
+        const users = await this.userModel
             .find(filter)
             .select('_id nickname email avatar') // avatar for client list/search thumbnails
             .limit(20) // Limit results to prevent performance issues
+            .lean()
             .exec();
+
+        return users.map((u: any) => ({
+            id: u._id.toString(),
+            _id: u._id,
+            nickname: u.nickname,
+            email: u.email,
+            avatar: u.avatar || `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(u.nickname || 'user')}`
+        })) as unknown as UserDocument[];
     }
 }

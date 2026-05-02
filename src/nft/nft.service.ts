@@ -438,12 +438,12 @@ export class NftService {
         path: 'nftId',
         populate: { path: 'compatibleGames', select: 'title genre' },
       })
-      .populate('ownerId', 'nickname email username')
+      .populate('ownerId', 'nickname email')
       .exec();
 
     if (filters?.rarity && filters.rarity !== 'ALL') {
       items = items.filter(
-        (item) => (item.nftId as any).rarity === filters.rarity,
+        (item) => item.nftId && (item.nftId as any).rarity === filters.rarity,
       );
     }
 
@@ -451,8 +451,10 @@ export class NftService {
       const searchLower = filters.search.toLowerCase();
       items = items.filter(
         (item) =>
-          (item.nftId as any).name.toLowerCase().includes(searchLower) ||
-          (item.nftId as any).description?.toLowerCase().includes(searchLower),
+          item.nftId && (
+            (item.nftId as any).name.toLowerCase().includes(searchLower) ||
+            (item.nftId as any).description?.toLowerCase().includes(searchLower)
+          ),
       );
     }
 
@@ -466,7 +468,7 @@ export class NftService {
         path: 'nftId',
         populate: { path: 'compatibleGames', select: 'title genre' },
       })
-      .populate('ownerId', 'nickname email username')
+      .populate('ownerId', 'nickname email')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -619,8 +621,8 @@ export class NftService {
         path: 'nftItemId',
         populate: { path: 'nftId', select: 'name imageUrl' },
       })
-      .populate('fromUserId', 'nickname username')
-      .populate('toUserId', 'nickname username')
+      .populate('fromUserId', 'nickname')
+      .populate('toUserId', 'nickname')
       .exec();
   }
 

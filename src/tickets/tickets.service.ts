@@ -9,7 +9,7 @@ import { Model, Types } from 'mongoose';
 import * as QRCode from 'qrcode';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { Ticket, TicketDocument, TicketStatus } from './schemas/ticket.schema';
+import { Ticket, TicketDocument, TicketStatus, TicketCategory } from './schemas/ticket.schema';
 import {
   Tournament,
   TournamentDocument,
@@ -20,6 +20,7 @@ import {
   TicketTypeDefinitionDocument,
 } from './schemas/ticket-type.schema';
 import { CreateTicketTypeDefinitionDto } from './dto/create-ticket-type.dto';
+import { LeagueParticipant } from '../league/schemas/league-participant.schema';
 
 @Injectable()
 export class TicketsService {
@@ -29,6 +30,8 @@ export class TicketsService {
     private tournamentModel: Model<TournamentDocument>,
     @InjectModel(TicketTypeDefinition.name)
     private ticketTypeDefinitionModel: Model<TicketTypeDefinitionDocument>,
+    @InjectModel('League') private leagueModel: Model<any>,
+    @InjectModel(LeagueParticipant.name) private participantModel: Model<any>,
   ) {}
 
   async createTicketTypeDefinition(
@@ -49,6 +52,119 @@ export class TicketsService {
     const def = await this.ticketTypeDefinitionModel.findById(id).exec();
     if (!def) throw new NotFoundException('Ticket Type Definition not found');
     return def;
+  }
+
+  async getMarketTemplates(): Promise<Ticket[]> {
+    const leagues = await this.leagueModel.find().exec();
+    
+    const savedTemplates = await this.ticketModel
+      .find({ ticketNumber: { $regex: /^TEMPLATE-/ } })
+      .populate('league', 'name startDate endDate logoUrl maxParticipants regionValue')
+      .exec();
+      
+    const savedMap = new Map();
+    for (const t of savedTemplates) {
+      if (t.league) {
+        const lId = typeof t.league === 'object' && (t.league as any)._id ? (t.league as any)._id.toString() : t.league.toString();
+        savedMap.set(lId, t);
+      }
+    }
+
+    const results: Ticket[] = [];
+    for (const league of leagues) {
+      const lId = league._id.toString();
+      if (savedMap.has(lId)) {
+        results.push(savedMap.get(lId));
+      } else {
+        results.push({
+          _id: new Types.ObjectId(),
+          ticketNumber: `TEMPLATE-${lId}`,
+          league: league,
+          price: 50,
+          type: 'STANDARD',
+          category: TicketCategory.STANDARD,
+        } as unknown as Ticket);
+      }
+    }
+    return results;
+  }
+
+  async updateMarketTemplate(leagueId: string, updateData: any): Promise<Ticket> {
+    if (!Types.ObjectId.isValid(leagueId)) {
+      throw new BadRequestException('Invalid league ID');
+    }
+    
+    let template = await this.ticketModel.findOne({ 
+      ticketNumber: `TEMPLATE-${leagueId}` 
+    });
+
+    if (!template) {
+      template = new this.ticketModel({
+        ticketNumber: `TEMPLATE-${leagueId}`,
+        league: new Types.ObjectId(leagueId),
+        user: new Types.ObjectId('000000000000000000000000'),
+        price: updateData.price || 0,
+        type: updateData.type || 'STANDARD',
+        category: updateData.category || TicketCategory.STANDARD,
+        qrCode: 'template-qr',
+        status: TicketStatus.VALID,
+      });
+    } else {
+      if (updateData.price !== undefined) template.price = updateData.price;
+      if (updateData.category !== undefined) template.category = updateData.category;
+      if (updateData.type !== undefined) template.type = updateData.type;
+    }
+
+    await template.save();
+    const updated = await this.ticketModel.findById(template._id)
+      .populate('league', 'name startDate endDate logoUrl maxParticipants regionValue')
+      .exec();
+    return updated as Ticket;
+  }
+
+  async generateMissingLeagueTickets(): Promise<{ created: number }> {
+    console.log('[TicketsService] Running league tickets migration...');
+    const participants = await this.participantModel.find({ playerId: { $exists: true, $ne: null } }).exec();
+    let createdCount = 0;
+
+    for (const p of participants) {
+      const leagueId = p.leagueId?.toString();
+      const userId = p.playerId?.toString();
+      if (!leagueId || !userId) continue;
+
+      const existing = await this.ticketModel.findOne({
+        league: p.leagueId,
+        user: p.playerId,
+      }).exec();
+
+      if (existing) {
+        console.log(`[TicketsService] Ticket already exists for user ${userId} in league ${leagueId}`);
+        continue;
+      }
+
+      try {
+        const ticketNumber = `LTK-${leagueId.slice(-6).toUpperCase()}-${Date.now()}-${userId.slice(-4).toUpperCase()}`;
+        const qrData = JSON.stringify({ ticketNumber, league: leagueId, user: userId, type: 'STANDARD' });
+        const qrCodeUrl = await QRCode.toDataURL(qrData);
+        
+        await this.ticketModel.create({
+          ticketNumber,
+          qrCode: qrCodeUrl,
+          purchaseDate: new Date(),
+          league: p.leagueId,
+          user: p.playerId,
+          type: 'STANDARD',
+          category: TicketCategory.STANDARD,
+          status: TicketStatus.VALID,
+          price: 0,
+        });
+        createdCount++;
+        console.log(`[TicketsService] Created migration ticket ${ticketNumber} for user ${userId}`);
+      } catch (err: any) {
+        console.error(`[TicketsService] Failed to create migration ticket for participant ${p._id}:`, err.message);
+      }
+    }
+    return { created: createdCount };
   }
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket[]> {
@@ -152,7 +268,7 @@ export class TicketsService {
     return await this.ticketModel
       .find({ user: new Types.ObjectId(userId) })
       .populate('tournament', 'name startDate endDate bannerImageUrl')
-      .populate('user', 'username email')
+      .populate('league', 'name startDate endDate logoUrl')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -161,7 +277,8 @@ export class TicketsService {
     return await this.ticketModel
       .find()
       .populate('tournament', 'name startDate endDate')
-      .populate('user', 'username email')
+      .populate('league', 'name startDate endDate logoUrl')
+      .populate('user', 'nickname email username')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -173,7 +290,7 @@ export class TicketsService {
     const ticket = await this.ticketModel
       .findById(id)
       .populate('tournament', 'name startDate endDate')
-      .populate('user', 'username email')
+      .populate('league', 'name startDate endDate logoUrl')
       .exec();
 
     if (!ticket) {
@@ -186,7 +303,7 @@ export class TicketsService {
     const ticket = await this.ticketModel
       .findOne({ ticketNumber })
       .populate('tournament', 'name startDate endDate')
-      .populate('user', 'username email')
+      .populate('league', 'name startDate endDate logoUrl')
       .exec();
 
     if (!ticket) {
@@ -210,7 +327,7 @@ export class TicketsService {
     const updatedTicket = await this.ticketModel
       .findByIdAndUpdate(id, updateData, { new: true })
       .populate('tournament', 'name startDate endDate')
-      .populate('user', 'username email')
+      .populate('league', 'name startDate endDate logoUrl')
       .exec();
 
     if (!updatedTicket) {
@@ -242,7 +359,8 @@ export class TicketsService {
     const ticket = await this.ticketModel
       .findOne({ ticketNumber })
       .populate('tournament', 'name startDate endDate')
-      .populate('user', 'username email')
+      .populate('league', 'name startDate endDate logoUrl')
+      .populate('user', 'nickname email')
       .exec();
 
     if (!ticket) {
@@ -308,7 +426,7 @@ export class TicketsService {
 
     return await this.ticketModel
       .find({ tournament: new Types.ObjectId(tournamentId) })
-      .populate('user', 'username email')
+      .populate('user', 'nickname email')
       .sort({ createdAt: -1 })
       .exec();
   }

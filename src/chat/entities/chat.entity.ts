@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 
 export type ChatDocument = Chat & Document;
 
@@ -11,8 +11,8 @@ export class Chat {
   @Prop({ type: Types.ObjectId, ref: 'User' })
   receiverId?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Channel' })
-  channelId?: Types.ObjectId;
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  channelId?: Types.ObjectId | string;
 
   @Prop()
   senderNickname?: string;

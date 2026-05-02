@@ -11,16 +11,29 @@ export enum TicketStatus {
   PENDING = 'PENDING',
 }
 
+export enum TicketCategory {
+  STANDARD = 'STANDARD',
+  NFT = 'NFT',
+}
+
+
 @Schema({ timestamps: true })
 export class Ticket {
   @Prop({ required: true, unique: true })
   ticketNumber: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Tournament', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Tournament', required: false })
   tournament: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'League', required: false })
+  league: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
+
+  @Prop({ enum: TicketCategory, default: TicketCategory.STANDARD })
+  category: TicketCategory;
+
 
   @Prop({ enum: TicketStatus, default: TicketStatus.VALID })
   status: TicketStatus;

@@ -5,10 +5,12 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import * as QRCode from 'qrcode';
 import { League, LeagueStatus } from './schemas/league.schema';
 import { LeagueParticipant } from './schemas/league-participant.schema';
 import { CreateLeagueDto } from './dto/create-league.dto';
 import { PlayerService } from '../player/player.service';
+import { Ticket, TicketDocument, TicketStatus, TicketCategory } from '../tickets/schemas/ticket.schema';
 
 @Injectable()
 export class LeagueService {
@@ -16,6 +18,7 @@ export class LeagueService {
     @InjectModel(League.name) private leagueModel: Model<League>,
     @InjectModel(LeagueParticipant.name)
     private participantModel: Model<LeagueParticipant>,
+    @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
     private playerService: PlayerService,
   ) {}
 
@@ -165,8 +168,35 @@ export class LeagueService {
       leagueId: leagueIdObj,
       playerId: playerIdObj,
     });
+    await participant.save();
 
-    return participant.save();
+    // 6. Generate league ticket with QR code
+    try {
+      const ticketNumber = `LTK-${leagueId.slice(-6).toUpperCase()}-${Date.now()}-${userId.slice(-4).toUpperCase()}`;
+      const qrData = JSON.stringify({
+        ticketNumber,
+        league: leagueId,
+        user: userId,
+        type: 'STANDARD',
+      });
+      const qrCodeUrl = await QRCode.toDataURL(qrData);
+      await this.ticketModel.create({
+        ticketNumber,
+        qrCode: qrCodeUrl,
+        purchaseDate: new Date(),
+        league: leagueIdObj,
+        user: playerIdObj,
+        type: 'STANDARD',
+        category: TicketCategory.STANDARD,
+        status: TicketStatus.VALID,
+        price: 0,
+      });
+    } catch (ticketErr) {
+      console.error('Failed to create league ticket:', ticketErr);
+      // Non-blocking: participant still registered even if ticket creation fails
+    }
+
+    return participant;
   }
 
   async getStandings(leagueId: string): Promise<LeagueParticipant[]> {
@@ -217,6 +247,45 @@ export class LeagueService {
 
     league.rewardsDistributed = true;
     await league.save();
+  }
+
+  async generateMissingLeagueTickets(): Promise<{ created: number }> {
+    const participants = await this.participantModel.find({ playerId: { $exists: true, $ne: null } }).exec();
+    let created = 0;
+
+    for (const p of participants) {
+      const leagueId = p.leagueId?.toString();
+      const userId = p.playerId?.toString();
+      if (!leagueId || !userId) continue;
+
+      const existing = await this.ticketModel.findOne({
+        league: p.leagueId,
+        user: p.playerId,
+      }).exec();
+
+      if (existing) continue;
+
+      try {
+        const ticketNumber = `LTK-${leagueId.slice(-6).toUpperCase()}-${Date.now()}-${userId.slice(-4).toUpperCase()}`;
+        const qrData = JSON.stringify({ ticketNumber, league: leagueId, user: userId, type: 'STANDARD' });
+        const qrCodeUrl = await QRCode.toDataURL(qrData);
+        await this.ticketModel.create({
+          ticketNumber,
+          qrCode: qrCodeUrl,
+          purchaseDate: new Date(),
+          league: p.leagueId,
+          user: p.playerId,
+          type: 'STANDARD',
+          category: TicketCategory.STANDARD,
+          status: TicketStatus.VALID,
+          price: 0,
+        });
+        created++;
+      } catch (err) {
+        console.error(`Failed to create ticket for participant ${p._id}:`, err.message);
+      }
+    }
+    return { created };
   }
 
   /**
