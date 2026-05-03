@@ -20,6 +20,9 @@ export class MatchmakingTicket {
   @Prop({ required: true, default: 'ALL' })
   region: string;
 
+  @Prop({ required: true, default: 'DEFAULT' })
+  map: string;
+
   @Prop({ required: true })
   elo: number;
 

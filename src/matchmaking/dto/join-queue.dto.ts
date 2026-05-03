@@ -40,6 +40,9 @@ export class JoinQueueDto {
   @IsString()
   region: string;
 
+  @IsString()
+  map: string;
+
   @IsOptional()
   @IsDateString()
   scheduledAt?: string;

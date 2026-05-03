@@ -47,6 +47,9 @@ export class Game {
   @Prop()
   region?: string;
 
+  @Prop({ default: 'DEFAULT' })
+  map?: string;
+
   @Prop({ type: Object })
   roomInfo?: {
     roomId: string;

@@ -326,6 +326,7 @@ export class MatchmakingService {
                 mode: dto.mode,
                 server: dto.server,
                 region: dto.region,
+                map: dto.map ?? 'DEFAULT',
                 elo,
                 status: isScheduled ? 'SCHEDULED' : 'SEARCHING',
                 ...(partyId ? { partyId } : {}),
@@ -709,16 +710,20 @@ export class MatchmakingService {
 
         if (allTickets.length < requiredPlayers) return;
 
-        const byServer = new Map<string, MatchmakingTicketDocument[]>();
+        // Group by (server, map) so two players on Bind never match a player on Haven
+        // even at the same elo / same server.
+        const byServerMap = new Map<string, MatchmakingTicketDocument[]>();
         for (const ticket of allTickets) {
             const server = (ticket.server ?? ticket.region ?? 'UNKNOWN').toUpperCase();
-            if (!byServer.has(server)) byServer.set(server, []);
-            byServer.get(server)!.push(ticket);
+            const map = ((ticket as any).map ?? 'DEFAULT').toString();
+            const key = `${server}::${map}`;
+            if (!byServerMap.has(key)) byServerMap.set(key, []);
+            byServerMap.get(key)!.push(ticket);
         }
 
         const matched = new Set<string>();
 
-        for (const [, tickets] of byServer) {
+        for (const [, tickets] of byServerMap) {
             if (tickets.length < requiredPlayers) continue;
 
             const unitMap = new Map<string, MatchmakingTicketDocument[]>();
@@ -848,6 +853,7 @@ export class MatchmakingService {
             mode,
             server: group[0].server,
             region: group[0].region,
+            map: (group[0] as any).map ?? 'DEFAULT',
             isScheduled: hasScheduledTicket,
             scheduled_at: new Date(),
             number_of_participant: group.length,
