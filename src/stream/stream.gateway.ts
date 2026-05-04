@@ -67,13 +67,17 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
   >();
 
   private async authenticateSocket(socket: Socket) {
-    const token = socket.handshake.auth?.token;
+    let token = socket.handshake.auth?.token;
     if (!token) {
       socket.data.user = {
         nickname: `Guest-${socket.id.slice(0, 4)}`,
         role: 'guest',
       } satisfies LiveSocketUser;
       return;
+    }
+
+    if (token.startsWith('Bearer ')) {
+      token = token.split(' ')[1];
     }
 
     try {
@@ -84,12 +88,14 @@ export class StreamGateway implements OnGatewayConnection, OnGatewayDisconnect {
         nickname: user.nickname,
         role: user.role,
       } satisfies LiveSocketUser;
-    } catch {
+    } catch (error) {
       socket.data.user = {
         nickname: `Guest-${socket.id.slice(0, 4)}`,
         role: 'guest',
       } satisfies LiveSocketUser;
-      this.logger.warn(`socket auth failed ${socket.id}`);
+      this.logger.warn(
+        `socket auth failed ${socket.id} (token len: ${token.length}) - ${error.message}`,
+      );
     }
   }
 

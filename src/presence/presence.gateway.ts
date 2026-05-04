@@ -32,15 +32,21 @@ export class PresenceGateway
   ) {}
 
   private async authenticate(socket: Socket): Promise<string | null> {
-    const token = socket.handshake.auth?.token;
+    let token = socket.handshake.auth?.token;
     if (!token) return null;
+
+    if (token.startsWith('Bearer ')) {
+      token = token.split(' ')[1];
+    }
 
     try {
       const payload = await this.jwtService.verifyAsync(token);
       const user = await this.usersService.findById(payload.sub);
       return user?._id?.toString() || null;
-    } catch {
-      this.logger.warn(`presence auth failed: ${socket.id}`);
+    } catch (error) {
+      this.logger.warn(
+        `presence auth failed: ${socket.id} (token len: ${token.length}) - ${error.message}`,
+      );
       return null;
     }
   }
