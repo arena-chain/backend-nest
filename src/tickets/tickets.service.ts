@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import * as QRCode from 'qrcode';
 import { CreateTicketDto } from './dto/create-ticket.dto';
+import { CreateLeaguePassDto } from './dto/create-league-pass.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket, TicketDocument, TicketStatus, TicketCategory } from './schemas/ticket.schema';
 import {
@@ -167,6 +168,79 @@ export class TicketsService {
     return { created: createdCount };
   }
 
+  /**
+   * Player-facing league pass: creates a league ticket only (no LeagueParticipant / status gates).
+   * Idempotent per league + user + category + type label.
+   */
+  async createLeaguePass(
+    userId: string,
+    dto: CreateLeaguePassDto,
+  ): Promise<TicketDocument> {
+    if (!userId || !Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException(
+        'Your session is invalid or has expired. Please log out and log in again.',
+      );
+    }
+    const { leagueId, category } = dto;
+    if (!Types.ObjectId.isValid(leagueId)) {
+      throw new BadRequestException('Invalid league reference');
+    }
+
+    const league = await this.leagueModel.findById(leagueId).exec();
+    if (!league) throw new NotFoundException('League not found');
+
+    const userOid = new Types.ObjectId(userId);
+    const leagueOid = new Types.ObjectId(leagueId);
+    const typeLabel =
+      (dto.type && dto.type.trim()) ||
+      (category === TicketCategory.NFT ? 'NFT Pass' : 'Standard');
+
+    const existing = await this.ticketModel
+      .findOne({
+        league: leagueOid,
+        user: userOid,
+        category,
+        type: typeLabel,
+        status: { $nin: [TicketStatus.CANCELLED] },
+      })
+      .exec();
+    if (existing) return existing;
+
+    let price = 0;
+    if (category === TicketCategory.NFT) {
+      const defs = (league as any).ticketTypes as
+        | { name?: string; type?: string; price?: number }[]
+        | undefined;
+      const match = defs?.find(
+        (t) =>
+          (t.name && t.name === typeLabel) || (t.type && t.type === typeLabel),
+      );
+      price = match?.price ?? 50;
+    }
+
+    const ticketNumber = `LTK-${leagueId.slice(-6).toUpperCase()}-${Date.now()}-${userId.slice(-4).toUpperCase()}`;
+    const qrData = JSON.stringify({
+      ticketNumber,
+      league: leagueId,
+      user: userId,
+      type: typeLabel,
+      category,
+    });
+    const qrCodeUrl = await QRCode.toDataURL(qrData);
+    const created = await this.ticketModel.create({
+      ticketNumber,
+      qrCode: qrCodeUrl,
+      purchaseDate: new Date(),
+      league: leagueOid,
+      user: userOid,
+      type: typeLabel,
+      category,
+      status: TicketStatus.VALID,
+      price,
+    });
+    return created as TicketDocument;
+  }
+
   async create(createTicketDto: CreateTicketDto): Promise<Ticket[]> {
     const {
       tournament: tournamentId,
@@ -268,7 +342,7 @@ export class TicketsService {
     return await this.ticketModel
       .find({ user: new Types.ObjectId(userId) })
       .populate('tournament', 'name startDate endDate bannerImageUrl')
-      .populate('league', 'name startDate endDate logoUrl')
+      .populate('league', 'name startDate endDate logoUrl regionValue')
       .sort({ createdAt: -1 })
       .exec();
   }

@@ -9,11 +9,19 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  Req,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
+import { CreateLeaguePassDto } from './dto/create-league-pass.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -46,6 +54,26 @@ export class TicketsController {
       throw new BadRequestException('User ID is required');
     }
     return this.ticketsService.findAllByUser(userId);
+  }
+
+  @Get('mine')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List tickets for the authenticated user (preferred for the player app)' })
+  getTicketsForCurrentUser(@Req() req: { user: { userId: string } }) {
+    return this.ticketsService.findAllByUser(req.user.userId);
+  }
+
+  @Post('league-pass')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'Claim a league access ticket (player pass / market) without league registration rules',
+  })
+  @ApiResponse({ status: 201, description: 'Ticket created or existing pass returned' })
+  createLeaguePass(@Body() body: CreateLeaguePassDto, @Req() req: { user: { userId: string } }) {
+    return this.ticketsService.createLeaguePass(req.user.userId, body);
   }
 
   @Post()

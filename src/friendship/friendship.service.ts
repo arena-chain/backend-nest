@@ -27,6 +27,7 @@ export class FriendshipService {
     
     const formatted: any = {
       id: doc._id?.toString(),
+      _id: doc._id?.toString(),
       status: doc.status,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
@@ -123,6 +124,13 @@ export class FriendshipService {
     userId: string,
     friendshipId: string,
   ): Promise<FriendshipDocument> {
+    if (
+      !friendshipId ||
+      friendshipId === 'undefined' ||
+      !Types.ObjectId.isValid(friendshipId)
+    ) {
+      throw new BadRequestException('Invalid friendship id');
+    }
     const friendship = await this.friendshipModel.findById(friendshipId);
 
     if (!friendship) {
@@ -159,6 +167,13 @@ export class FriendshipService {
     userId: string,
     friendshipId: string,
   ): Promise<FriendshipDocument> {
+    if (
+      !friendshipId ||
+      friendshipId === 'undefined' ||
+      !Types.ObjectId.isValid(friendshipId)
+    ) {
+      throw new BadRequestException('Invalid friendship id');
+    }
     const friendship = await this.friendshipModel.findById(friendshipId);
 
     if (!friendship) {
