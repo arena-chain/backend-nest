@@ -1,0 +1,13 @@
+{
+  "name": "ArenaChain Ticket #1024",
+  "description": "VIP NFT ticket for Valorant Champions 2026",
+  "image": "ipfs://bafybeixxxxxxxxxxxxxxxxxxxxxxx/tickets/1024.png",
+  "attributes": [
+    { "trait_type": "tournamentId", "value": "69ddb6abdb984f5759bdb6e1" },
+    { "trait_type": "tournamentName", "value": "Valorant Champions 2026" },
+    { "trait_type": "eventDate", "value": "2026-04-19T18:30:00Z" },
+    { "trait_type": "ticketType", "value": "VIP NFT" },
+    { "trait_type": "status", "value": "VALID" }
+  ],
+  "external_url": "https://arenachain.app/player/tickets/1024"
+}

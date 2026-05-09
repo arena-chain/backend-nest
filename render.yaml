@@ -1,0 +1,27 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# After connect, set secret env vars in the dashboard (or link a secret store).
+# MongoDB: use Atlas or Render Mongo. Redis: Render Redis / Upstash for BullMQ.
+
+services:
+  - type: web
+    name: arena-chain-api
+    runtime: docker
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: HIGHLIGHT_QUEUE_ENABLED
+        value: "true"
+      - key: HIGHLIGHT_WORKER_ENABLED
+        value: "true"

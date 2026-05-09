@@ -1,0 +1,147 @@
+[
+  {
+    "_id": {"$oid": "663000000000000000000601"},
+    "seasonId": "663000000000000000000101",
+    "stageId": "663000000000000000000302",
+    "format": "SINGLE_ELIMINATION",
+    "totalRounds": 2,
+    "status": "ACTIVE",
+    "slots": [
+      {
+        "slotId": "sf1",
+        "roundNumber": 1,
+        "position": 1,
+        "team1Id": "662000000000000000000101",
+        "team2Id": "662000000000000000000105",
+        "winnerId": "662000000000000000000101",
+        "matchId": "663000000000000000000713",
+        "nextSlotId": "gf1",
+        "status": "COMPLETED"
+      },
+      {
+        "slotId": "sf2",
+        "roundNumber": 1,
+        "position": 2,
+        "team1Id": "662000000000000000000106",
+        "team2Id": "662000000000000000000103",
+        "winnerId": "662000000000000000000106",
+        "matchId": "663000000000000000000714",
+        "nextSlotId": "gf1",
+        "status": "COMPLETED"
+      },
+      {
+        "slotId": "gf1",
+        "roundNumber": 2,
+        "position": 1,
+        "team1Id": "662000000000000000000101",
+        "team2Id": "662000000000000000000106",
+        "matchId": "663000000000000000000715",
+        "status": "READY"
+      }
+    ],
+    "createdAt": {"$date": "2024-03-09T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-17T14:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000000602"},
+    "seasonId": "663000000000000000000102",
+    "stageId": "663000000000000000000304",
+    "format": "SINGLE_ELIMINATION",
+    "totalRounds": 3,
+    "status": "ACTIVE",
+    "slots": [
+      {
+        "slotId": "R1S1",
+        "roundNumber": 1,
+        "position": 1,
+        "team1Id": "662000000000000000000101",
+        "team2Id": "662000000000000000000102",
+        "nextSlotId": "R2S1",
+        "status": "READY"
+      },
+      {
+        "slotId": "R1S2",
+        "roundNumber": 1,
+        "position": 2,
+        "team1Id": "662000000000000000000103",
+        "team2Id": "662000000000000000000104",
+        "nextSlotId": "R2S1",
+        "status": "READY"
+      },
+      {
+        "slotId": "R1S3",
+        "roundNumber": 1,
+        "position": 3,
+        "team1Id": "662000000000000000000105",
+        "team2Id": "662000000000000000000106",
+        "nextSlotId": "R2S2",
+        "status": "READY"
+      },
+      {
+        "slotId": "R1S4",
+        "roundNumber": 1,
+        "position": 4,
+        "nextSlotId": "R2S2",
+        "status": "PENDING"
+      },
+      {
+        "slotId": "R2S1",
+        "roundNumber": 2,
+        "position": 1,
+        "nextSlotId": "R3S1",
+        "status": "PENDING"
+      },
+      {
+        "slotId": "R2S2",
+        "roundNumber": 2,
+        "position": 2,
+        "nextSlotId": "R3S1",
+        "status": "PENDING"
+      },
+      {
+        "slotId": "R3S1",
+        "roundNumber": 3,
+        "position": 1,
+        "status": "PENDING"
+      }
+    ],
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000000603"},
+    "seasonId": "663000000000000000000103",
+    "stageId": "663000000000000000000306",
+    "format": "SINGLE_ELIMINATION",
+    "totalRounds": 2,
+    "status": "ACTIVE",
+    "slots": [
+      {
+        "slotId": "R1S1",
+        "roundNumber": 1,
+        "position": 1,
+        "team1Id": "662000000000000000000105",
+        "team2Id": "662000000000000000000106",
+        "nextSlotId": "R2S1",
+        "status": "READY"
+      },
+      {
+        "slotId": "R1S2",
+        "roundNumber": 1,
+        "position": 2,
+        "team1Id": "662000000000000000000107",
+        "team2Id": "662000000000000000000108",
+        "nextSlotId": "R2S1",
+        "status": "READY"
+      },
+      {
+        "slotId": "R2S1",
+        "roundNumber": 2,
+        "position": 1,
+        "status": "PENDING"
+      }
+    ],
+    "createdAt": {"$date": "2024-02-20T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-20T10:00:00.000Z"}
+  }
+]
