@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req, Patch, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -9,31 +20,52 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Get('inbox')
-  getInbox(@Req() req) {
+  getInbox(@Req() req: { user: { userId: string } }) {
     return this.chatService.getInbox(req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('conversation/:userId')
-  getConversation(@Param('userId') otherUserId: string, @Req() req) {
-    return this.chatService.getConversation(req.user.userId, otherUserId);
+  getConversation(
+    @Req() req: { user: { userId: string } },
+    @Param('userId') otherUserId: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.chatService.getConversation(
+      req.user.userId,
+      otherUserId,
+      limit ? +limit : 50,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('send')
-  sendMessage(@Body() body: { receiverId: string; message: string }, @Req() req) {
-    return this.chatService.createPrivateMessage(req.user.userId, body.receiverId, body.message);
+  sendPrivate(
+    @Req() req: { user: { userId: string } },
+    @Body() body: { receiverId: string; message: string },
+  ) {
+    return this.chatService.createPrivateMessage(
+      req.user.userId,
+      body.receiverId,
+      body.message,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('read/:userId')
-  markAsRead(@Param('userId') otherUserId: string, @Req() req) {
+  markRead(
+    @Req() req: { user: { userId: string } },
+    @Param('userId') otherUserId: string,
+  ) {
     return this.chatService.markAsRead(req.user.userId, otherUserId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete('conversation/:userId')
-  deleteConversation(@Param('userId') otherUserId: string, @Req() req) {
+  deleteConversation(
+    @Req() req: { user: { userId: string } },
+    @Param('userId') otherUserId: string,
+  ) {
     return this.chatService.deleteConversation(req.user.userId, otherUserId);
   }
 
@@ -61,4 +93,3 @@ export class ChatController {
     return this.chatService.findByChannel(channelId, limit ? +limit : 50);
   }
 }
-

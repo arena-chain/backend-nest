@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,18 +9,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger, UseFilters } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
-import { UsersService } from '../user/user.service';
 
 @WebSocketGateway({
   namespace: '/chat',
-  cors: {
-    origin: true,
-    credentials: true,
-  },
+  cors: { origin: true, credentials: true },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -26,28 +22,36 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(ChatGateway.name);
 
+  /** groupId -> userIds currently in voice room */
+  private readonly voiceUsersByGroup = new Map<string, Set<string>>();
+
   constructor(
     private readonly jwtService: JwtService,
-    private readonly usersService: UsersService,
     private readonly chatService: ChatService,
   ) {}
 
-  private async authenticate(socket: Socket): Promise<string | null> {
-    let token = socket.handshake.auth?.token;
-    if (!token) return null;
-
-    if (token.startsWith('Bearer ')) {
-      token = token.split(' ')[1];
+  private stripBearer(raw: unknown): string | null {
+    if (raw == null) return null;
+    const s = String(raw).trim();
+    if (!s) return null;
+    if (s.startsWith('Bearer ')) {
+      return s.slice(7).trim() || null;
     }
+    return s;
+  }
 
+  private async authenticate(socket: Socket): Promise<string | null> {
+    const token = this.stripBearer(socket.handshake.auth?.token);
+    if (!token) {
+      this.logger.warn(`chat auth missing token: ${socket.id}`);
+      return null;
+    }
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      const user = await this.usersService.findById(payload.sub);
-      return user?._id?.toString() || null;
-    } catch (error) {
-      this.logger.warn(
-        `chat auth failed: ${socket.id} (token len: ${token.length}) - ${error.message}`,
-      );
+      const sub = payload?.sub ?? payload?.userId;
+      return typeof sub === 'string' ? sub : sub != null ? String(sub) : null;
+    } catch (e) {
+      this.logger.warn(`chat auth failed: ${socket.id} (${e instanceof Error ? e.message : e})`);
       return null;
     }
   }
@@ -55,222 +59,258 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(socket: Socket) {
     const userId = await this.authenticate(socket);
     if (!userId) {
-      this.logger.log(`chat connection rejected (unauthorized): ${socket.id}`);
       socket.disconnect(true);
       return;
     }
-
     socket.data.userId = userId;
-    socket.join(userId); // Join private room for PMs
+    await socket.join(userId);
     this.logger.log(`chat connected: ${userId} (${socket.id})`);
   }
 
-  handleDisconnect(socket: Socket) {
-    const userId = socket.data.userId;
-    const rooms = Array.from(socket.rooms);
-    rooms.forEach((room) => {
-      if (room.startsWith('voice:')) {
-        socket.to(room).emit('user-left', { userId });
+  async handleDisconnect(socket: Socket) {
+    const userId = socket.data.userId as string | undefined;
+    if (!userId) return;
+
+    for (const [groupId, set] of this.voiceUsersByGroup.entries()) {
+      if (set.has(userId)) {
+        set.delete(userId);
+        this.server.to(`voice:${groupId}`).emit('user-left', { userId, groupId });
+        if (set.size === 0) {
+          this.voiceUsersByGroup.delete(groupId);
+        }
       }
-    });
-    this.logger.log(`chat disconnected: ${socket.id}`);
+    }
+    this.logger.log(`chat disconnected: ${userId} (${socket.id})`);
   }
 
   @SubscribeMessage('join-room')
-  handleJoinRoom(
+  joinRoom(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() body: { room?: string; channelId?: string },
   ) {
-    socket.join(data.roomId);
-    this.logger.log(`socket ${socket.id} joined room ${data.roomId}`);
-    return { ok: true };
+    const room = body?.room || body?.channelId;
+    if (!room) return { ok: false };
+    void socket.join(room);
+    socket.to(room).emit('user-joined', { userId: socket.data.userId, room });
+    return { ok: true, room };
   }
 
   @SubscribeMessage('leave-room')
-  handleLeaveRoom(
+  leaveRoom(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() body: { room?: string; channelId?: string },
   ) {
-    socket.leave(data.roomId);
-    this.logger.log(`socket ${socket.id} left room ${data.roomId}`);
+    const room = body?.room || body?.channelId;
+    if (!room) return { ok: false };
+    void socket.leave(room);
+    socket.to(room).emit('user-left', { userId: socket.data.userId, room });
     return { ok: true };
   }
 
   @SubscribeMessage('send-message')
-  async handleMessage(
+  async sendMessage(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { roomId: string; message: string },
+    @MessageBody() body: { channelId: string; message: string },
   ) {
-    const userId = socket.data.userId;
-    if (!userId) return { ok: false, error: 'Unauthorized' };
-
+    const userId = socket.data.userId as string;
+    if (!body?.channelId || !body?.message?.trim()) {
+      return { ok: false };
+    }
     const created = await this.chatService.createForUser(userId, {
-      channelId: data.roomId,
-      message: data.message,
+      channelId: body.channelId,
+      message: body.message,
     });
-
-    this.server.to(data.roomId).emit('new-message', created);
-    return { ok: true, data: created };
+    this.server.to(body.channelId).emit('new-message', created);
+    return { ok: true, message: created };
   }
 
   @SubscribeMessage('sendPrivateMessage')
-  async handlePrivateMessage(
+  async sendPrivateMessage(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { receiverId: string; message: string },
+    @MessageBody() body: { receiverId: string; message: string },
   ) {
-    const userId = socket.data.userId;
-    if (!userId) return { ok: false, error: 'Unauthorized' };
-
+    const userId = socket.data.userId as string;
+    if (!body?.receiverId || !body?.message?.trim()) {
+      return { ok: false };
+    }
     const created = await this.chatService.createPrivateMessage(
       userId,
-      data.receiverId,
-      data.message,
+      body.receiverId,
+      body.message,
     );
-
-    // Emit to the receiver's private room
-    this.server.to(data.receiverId).emit('newPrivateMessage', created);
-
-    return created;
-  }
-
-  @SubscribeMessage('sendGroupMessage')
-  async handleGroupMessage(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { groupId: string; message: string },
-  ) {
-    const userId = socket.data.userId;
-    if (!userId) return { status: 'error', message: 'Unauthorized' };
-
-    const created = await this.chatService.createForUser(userId, {
-      channelId: data.groupId,
-      message: data.message,
-    });
-
-    this.server.to(data.groupId).emit('newGroupMessage', {
-      ...created,
-      groupId: data.groupId, // Frontend expects groupId in the message
-    });
-    return { status: 'ok', data: created };
+    this.server.to(body.receiverId).emit('newPrivateMessage', created);
+    this.server.to(userId).emit('newPrivateMessage', created);
+    return { ok: true, message: created };
   }
 
   @SubscribeMessage('joinGroupRoom')
-  handleJoinGroupRoom(
+  async joinGroupRoom(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { groupId: string },
+    @MessageBody() body: { groupId: string },
   ) {
-    socket.join(data.groupId);
-    this.logger.log(`socket ${socket.id} joined group room ${data.groupId}`);
-    return { status: 'ok' };
+    const userId = socket.data.userId as string;
+    if (!body?.groupId) return { ok: false };
+    try {
+      await this.chatService.assertGroupMember(body.groupId, userId);
+    } catch {
+      return { ok: false, error: 'not_member' };
+    }
+    const room = `group:${body.groupId}`;
+    await socket.join(room);
+    socket.to(room).emit('user-joined', { userId, groupId: body.groupId });
+    return { ok: true, groupId: body.groupId };
   }
 
+  @SubscribeMessage('sendGroupMessage')
+  async sendGroupMessage(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { groupId: string; message: string },
+  ) {
+    const userId = socket.data.userId as string;
+    if (!body?.groupId || !body?.message?.trim()) {
+      return { ok: false };
+    }
+    try {
+      const created = await this.chatService.createGroupMessage(
+        userId,
+        body.groupId,
+        body.message,
+      );
+      const room = `group:${body.groupId}`;
+      this.server.to(room).emit('newGroupMessage', created);
+      return { ok: true, message: created };
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
 
   @SubscribeMessage('deleteMessage')
-  async handleDeleteMessage(
+  async deleteMessage(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { messageId: string; receiverId: string },
+    @MessageBody() body: { messageId: string },
   ) {
-    const userId = socket.data.userId;
-    if (!userId) return { status: 'error' };
-
-    const success = await this.chatService.deleteMessage(data.messageId, userId);
-    if (success) {
-      this.server.to(data.receiverId).to(userId).emit('messageDeleted', {
-        messageId: data.messageId,
-      });
-      return { status: 'ok' };
+    const userId = socket.data.userId as string;
+    if (!body?.messageId) return { ok: false };
+    try {
+      const res = await this.chatService.deleteMessage(body.messageId, userId);
+      const payload = { messageId: body.messageId };
+      const targets = new Set<string>([userId]);
+      if (res.receiverId) targets.add(res.receiverId);
+      if (res.senderId) targets.add(res.senderId);
+      for (const id of targets) {
+        this.server.to(id).emit('messageDeleted', payload);
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false };
     }
-    return { status: 'error' };
   }
 
   @SubscribeMessage('deleteConversation')
-  async handleDeleteConversation(
+  async deleteConversation(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { interlocutorId: string },
+    @MessageBody() body: { userId: string },
   ) {
-    const userId = socket.data.userId;
-    if (!userId) return { status: 'error' };
-
-    await this.chatService.deleteConversation(userId, data.interlocutorId);
-    return { status: 'ok' };
+    const selfId = socket.data.userId as string;
+    const otherId = body?.userId;
+    if (!otherId) return { ok: false };
+    await this.chatService.deleteConversation(selfId, otherId);
+    const payload = { conversationWith: otherId, all: true };
+    this.server.to(selfId).emit('messageDeleted', payload);
+    this.server.to(otherId).emit('messageDeleted', {
+      conversationWith: selfId,
+      all: true,
+    });
+    return { ok: true };
   }
 
-  // 🎙️ VOICE CHAT SIGNALING
   @SubscribeMessage('joinVoiceRoom')
-  async handleJoinVoiceRoom(
+  async joinVoiceRoom(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { roomId: string },
+    @MessageBody() body: { groupId: string },
   ) {
-    const userId = socket.data.userId;
-    const roomName = `voice:${data.roomId}`;
-    socket.join(roomName);
-
-    socket.to(roomName).emit('user-joined', { userId });
-
-    const sockets = await this.server.in(roomName).fetchSockets();
-    const participants = sockets
-      .map((s) => s.data.userId)
-      .filter((id) => id && id !== userId);
-
-    return { status: 'ok', participants };
+    const userId = socket.data.userId as string;
+    if (!body?.groupId) return { ok: false };
+    try {
+      await this.chatService.assertGroupMember(body.groupId, userId);
+    } catch {
+      return { ok: false, error: 'not_member' };
+    }
+    const voiceRoom = `voice:${body.groupId}`;
+    await socket.join(voiceRoom);
+    let set = this.voiceUsersByGroup.get(body.groupId);
+    if (!set) {
+      set = new Set();
+      this.voiceUsersByGroup.set(body.groupId, set);
+    }
+    set.add(userId);
+    socket.to(voiceRoom).emit('user-joined', { userId, groupId: body.groupId, voice: true });
+    return { ok: true };
   }
 
   @SubscribeMessage('leaveVoiceRoom')
-  handleLeaveVoiceRoom(@ConnectedSocket() socket: Socket) {
-    const userId = socket.data.userId;
-    const rooms = Array.from(socket.rooms);
-    rooms.forEach((room) => {
-      if (room.startsWith('voice:')) {
-        socket.leave(room);
-        socket.to(room).emit('user-left', { userId });
+  async leaveVoiceRoom(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { groupId: string },
+  ) {
+    const userId = socket.data.userId as string;
+    if (!body?.groupId) return { ok: false };
+    const voiceRoom = `voice:${body.groupId}`;
+    const set = this.voiceUsersByGroup.get(body.groupId);
+    if (set) {
+      set.delete(userId);
+      if (set.size === 0) {
+        this.voiceUsersByGroup.delete(body.groupId);
       }
-    });
-    return { status: 'ok' };
+    }
+    socket.to(voiceRoom).emit('user-left', { userId, groupId: body.groupId, voice: true });
+    await socket.leave(voiceRoom);
+    return { ok: true };
   }
 
   @SubscribeMessage('getVoiceRoomUsers')
-  async handleGetVoiceRoomUsers(@MessageBody() data: { roomId: string }) {
-    const roomName = `voice:${data.roomId}`;
-    const sockets = await this.server.in(roomName).fetchSockets();
-    const participants = sockets
-      .map((s) => s.data.userId)
-      .filter((id) => !!id);
-
-    return participants;
+  getVoiceRoomUsers(@MessageBody() body: { groupId: string }) {
+    if (!body?.groupId) return { ok: false, users: [] };
+    const set = this.voiceUsersByGroup.get(body.groupId);
+    return { ok: true, users: set ? [...set] : [] };
   }
 
-
-
   @SubscribeMessage('voice-offer')
-  handleVoiceOffer(
+  voiceOffer(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { to: string; offer: any },
+    @MessageBody() body: Record<string, unknown>,
   ) {
-    this.server.to(data.to).emit('voice-offer', {
-      from: socket.data.userId,
-      offer: data.offer,
-    });
+    const fromUserId = socket.data.userId as string;
+    const target =
+      (body?.targetUserId as string) || (body?.to as string) || (body?.toUserId as string);
+    if (!target) return { ok: false };
+    this.server.to(target).emit('voice-offer', { ...body, fromUserId });
+    return { ok: true };
   }
 
   @SubscribeMessage('voice-answer')
-  handleVoiceAnswer(
+  voiceAnswer(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { to: string; answer: any },
+    @MessageBody() body: Record<string, unknown>,
   ) {
-    this.server.to(data.to).emit('voice-answer', {
-      from: socket.data.userId,
-      answer: data.answer,
-    });
+    const fromUserId = socket.data.userId as string;
+    const target =
+      (body?.targetUserId as string) || (body?.to as string) || (body?.toUserId as string);
+    if (!target) return { ok: false };
+    this.server.to(target).emit('voice-answer', { ...body, fromUserId });
+    return { ok: true };
   }
 
   @SubscribeMessage('voice-ice-candidate')
-  handleIceCandidate(
+  voiceIce(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: { to: string; candidate: any },
+    @MessageBody() body: Record<string, unknown>,
   ) {
-    this.server.to(data.to).emit('voice-ice-candidate', {
-      from: socket.data.userId,
-      candidate: data.candidate,
-    });
+    const fromUserId = socket.data.userId as string;
+    const target =
+      (body?.targetUserId as string) || (body?.to as string) || (body?.toUserId as string);
+    if (!target) return { ok: false };
+    this.server.to(target).emit('voice-ice-candidate', { ...body, fromUserId });
+    return { ok: true };
   }
-
 }

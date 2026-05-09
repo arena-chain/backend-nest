@@ -31,21 +31,25 @@ export class PresenceGateway
     private readonly presenceService: PresenceService,
   ) {}
 
-  private async authenticate(socket: Socket): Promise<string | null> {
-    let token = socket.handshake.auth?.token;
-    if (!token) return null;
+  private stripBearer(raw: unknown): string | null {
+    if (raw == null) return null;
+    const s = String(raw).trim();
+    if (!s) return null;
+    if (s.startsWith('Bearer ')) return s.slice(7).trim() || null;
+    return s;
+  }
 
-    if (token.startsWith('Bearer ')) {
-      token = token.split(' ')[1];
-    }
+  private async authenticate(socket: Socket): Promise<string | null> {
+    const token = this.stripBearer(socket.handshake.auth?.token);
+    if (!token) return null;
 
     try {
       const payload = await this.jwtService.verifyAsync(token);
       const user = await this.usersService.findById(payload.sub);
       return user?._id?.toString() || null;
-    } catch (error) {
+    } catch (err) {
       this.logger.warn(
-        `presence auth failed: ${socket.id} (token len: ${token.length}) - ${error.message}`,
+        `presence auth failed: ${socket.id} (${err instanceof Error ? err.message : err})`,
       );
       return null;
     }

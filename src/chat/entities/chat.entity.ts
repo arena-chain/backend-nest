@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types, Schema as MongooseSchema } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type ChatDocument = Chat & Document;
 
@@ -11,6 +11,7 @@ export class Chat {
   @Prop({ type: Types.ObjectId, ref: 'User' })
   receiverId?: Types.ObjectId;
 
+  /** Stream / group channel id — ObjectId or string slug. */
   @Prop({ type: MongooseSchema.Types.Mixed })
   channelId?: Types.ObjectId | string;
 
@@ -27,7 +28,7 @@ export class Chat {
   isRead: boolean;
 
   @Prop({ default: 'text' })
-  messageType: string; // text, image, file, etc.
+  messageType: string;
 
   @Prop({ type: [String], default: [] })
   attachments: string[];
