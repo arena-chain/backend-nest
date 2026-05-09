@@ -1,0 +1,154 @@
+[
+  {
+    "_id": {"$oid": "662000000000000000000101"},
+    "name": "Team Liquid",
+    "tag": "TL",
+    "description": "Elite MENA Valorant roster competing at international level under the Team Liquid banner.",
+    "country": "TUNISIA",
+    "captain": {"$oid": "662000000000000000000001"},
+    "members": [
+      {"$oid": "662000000000000000000001"},
+      {"$oid": "662000000000000000000002"},
+      {"$oid": "662000000000000000000003"},
+      {"$oid": "662000000000000000000004"},
+      {"$oid": "662000000000000000000005"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000401"},
+    "elo": 1326,
+    "createdAt": {"$date": "2024-01-08T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000102"},
+    "name": "Fnatic",
+    "tag": "FNC",
+    "description": "MENA branch of the iconic Fnatic organization, known for aggressive Valorant playstyle.",
+    "country": "TUNISIA",
+    "captain": {"$oid": "662000000000000000000006"},
+    "members": [
+      {"$oid": "662000000000000000000006"},
+      {"$oid": "662000000000000000000007"},
+      {"$oid": "662000000000000000000008"},
+      {"$oid": "662000000000000000000009"},
+      {"$oid": "662000000000000000000010"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000402"},
+    "elo": 1436,
+    "createdAt": {"$date": "2024-01-08T10:10:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T10:10:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000103"},
+    "name": "Natus Vincere",
+    "tag": "NAVI",
+    "description": "MENA division of Natus Vincere — born to win, competing at the highest level.",
+    "country": "TUNISIA",
+    "captain": {"$oid": "662000000000000000000011"},
+    "members": [
+      {"$oid": "662000000000000000000011"},
+      {"$oid": "662000000000000000000012"},
+      {"$oid": "662000000000000000000013"},
+      {"$oid": "662000000000000000000014"},
+      {"$oid": "662000000000000000000015"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000403"},
+    "elo": 1572,
+    "createdAt": {"$date": "2024-01-08T10:20:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T10:20:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000104"},
+    "name": "Cloud9",
+    "tag": "C9",
+    "description": "Cloud9 MENA — built on talent from Morocco, competing on the world stage.",
+    "country": "MOROCCO",
+    "captain": {"$oid": "662000000000000000000016"},
+    "members": [
+      {"$oid": "662000000000000000000016"},
+      {"$oid": "662000000000000000000017"},
+      {"$oid": "662000000000000000000018"},
+      {"$oid": "662000000000000000000019"},
+      {"$oid": "662000000000000000000020"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000404"},
+    "elo": 1364,
+    "createdAt": {"$date": "2024-01-08T10:30:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T10:30:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000105"},
+    "name": "100 Thieves",
+    "tag": "100T",
+    "description": "100 Thieves MENA roster — hungry, skilled, and relentless Moroccan talent.",
+    "country": "MOROCCO",
+    "captain": {"$oid": "662000000000000000000021"},
+    "members": [
+      {"$oid": "662000000000000000000021"},
+      {"$oid": "662000000000000000000022"},
+      {"$oid": "662000000000000000000023"},
+      {"$oid": "662000000000000000000024"},
+      {"$oid": "662000000000000000000025"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000405"},
+    "elo": 1424,
+    "createdAt": {"$date": "2024-01-08T10:40:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T10:40:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000106"},
+    "name": "Sentinels",
+    "tag": "SEN",
+    "description": "Sentinels MENA — Algeria's finest, featuring pro players competing at Immortal and above.",
+    "country": "ALGERIA",
+    "captain": {"$oid": "662000000000000000000026"},
+    "members": [
+      {"$oid": "662000000000000000000026"},
+      {"$oid": "662000000000000000000027"},
+      {"$oid": "662000000000000000000028"},
+      {"$oid": "662000000000000000000029"},
+      {"$oid": "662000000000000000000030"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000406"},
+    "elo": 1650,
+    "createdAt": {"$date": "2024-01-08T10:50:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T10:50:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000107"},
+    "name": "LOUD",
+    "tag": "LOUD",
+    "description": "LOUD MENA — explosive Algerian talent bringing energy and firepower to every match.",
+    "country": "ALGERIA",
+    "captain": {"$oid": "662000000000000000000031"},
+    "members": [
+      {"$oid": "662000000000000000000031"},
+      {"$oid": "662000000000000000000032"},
+      {"$oid": "662000000000000000000033"},
+      {"$oid": "662000000000000000000034"},
+      {"$oid": "662000000000000000000035"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000407"},
+    "elo": 1416,
+    "createdAt": {"$date": "2024-01-08T11:00:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T11:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "662000000000000000000108"},
+    "name": "Evil Geniuses",
+    "tag": "EG",
+    "description": "Evil Geniuses MENA — Egyptian powerhouse led by a Radiant-ranked captain.",
+    "country": "EGYPT",
+    "captain": {"$oid": "662000000000000000000036"},
+    "members": [
+      {"$oid": "662000000000000000000036"},
+      {"$oid": "662000000000000000000037"},
+      {"$oid": "662000000000000000000038"},
+      {"$oid": "662000000000000000000039"},
+      {"$oid": "662000000000000000000040"}
+    ],
+    "teamManager": {"$oid": "662000000000000000000408"},
+    "elo": 1528,
+    "createdAt": {"$date": "2024-01-08T11:10:00.000Z"},
+    "updatedAt": {"$date": "2024-01-08T11:10:00.000Z"}
+  }
+]

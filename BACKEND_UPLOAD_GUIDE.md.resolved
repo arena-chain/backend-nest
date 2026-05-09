@@ -1,0 +1,106 @@
+# Backend Update Guide: Tournament Image Upload
+
+To support the image upload feature on the frontend, the backend `POST /tournements` endpoint needs to be updated to handle `multipart/form-data` requests.
+
+## 1. Install Dependencies
+Ensure you have `multer` (for handling file uploads) installed in your backend project.
+```bash
+npm install --save @nestjs/platform-express multer
+# OR if using plain Express
+npm install --save multer
+```
+
+## 2. Update the Controller (NestJS Example)
+
+If your backend is built with **NestJS**, you need to use the `FileInterceptor`.
+
+### `tournaments.controller.ts`
+
+```typescript
+import { 
+  Controller, 
+  Post, 
+  UseInterceptors, 
+  UploadedFile, 
+  Body, 
+  BadRequestException 
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+// ... other imports
+
+@Post()
+@UseInterceptors(FileInterceptor('file', {
+  storage: diskStorage({
+    destination: './uploads/tournaments', // Ensure this directory exists
+    filename: (req, file, cb) => {
+      const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+      return cb(null, `${randomName}${extname(file.originalname)}`);
+    }
+  }),
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+      return cb(new BadRequestException('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+}))
+async create(
+  @Body() createTournamentDto: CreateTournamentDto,
+  @UploadedFile() file: Express.Multer.File
+) {
+  // If a file was uploaded, set the bannerImageUrl in the DTO
+  if (file) {
+    // Construct the public URL for the file
+    // Adjust logic based on how you serve static files
+    createTournamentDto.bannerImageUrl = `${process.env.API_URL}/uploads/tournaments/${file.filename}`;
+  }
+
+  return this.tournamentsService.create(createTournamentDto);
+}
+```
+
+## 3. Update the Controller (Express Example)
+
+If your backend is built with plain **Express**, use the `multer` middleware.
+
+### `tournaments.routes.ts`
+
+```typescript
+import multer from 'multer';
+import path from 'path';
+
+// Configure storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/tournaments'); // Ensure directory exists
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// Apply middleware to route
+router.post('/', upload.single('file'), async (req, res) => {
+  try {
+    const tournamentData = req.body;
+    
+    // If file uploaded, add to data
+    if (req.file) {
+      tournamentData.bannerImageUrl = `${process.env.API_URL}/uploads/tournaments/${req.file.filename}`;
+    }
+
+    const newTournament = await tournamentService.create(tournamentData);
+    res.status(201).json(newTournament);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+```
+
+## 4. Why This Failed Previously
+The error `name should not be empty...` occurred because the backend was trying to parse the request body as JSON, but the frontend was sending `multipart/form-data`. Without the `multer` middleware (or `FileInterceptor`), the backend cannot parse the multipart body, resulting in an empty body object and triggering validation errors for all required fields.

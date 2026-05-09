@@ -1,0 +1,182 @@
+[
+  {
+    "_id": {"$oid": "663000000000000000001001"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000101",
+    "seed": 1,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Direct Invite",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001002"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000102",
+    "seed": 2,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Direct Invite",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001003"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000103",
+    "seed": 3,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Direct Invite",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001004"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000104",
+    "seed": 4,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Open Qualifier",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001005"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000105",
+    "seed": 5,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Direct Invite",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001006"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000106",
+    "seed": 6,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Direct Invite",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001007"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000107",
+    "seed": 7,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Open Qualifier",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001008"},
+    "seasonId": "663000000000000000000101",
+    "teamId": "662000000000000000000108",
+    "seed": 8,
+    "status": "ACTIVE",
+    "qualifiedFromName": "MENA VCL Open Qualifier",
+    "createdAt": {"$date": "2024-02-05T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-02-05T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001009"},
+    "seasonId": "663000000000000000000102",
+    "teamId": "662000000000000000000101",
+    "seed": 1,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Maghreb Cup Direct Invite",
+    "createdAt": {"$date": "2024-03-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001010"},
+    "seasonId": "663000000000000000000102",
+    "teamId": "662000000000000000000102",
+    "seed": 2,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Maghreb Cup Direct Invite",
+    "createdAt": {"$date": "2024-03-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001011"},
+    "seasonId": "663000000000000000000102",
+    "teamId": "662000000000000000000103",
+    "seed": 3,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Maghreb Cup Direct Invite",
+    "createdAt": {"$date": "2024-03-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001012"},
+    "seasonId": "663000000000000000000102",
+    "teamId": "662000000000000000000104",
+    "seed": 4,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Maghreb Cup Open Qualifier",
+    "createdAt": {"$date": "2024-03-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001013"},
+    "seasonId": "663000000000000000000102",
+    "teamId": "662000000000000000000105",
+    "seed": 5,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Maghreb Cup Direct Invite",
+    "createdAt": {"$date": "2024-03-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001014"},
+    "seasonId": "663000000000000000000102",
+    "teamId": "662000000000000000000106",
+    "seed": 6,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Maghreb Cup Direct Invite",
+    "createdAt": {"$date": "2024-03-01T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-01T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001015"},
+    "seasonId": "663000000000000000000103",
+    "teamId": "662000000000000000000105",
+    "seed": 1,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Arab Elite Direct Invite",
+    "createdAt": {"$date": "2024-03-15T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-15T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001016"},
+    "seasonId": "663000000000000000000103",
+    "teamId": "662000000000000000000106",
+    "seed": 2,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Arab Elite Direct Invite",
+    "createdAt": {"$date": "2024-03-15T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-15T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001017"},
+    "seasonId": "663000000000000000000103",
+    "teamId": "662000000000000000000107",
+    "seed": 3,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Arab Elite Open Qualifier",
+    "createdAt": {"$date": "2024-03-15T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-15T10:00:00.000Z"}
+  },
+  {
+    "_id": {"$oid": "663000000000000000001018"},
+    "seasonId": "663000000000000000000103",
+    "teamId": "662000000000000000000108",
+    "seed": 4,
+    "status": "ACTIVE",
+    "qualifiedFromName": "Arab Elite Open Qualifier",
+    "createdAt": {"$date": "2024-03-15T10:00:00.000Z"},
+    "updatedAt": {"$date": "2024-03-15T10:00:00.000Z"}
+  }
+]
