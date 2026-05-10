@@ -98,6 +98,38 @@ interface TeamObjectiveStats {
   dragons: number;
 }
 
+export interface RankedMatchSummary {
+  matchId: string;
+  gameDate: number; // ms epoch (Riot gameCreation)
+  gameDuration: number; // seconds
+  win: boolean;
+  championName: string;
+  individualPosition: string; // TOP | JUNGLE | MIDDLE | BOTTOM | UTILITY | Invalid
+  teamPosition: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  totalMinionsKilled: number;
+  neutralMinionsKilled: number;
+  visionScore: number;
+  goldEarned: number;
+  damageDealtToChampions: number;
+  damageTaken: number;
+  wardsPlaced: number;
+  wardsKilled: number;
+  firstBloodKill: boolean;
+  firstBloodAssist: boolean;
+  opponentChampionName: string;
+  teamWin: boolean;
+}
+
+export interface RankedAiAnalysisResponse {
+  analysis: string;
+  gamesAnalyzed: number;
+  generatedAt: Date;
+  cached: boolean;
+}
+
 export interface TftMatchInfo {
   matchId: string;
   placement: number;
@@ -466,6 +498,160 @@ export class RiotApiService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  /**
+   * Fetch a single Ranked Solo/Duo match (queue 420) and extract the rich
+   * field set the AI analysis needs. Distinct from getMatchDetailsById /
+   * getDetailedMatchById — keeps those untouched.
+   */
+  private async fetchRankedMatchSummary(
+    matchId: string,
+    region: RiotRegion,
+    puuid: string,
+  ): Promise<RankedMatchSummary | null> {
+    const matchRouting = REGION_TO_MATCH_ROUTING[region];
+    const url = `https://${matchRouting}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<any>(url, {
+          headers: { 'X-Riot-Token': this.apiKey },
+        }),
+      );
+
+      const match = response.data;
+      const info = match?.info;
+      const participants = info?.participants;
+      if (!info || !Array.isArray(participants)) return null;
+
+      // Skip non-Ranked Solo/Duo just in case Riot ever returns mixed ids.
+      if (info.queueId !== 420) return null;
+
+      const me = participants.find((p: any) => p.puuid === puuid);
+      if (!me) return null;
+
+      const myTeamId: number = me.teamId;
+      const myLane: string = me.teamPosition || me.individualPosition || '';
+
+      // Best-effort lane opponent: same teamPosition, opposing teamId.
+      const opponent = participants.find(
+        (p: any) =>
+          p.teamId !== myTeamId &&
+          (p.teamPosition || p.individualPosition) === myLane &&
+          myLane !== '',
+      );
+
+      const myTeam = (info.teams || []).find((t: any) => t.teamId === myTeamId);
+
+      return {
+        matchId: match.metadata?.matchId || matchId,
+        gameDate: info.gameCreation ?? 0,
+        gameDuration: info.gameDuration ?? 0,
+        win: !!me.win,
+        championName: me.championName || 'Unknown',
+        individualPosition: me.individualPosition || 'Invalid',
+        teamPosition: me.teamPosition || me.individualPosition || 'Invalid',
+        kills: me.kills ?? 0,
+        deaths: me.deaths ?? 0,
+        assists: me.assists ?? 0,
+        totalMinionsKilled: me.totalMinionsKilled ?? 0,
+        neutralMinionsKilled: me.neutralMinionsKilled ?? 0,
+        visionScore: me.visionScore ?? 0,
+        goldEarned: me.goldEarned ?? 0,
+        damageDealtToChampions: me.totalDamageDealtToChampions ?? 0,
+        damageTaken: me.totalDamageTaken ?? 0,
+        wardsPlaced: me.wardsPlaced ?? 0,
+        wardsKilled: me.wardsKilled ?? 0,
+        firstBloodKill: !!me.firstBloodKill,
+        firstBloodAssist: !!me.firstBloodAssist,
+        opponentChampionName: opponent?.championName || 'Unknown',
+        teamWin: !!myTeam?.win,
+      };
+    } catch (err: any) {
+      const status = err?.response?.status;
+      // 429 = Riot rate limit. Re-throw so the caller can surface a friendly error.
+      if (status === 429) {
+        throw new HttpException(
+          'Riot API rate limit hit while fetching ranked match details. Please try again in a minute.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      console.warn(
+        `RiotApiService: fetchRankedMatchSummary failed for ${matchId}: ${err.message}`,
+      );
+      return null;
+    }
+  }
+
+  private buildAnalysisPrompt(
+    summonerName: string,
+    matches: RankedMatchSummary[],
+  ): string {
+    const lines = matches.map((m, i) => {
+      const cs = m.totalMinionsKilled + m.neutralMinionsKilled;
+      const cspm =
+        m.gameDuration > 0 ? (cs / (m.gameDuration / 60)).toFixed(2) : '0.00';
+      const durationMin =
+        m.gameDuration > 0 ? Math.round(m.gameDuration / 60) : 0;
+      return [
+        `Game ${i + 1} (${m.win ? 'WIN' : 'LOSS'}, ${durationMin}min, ${m.teamPosition || m.individualPosition}):`,
+        `  Champion: ${m.championName} vs ${m.opponentChampionName}`,
+        `  KDA: ${m.kills}/${m.deaths}/${m.assists}`,
+        `  CS: ${cs} (${cspm}/min)`,
+        `  Vision: ${m.visionScore}, Wards placed: ${m.wardsPlaced}, Wards killed: ${m.wardsKilled}`,
+        `  Gold: ${m.goldEarned}, DMG to champs: ${m.damageDealtToChampions}, DMG taken: ${m.damageTaken}`,
+        `  First blood kill: ${m.firstBloodKill}, First blood assist: ${m.firstBloodAssist}`,
+      ].join('\n');
+    });
+
+    const n = matches.length;
+    const basisLine =
+      n >= 10
+        ? `Based on your last ${n} ranked games`
+        : `Based on your ${n} ranked game${n === 1 ? '' : 's'} (fewer than 10 available)`;
+
+    return `You are a top-tier League of Legends ranked coach.
+Analyze the following ${n} Ranked Solo/Duo (queue 420) games for "${summonerName}".
+
+DATA:
+${lines.join('\n\n')}
+
+WRITE A REPORT IN MARKDOWN WITH EXACTLY THESE SECTIONS AND HEADINGS, IN THIS ORDER:
+
+## Your Ranked Performance Analysis — ${summonerName}
+${basisLine}
+
+### 1. Champion Pool Assessment
+[List specific champions played, which performed best/worst, win rate per champion when 2+ games on it.]
+
+### 2. Lane Performance
+[CS efficiency (CS/min), kill participation, early vs late game patterns. Reference specific games.]
+
+### 3. Deaths Analysis
+[When and how they die — early game deaths, getting caught, snowballing-loss patterns. Reference specific games.]
+
+### 4. Biggest Recurring Mistake
+[ONE specific, concrete mistake that appears across multiple games, with evidence from the data above.]
+
+### 5. What You Did Well
+[Specific positive patterns visible in the data.]
+
+### 6. Priority Improvement Points
+1. [Most impactful thing to fix — specific and actionable]
+2. [Second priority]
+3. [Third priority]
+
+### 7. Recommended Next Steps
+[2–3 concrete in-game actions to focus on next session.]
+
+STRICT RULES:
+- DO NOT give generic advice like "improve your CS". Always cite the specific game.
+- DO reference specific games: "In Game 3 (Yasuo, 2/7 vs Zed) you took 7 deaths in a 24-minute loss, suggesting…".
+- DO compare across champions: "You won 2/2 on Garen but 0/2 on Darius — this suggests…".
+- DO reference the lane opponent when relevant.
+- Keep the WHOLE report under 600 words. Every sentence must say something specific.
+- Output PURE markdown. Do not wrap in code fences. Do not add any preamble before "## Your Ranked Performance Analysis".`;
   }
 
   async getDetailedMatchById(
@@ -880,6 +1066,181 @@ export class RiotApiService {
       gameMode: match.matchInfo?.gameMode || 'Unknown',
       gameLengthMs: match.matchInfo?.gameLengthMillis ?? 0,
       gameCreation: match.matchInfo?.gameStartMillis ?? 0,
+    };
+  }
+
+  /**
+   * Fetch the player's last 10 Ranked Solo/Duo games (queue 420) and run them
+   * through a local Ollama llama3.1 instance to produce a written coaching
+   * report. Cached on the player profile for 24 h.
+   *
+   * Throws HttpException with HTTP-friendly status codes for the desktop UI
+   * to surface (Riot rate limit, Ollama unreachable, account not linked).
+   */
+  async getRankedAiAnalysis(
+    userId: string,
+  ): Promise<RankedAiAnalysisResponse> {
+    const profile = await this.playerService.findByUserId(userId);
+
+    if (
+      !profile?.riotPuuid ||
+      profile.riotLinkStatus !== RiotLinkStatus.VERIFIED
+    ) {
+      throw new HttpException(
+        'Link and verify your Riot account before requesting AI analysis.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // ── 24h cache ──
+    const cached = profile.lastAiAnalysis;
+    if (
+      cached &&
+      cached.content &&
+      cached.generatedAt &&
+      Date.now() - new Date(cached.generatedAt).getTime() < 24 * 60 * 60 * 1000
+    ) {
+      return {
+        analysis: cached.content,
+        gamesAnalyzed: cached.gamesAnalyzed,
+        generatedAt: cached.generatedAt,
+        cached: true,
+      };
+    }
+
+    const region = profile.riotRegion as RiotRegion;
+    const puuid = profile.riotPuuid;
+    const summonerName = profile.riotGameName || 'Summoner';
+    const matchRouting = REGION_TO_MATCH_ROUTING[region];
+
+    if (!matchRouting) {
+      throw new HttpException(
+        `Unsupported Riot region: ${region}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // ── 1. Get last 10 Ranked Solo/Duo match IDs (queue=420) ──
+    const idsUrl = `https://${matchRouting}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?queue=420&count=10`;
+    let matchIds: string[] = [];
+    try {
+      const resp = await firstValueFrom(
+        this.httpService.get<string[]>(idsUrl, {
+          headers: { 'X-Riot-Token': this.apiKey },
+        }),
+      );
+      matchIds = Array.isArray(resp.data) ? resp.data : [];
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 429) {
+        throw new HttpException(
+          'Riot API rate limit hit. Please try again in a minute.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw new HttpException(
+        'Failed to fetch ranked match list from Riot.',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    if (matchIds.length === 0) {
+      const friendly = `## Your Ranked Performance Analysis — ${summonerName}\n\nPlay at least 1 ranked game to get analysis.`;
+      return {
+        analysis: friendly,
+        gamesAnalyzed: 0,
+        generatedAt: new Date(),
+        cached: false,
+      };
+    }
+
+    // ── 2. Pull rich per-match summaries ──
+    const settled = await Promise.allSettled(
+      matchIds.map((id) => this.fetchRankedMatchSummary(id, region, puuid)),
+    );
+    const summaries: RankedMatchSummary[] = settled
+      .filter(
+        (r): r is PromiseFulfilledResult<RankedMatchSummary | null> =>
+          r.status === 'fulfilled',
+      )
+      .map((r) => r.value)
+      .filter((s): s is RankedMatchSummary => s !== null);
+
+    if (summaries.length === 0) {
+      const friendly = `## Your Ranked Performance Analysis — ${summonerName}\n\nPlay at least 1 ranked game to get analysis.`;
+      return {
+        analysis: friendly,
+        gamesAnalyzed: 0,
+        generatedAt: new Date(),
+        cached: false,
+      };
+    }
+
+    // ── 3. Call Ollama ──
+    const prompt = this.buildAnalysisPrompt(summonerName, summaries);
+    let analysis = '';
+    try {
+      const ollamaResp = await firstValueFrom(
+        this.httpService.post<{ response?: string }>(
+          'http://localhost:11434/api/generate',
+          {
+            model: 'llama3.1',
+            prompt,
+            stream: false,
+            options: {
+              temperature: 0.3,
+              num_predict: 800,
+            },
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 120000, // Ollama can take up to 2 min on CPU
+          },
+        ),
+      );
+      analysis = (ollamaResp.data?.response || '').trim();
+    } catch (err: any) {
+      const code = err?.code || err?.cause?.code;
+      if (code === 'ECONNREFUSED' || code === 'ECONNRESET' || code === 'ENOTFOUND') {
+        throw new HttpException(
+          'Ollama is not running on http://localhost:11434. Start it with `ollama serve` and ensure `ollama pull llama3.1` has been run.',
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
+      }
+      console.error('RiotApiService: Ollama call failed:', err?.message || err);
+      throw new HttpException(
+        'AI analysis service is temporarily unavailable.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    if (!analysis) {
+      throw new HttpException(
+        'Ollama returned an empty response. Try again.',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    // ── 4. Persist 24h cache ──
+    const generatedAt = new Date();
+    profile.lastAiAnalysis = {
+      content: analysis,
+      gamesAnalyzed: summaries.length,
+      generatedAt,
+    };
+    try {
+      await profile.save();
+    } catch (e: any) {
+      console.warn(
+        `RiotApiService: failed to persist lastAiAnalysis cache: ${e?.message || e}`,
+      );
+    }
+
+    return {
+      analysis,
+      gamesAnalyzed: summaries.length,
+      generatedAt,
+      cached: false,
     };
   }
 

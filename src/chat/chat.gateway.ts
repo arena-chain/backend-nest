@@ -193,7 +193,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!body?.messageId) return { ok: false };
     try {
       const res = await this.chatService.deleteMessage(body.messageId, userId);
-      if (!res) return { ok: false };
+      if (!res.deleted) {
+        return { ok: false };
+      }
       const payload = { messageId: body.messageId };
       const targets = new Set<string>([userId]);
       if (res.receiverId) targets.add(res.receiverId);

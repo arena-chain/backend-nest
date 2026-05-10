@@ -51,6 +51,22 @@ export class PlayerProfile {
 
   @Prop({ default: RiotLinkStatus.UNLINKED, enum: RiotLinkStatus })
   riotLinkStatus: RiotLinkStatus;
+
+  // Cached AI ranked-analysis report (regenerated at most every 24h)
+  @Prop({
+    type: {
+      content: { type: String, default: '' },
+      gamesAnalyzed: { type: Number, default: 0 },
+      generatedAt: { type: Date, default: null },
+    },
+    default: null,
+    _id: false,
+  })
+  lastAiAnalysis: {
+    content: string;
+    gamesAnalyzed: number;
+    generatedAt: Date;
+  } | null;
 }
 
 export const PlayerProfileSchema = SchemaFactory.createForClass(PlayerProfile);
