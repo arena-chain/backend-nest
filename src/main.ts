@@ -7,9 +7,14 @@ import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 async function bootstrap() {
-  const uploadsDir = join(__dirname, '..', 'uploads');
+  // Same root as Multer (`./uploads/...`) and ServeStatic (`process.cwd()/uploads`).
+  const uploadsDir = join(process.cwd(), 'uploads');
   if (!existsSync(uploadsDir)) {
     mkdirSync(uploadsDir, { recursive: true });
+  }
+  const videosDir = join(uploadsDir, 'videos');
+  if (!existsSync(videosDir)) {
+    mkdirSync(videosDir, { recursive: true });
   }
 
   const app = await NestFactory.create(AppModule, {

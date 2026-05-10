@@ -36,6 +36,8 @@ import { VideoDocument } from './schema/video.schema';
 import { VideoEngagementService } from './video-engagement.service';
 import { CreateVideoCommentDto } from './dto/create-video-comment.dto';
 import { HighlightSelectionMode } from '../highlights/highlights.service';
+import * as path from 'path';
+import { GamingVideoClassifierService } from './gaming-video-classifier.service';
 
 @ApiTags('Video')
 @Controller('video')
@@ -52,6 +54,7 @@ export class VideoController {
     private readonly videoService: VideoService,
     private readonly highlightBullmq: HighlightBullmqService,
     private readonly videoEngagement: VideoEngagementService,
+    private readonly gamingClassifier: GamingVideoClassifierService,
   ) {}
 
   @Post()
@@ -158,6 +161,13 @@ export class VideoController {
     if (!uploader) {
       throw new BadRequestException('uploader is required');
     }
+
+    const uploadedPath =
+      typeof file.path === 'string'
+        ? path.resolve(file.path)
+        : path.resolve(process.cwd(), 'uploads', 'videos', file.filename);
+    await this.gamingClassifier.assertGamingVideo(uploadedPath);
+
     const channelVisRaw = (body as { channelVisibility?: string })
       .channelVisibility;
     const createVideoDto: CreateVideoDto = {

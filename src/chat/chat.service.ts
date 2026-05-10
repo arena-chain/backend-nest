@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -45,6 +45,39 @@ export class ChatService {
       receiverId: new Types.ObjectId(receiverId),
       senderNickname: sender.nickname,
       senderRole: sender.role,
+      message: message.trim(),
+    });
+
+    return created.toObject();
+  }
+
+  async assertGroupMember(groupId: string, userId: string) {
+    const group = await this.groupChatModel
+      .findById(groupId)
+      .select('_id members')
+      .lean()
+      .exec();
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    const isMember = group.members.some((member) => member.toString() === userId);
+    if (!isMember) {
+      throw new ForbiddenException('Not a group member');
+    }
+  }
+
+  async createGroupMessage(senderId: string, groupId: string, message: string) {
+    await this.assertGroupMember(groupId, senderId);
+
+    const sender = await this.usersService.findById(senderId);
+    if (!sender) throw new NotFoundException('Sender not found');
+
+    const created = await this.chatModel.create({
+      senderId: new Types.ObjectId(senderId),
+      senderNickname: sender.nickname,
+      senderRole: sender.role,
+      channelId: new Types.ObjectId(groupId),
       message: message.trim(),
     });
 
@@ -190,11 +223,18 @@ export class ChatService {
   }
 
   async deleteMessage(messageId: string, userId: string) {
-    const res = await this.chatModel.deleteOne({
+    const deleted = await this.chatModel.findOneAndDelete({
       _id: new Types.ObjectId(messageId),
       senderId: new Types.ObjectId(userId),
     });
-    return res.deletedCount > 0;
+    if (!deleted) {
+      return null;
+    }
+
+    return {
+      receiverId: deleted.receiverId ? deleted.receiverId.toString() : null,
+      senderId: deleted.senderId ? deleted.senderId.toString() : null,
+    };
   }
 
   async getMyGroups(userId: string) {

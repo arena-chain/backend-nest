@@ -1,4 +1,4 @@
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { diskStorage } from 'multer';
 import { mkdirSync } from 'fs';
@@ -51,7 +51,7 @@ export const videoUploadOptions = {
   },
   storage: diskStorage({
     destination: (req, file, cb) => {
-      const dir = './uploads/videos';
+      const dir = join(process.cwd(), 'uploads', 'videos');
       mkdirSync(dir, { recursive: true });
       cb(null, dir);
     },
