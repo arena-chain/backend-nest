@@ -87,6 +87,26 @@ export class RiotApiController {
     );
   }
 
+  @Post('ai-analysis')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      "Generate (or return cached) AI ranked analysis for the logged-in player's last 10 LoL ranked solo/duo games",
+  })
+  @ApiResponse({ status: 200, description: 'AI analysis generated' })
+  @ApiResponse({
+    status: 400,
+    description: 'Riot account not linked / verified',
+  })
+  @ApiResponse({ status: 429, description: 'Riot rate limit hit' })
+  @ApiResponse({
+    status: 503,
+    description: 'Ollama unavailable on http://localhost:11434',
+  })
+  getRankedAiAnalysis(@Req() req: any) {
+    return this.riotApiService.getRankedAiAnalysis(req.user.userId);
+  }
+
   // ── Account Linking ───────────────────────────────────────────────────
 
   @Post('link-account')

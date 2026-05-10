@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -190,11 +190,69 @@ export class ChatService {
   }
 
   async deleteMessage(messageId: string, userId: string) {
-    const res = await this.chatModel.deleteOne({
+    if (!Types.ObjectId.isValid(messageId)) {
+      return { deleted: false as const };
+    }
+    const doc = await this.chatModel.findOneAndDelete({
       _id: new Types.ObjectId(messageId),
       senderId: new Types.ObjectId(userId),
     });
-    return res.deletedCount > 0;
+    if (!doc) {
+      return { deleted: false as const };
+    }
+    const receiverId = doc.receiverId?.toString();
+    const senderId = doc.senderId?.toString();
+    return { deleted: true as const, receiverId, senderId };
+  }
+
+  async assertGroupMember(groupId: string, userId: string) {
+    if (!Types.ObjectId.isValid(groupId)) {
+      throw new ForbiddenException('Invalid group');
+    }
+    const group = await this.groupChatModel.findOne({
+      _id: new Types.ObjectId(groupId),
+      members: new Types.ObjectId(userId),
+    });
+    if (!group) {
+      throw new ForbiddenException('Not a group member');
+    }
+  }
+
+  async getGroupMessages(groupId: string, userId: string, limit = 100) {
+    await this.assertGroupMember(groupId, userId);
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const parsedChannelId = Types.ObjectId.isValid(groupId)
+      ? new Types.ObjectId(groupId)
+      : groupId;
+
+    const messages = await this.chatModel
+      .find({ channelId: parsedChannelId })
+      .sort({ createdAt: -1 })
+      .limit(safeLimit)
+      .lean()
+      .exec();
+
+    return messages.reverse();
+  }
+
+  async createGroupMessage(senderId: string, groupId: string, message: string) {
+    await this.assertGroupMember(groupId, senderId);
+    const sender = await this.usersService.findById(senderId);
+    if (!sender) throw new NotFoundException('Sender not found');
+
+    const channelId = Types.ObjectId.isValid(groupId)
+      ? new Types.ObjectId(groupId)
+      : groupId;
+
+    const created = await this.chatModel.create({
+      senderId: new Types.ObjectId(senderId),
+      channelId,
+      senderNickname: sender.nickname,
+      senderRole: sender.role,
+      message: message.trim(),
+    });
+
+    return created.toObject();
   }
 
   async getMyGroups(userId: string) {
@@ -226,7 +284,8 @@ export class ChatService {
     return group.populate('members', 'nickname avatar');
   }
 
-  async inviteToGroup(groupId: string, memberId: string) {
+  async inviteToGroup(groupId: string, memberId: string, inviterUserId: string) {
+    await this.assertGroupMember(groupId, inviterUserId);
     return this.groupChatModel
       .findByIdAndUpdate(
         groupId,
